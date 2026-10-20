@@ -46,6 +46,10 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
 header .centro { text-align:center; }
+#hIndices { display:flex; justify-content:flex-end; gap:12px; font-size:12px; margin:-4px 0 6px; }
+#hIndices:empty { display:none; }
+#hIndices .iup { color:#bbf7d0; } #hIndices .idn { color:#fecaca; }
+@media (prefers-color-scheme: dark) { #hIndices .iup { color:#14532d; } #hIndices .idn { color:#7f1d1d; } }
 /* um retângulo por tipo; se só houver um tipo, ocupa a largura toda */
 #hClasses { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-top:12px; }
 #hClasses .cls { border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.1); border-radius:10px; padding:8px 10px; font-size:12px; line-height:1.45; }
@@ -60,6 +64,7 @@ header .centro { text-align:center; }
 </head>
 <body>
 <header>
+  <div id="hIndices"></div>
   <div class="centro">
     <small>Lucro da carteira (em aberto)</small>
     <div class="big" id="hLucro">—</div>
@@ -143,7 +148,7 @@ header .centro { text-align:center; }
 <script src="calc.js"></script>
 <script>
 const KEY = 'carteira-bdr';
-const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, token: '', atualizado: null };
+const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, indices: {}, token: '', atualizado: null };
 let db;
 try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
 const salvar = () => localStorage.setItem(KEY, JSON.stringify(db));
@@ -174,6 +179,10 @@ function render() {
   const lucro = comPreco.reduce((s, p) => s + p.lucro, 0);
   const valor = comPreco.reduce((s, p) => s + p.valor, 0);
   $('hLucro').textContent = brl(lucro) + '  (' + pct(inv ? lucro / inv : null) + ')';
+  const ind = (nome, x, fmt) => !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
+    <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`;
+  $('hIndices').innerHTML = ind('IBOV', db.indices.ibov, v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })) +
+    ind('Dólar', db.indices.usd, v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 }));
   // lucro por tipo; só aparece o tipo que tem posição em aberto
   $('hClasses').innerHTML = [['A', 'Carteira Ações'], ['F', 'Carteira Fundos']].map(([c, nome]) => {
     const ab = abertos.filter(p => p.classe === c);
@@ -254,19 +263,29 @@ async function atualizar() {
   const tks = posicoes(db.ops, {}).filter(p => !p.encerrado && ehB3(p.ticker)).map(p => p.ticker);
   $('btnAtualizar').disabled = true; $('erroCot').textContent = '';
   const erros = [];
+  const brapi = async t => {
+    const r = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?token=${encodeURIComponent(db.token)}`);
+    const j = await r.json();
+    const q = j.results?.[0];
+    if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
+    return q;
+  };
   // uma requisição por ativo: o plano grátis do brapi aceita 1 ativo por chamada
-  await Promise.all(tks.map(async t => {
+  await Promise.all([...tks.map(async t => {
     try {
-      const r = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?token=${encodeURIComponent(db.token)}`);
-      const j = await r.json();
-      const q = j.results?.[0];
-      if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
+      const q = await brapi(t);
       db.precos[t] = q.regularMarketPrice;
       db.variacao[t] = q.regularMarketChangePercent;
       if (q.longName || q.shortName) db.nomes[t] = q.longName || q.shortName;
     } catch (e) { erros.push(`${t}: ${e.message}`); }
-  }));
-  if (erros.length < tks.length) { db.atualizado = new Date().toISOString(); registrarDia(); }
+  }),
+  brapi('^BVSP').then(q => db.indices.ibov = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent })
+    .catch(e => erros.push('IBOV: ' + e.message)),
+  // dólar comercial pela AwesomeAPI (grátis, sem token)
+  fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL').then(r => r.json())
+    .then(j => { if (!j.USDBRL) throw new Error('sem dados'); db.indices.usd = { v: +j.USDBRL.bid, pct: +j.USDBRL.pctChange }; })
+    .catch(e => erros.push('Dólar: ' + e.message))]);
+  if (tks.some(t => !erros.some(e => e.startsWith(t + ':')))) { db.atualizado = new Date().toISOString(); registrarDia(); }
   salvar(); render();
   $('erroCot').textContent = erros.length ? 'Sem cotação para ' + erros.join(' · ') : '';
   $('btnAtualizar').disabled = false;
