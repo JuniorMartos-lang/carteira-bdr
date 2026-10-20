@@ -48,6 +48,8 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .topo { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:4px 16px; }
 #hClasses { font-size:13px; line-height:1.35; margin-bottom:4px; }
 #hClasses b { font-size:14px; }
+#hClasses .cls { margin-top:6px; }
+#hClasses .cls span { font-size:12px; opacity:.85; }
 .nome { display:inline-block; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;
   font-size:12px; font-weight:500; padding:1px 6px; border:1px solid var(--bd); border-radius:4px; color:var(--tx); margin-left:4px; }
 .tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
@@ -173,11 +175,14 @@ function render() {
   $('hClasses').innerHTML = [['A', 'Carteira Ações'], ['F', 'Carteira Fundos']].map(([c, nome]) => {
     const ab = abertos.filter(p => p.classe === c);
     if (!ab.length) return '';
-    const l = ab.filter(p => p.valor != null).reduce((s, p) => s + p.lucro, 0);
+    const cp = ab.filter(p => p.valor != null);
+    const l = cp.reduce((s, p) => s + p.lucro, 0);
+    const v = cp.reduce((s, p) => s + p.valor, 0);
     const i = ab.reduce((s, p) => s + p.investido, 0);
-    return `<div>${nome}: <b>${brl(l)}</b> (${pct(i ? l / i : null)})</div>`;
+    return `<div class="cls">${nome}: Lucro <b>${brl(l)}</b> (${pct(i ? l / i : null)})<br>
+      <span>Investido ${brl(i)} · Atual ${brl(v)}</span></div>`;
   }).join('');
-  $('hResumo').textContent = `Investido ${brl(inv)} · Atual ${brl(valor)}` +
+  $('hResumo').textContent = `Total: Investido ${brl(inv)} · Atual ${brl(valor)}` +
     (comPreco.length < abertos.length ? ' · faltam cotações' : '');
   $('atualizado').textContent = db.atualizado ? 'Cotações de ' + new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem cotações ainda';
 
