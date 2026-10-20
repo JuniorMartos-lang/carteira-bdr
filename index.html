@@ -45,11 +45,14 @@ td:first-child, th:first-child { text-align:left; }
 h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
-.topo { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:4px 16px; }
-#hClasses { font-size:13px; line-height:1.35; margin-bottom:4px; }
-#hClasses b { font-size:14px; }
-#hClasses .cls { margin-top:6px; }
-#hClasses .cls span { font-size:12px; opacity:.85; }
+header .centro { text-align:center; }
+/* um retângulo por tipo; se só houver um tipo, ocupa a largura toda */
+#hClasses { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-top:12px; }
+#hClasses .cls { border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.1); border-radius:10px; padding:8px 10px; font-size:12px; line-height:1.45; }
+#hClasses .cls .tit { font-size:12px; font-weight:600; opacity:.9; }
+#hClasses .cls .luc { font-size:16px; font-weight:700; }
+#hClasses .cls .det { opacity:.85; }
+@media (prefers-color-scheme: dark) { #hClasses .cls { border-color:rgba(0,0,0,.25); background:rgba(0,0,0,.08); } }
 .nome { display:inline-block; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;
   font-size:12px; font-weight:500; padding:1px 6px; border:1px solid var(--bd); border-radius:4px; color:var(--tx); margin-left:4px; }
 .tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
@@ -57,12 +60,12 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 </head>
 <body>
 <header>
-  <div class="topo">
-    <div><small>Lucro da carteira (em aberto)</small>
-      <div class="big" id="hLucro">—</div></div>
-    <div id="hClasses"></div>
+  <div class="centro">
+    <small>Lucro da carteira (em aberto)</small>
+    <div class="big" id="hLucro">—</div>
+    <small id="hResumo"></small>
   </div>
-  <small id="hResumo"></small>
+  <div id="hClasses"></div>
 </header>
 
 <main>
@@ -179,8 +182,9 @@ function render() {
     const l = cp.reduce((s, p) => s + p.lucro, 0);
     const v = cp.reduce((s, p) => s + p.valor, 0);
     const i = ab.reduce((s, p) => s + p.investido, 0);
-    return `<div class="cls">${nome}: Lucro <b>${brl(l)}</b> (${pct(i ? l / i : null)})<br>
-      <span>Investido ${brl(i)} · Atual ${brl(v)}</span></div>`;
+    return `<div class="cls"><div class="tit">${nome}</div>
+      <div class="luc">${brl(l)} <small>(${pct(i ? l / i : null)})</small></div>
+      <div class="det">Investido ${brl(i)}<br>Atual ${brl(v)}</div></div>`;
   }).join('');
   $('hResumo').textContent = `Total: Investido ${brl(inv)} · Atual ${brl(valor)}` +
     (comPreco.length < abertos.length ? ' · faltam cotações' : '');
