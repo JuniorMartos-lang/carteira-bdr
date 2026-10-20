@@ -48,6 +48,8 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .topo { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:4px 16px; }
 #hClasses { font-size:13px; line-height:1.35; margin-bottom:4px; }
 #hClasses b { font-size:14px; }
+.nome { display:inline-block; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;
+  font-size:12px; font-weight:500; padding:1px 6px; border:1px solid var(--bd); border-radius:4px; color:var(--tx); margin-left:4px; }
 .tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
 </style>
 </head>
@@ -136,7 +138,7 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 <script src="calc.js"></script>
 <script>
 const KEY = 'carteira-bdr';
-const vazio = { ops: [], historico: [], precos: {}, variacao: {}, token: '', atualizado: null };
+const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, token: '', atualizado: null };
 let db;
 try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
 const salvar = () => localStorage.setItem(KEY, JSON.stringify(db));
@@ -181,7 +183,7 @@ function render() {
 
   $('lista').innerHTML = abertos.map((p, i) => `
     <div class="card">
-      <div class="row"><span class="tk">${i + 1}º ${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></span>
+      <div class="row" style="flex-wrap:wrap"><span class="tk">${i + 1}º ${esc(p.ticker)}${db.nomes[p.ticker] ? ` <span class="nome" title="${esc(db.nomes[p.ticker])}">${esc(db.nomes[p.ticker])}</span>` : ''} <span class="tag">${NOME_CLASSE[p.classe]}</span></span>
         <span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
       <div class="grid">
         <div><span class="mut">Qtd</span>${p.qtd.toLocaleString('pt-BR')}</div>
@@ -252,6 +254,7 @@ async function atualizar() {
       if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
       db.precos[t] = q.regularMarketPrice;
       db.variacao[t] = q.regularMarketChangePercent;
+      if (q.longName || q.shortName) db.nomes[t] = q.longName || q.shortName;
     } catch (e) { erros.push(`${t}: ${e.message}`); }
   }));
   if (erros.length < tks.length) { db.atualizado = new Date().toISOString(); registrarDia(); }
