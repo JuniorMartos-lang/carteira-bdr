@@ -45,23 +45,13 @@ td:first-child, th:first-child { text-align:left; }
 h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
-body.off header, body.off main, body.off nav { display:none; }
-#login { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:24px 16px; gap:12px; }
-body:not(.off) #login { display:none; }
 </style>
 </head>
-<body class="off">
-<div id="login">
-  <img src="icon.svg" width="72" height="72" alt="">
-  <b style="font-size:20px">Carteira BDR</b>
-  <p class="mut" id="loginMsg">Carregando…</p>
-  <button id="btnLogin" hidden>Entrar com a conta Microsoft</button>
-</div>
+<body>
 <header>
   <small>Lucro da carteira (em aberto)</small>
   <div class="big" id="hLucro">—</div>
-  <small id="hResumo"></small><br>
-  <small id="status"></small>
+  <small id="hResumo"></small>
 </header>
 
 <main>
@@ -71,6 +61,7 @@ body:not(.off) #login { display:none; }
       <button id="btnAtualizar">Atualizar cotações</button>
     </div>
     <div class="msg dn" id="erroCot"></div>
+    <div class="msg dn" id="lembrete"></div>
     <div id="lista"></div>
     <h2 id="tEnc" hidden>Encerrados</h2>
     <div id="encerrados"></div>
@@ -106,21 +97,21 @@ body:not(.off) #login { display:none; }
     <div class="card">
       <label for="cToken">Token do brapi.dev (cotações da B3)</label>
       <input id="cToken" autocomplete="off" spellcheck="false">
-      <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado no seu OneDrive.</p>
+      <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado só neste celular.</p>
       <button id="btnToken">Salvar token</button>
     </div>
     <div class="card">
       <b>Backup</b>
-      <p class="mut">Os dados ficam no seu OneDrive, em Aplicativos › Carteira BDR › carteira.json. Use Importar para carregar o arquivo dados-iniciais.json da planilha.</p>
+      <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo no OneDrive.</p>
+      <p class="mut" id="ultBackup"></p>
       <div class="two">
-        <button id="btnExp" class="sec">Exportar</button>
-        <button id="btnImp" class="sec">Importar</button>
+        <button id="btnExp">Salvar backup</button>
+        <button id="btnImp" class="sec">Restaurar</button>
       </div>
       <input type="file" id="fileImp" accept=".json,application/json" hidden>
       <div class="msg" id="cMsg"></div>
     </div>
     <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
-    <div class="card row"><span class="mut" id="conta"></span><button class="sec" id="btnSair">Sair</button></div>
   </section>
 </main>
 
@@ -131,73 +122,15 @@ body:not(.off) #login { display:none; }
   <button data-tab="config">Ajustes</button>
 </nav>
 
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@4.30.0/lib/msal-browser.min.js" integrity="sha384-RGxxfG5yRS8DLU7ZJ8OoLhbV/BsJFHyPuMVHrTLbpj3t5Z15LnviJmaznKY/a7LZ" crossorigin="anonymous"></script>
 <script src="calc.js"></script>
 <script>
-// "ID do aplicativo (cliente)" do cadastro no portal Azure (Entra). Não é senha: o acesso exige o login da sua conta.
-const CLIENT_ID = '';
-const ARQ = 'https://graph.microsoft.com/v1.0/me/drive/special/approot:/carteira.json:/content';
-const SCOPES = ['Files.ReadWrite.AppFolder'];
+const KEY = 'carteira-bdr';
 const vazio = { ops: [], historico: [], precos: {}, variacao: {}, token: '', atualizado: null };
-let db = { ...vazio }, msalApp;
+let db;
+try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
+const salvar = () => localStorage.setItem(KEY, JSON.stringify(db));
 
 const $ = id => document.getElementById(id);
-const status = (txt, erro) => { $('status').textContent = txt; $('status').style.color = erro ? '#fecaca' : ''; };
-
-async function tokenGraph() {
-  const account = msalApp.getAllAccounts()[0];
-  try { return (await msalApp.acquireTokenSilent({ scopes: SCOPES, account })).accessToken; }
-  catch { await msalApp.acquireTokenRedirect({ scopes: SCOPES, account }); throw new Error('entrando de novo…'); }
-}
-
-async function carregar() {
-  const r = await fetch(ARQ, { headers: { Authorization: 'Bearer ' + await tokenGraph() } });
-  if (r.status === 404) return { ...vazio }; // primeiro uso: ainda não existe arquivo
-  if (!r.ok) throw new Error('OneDrive respondeu ' + r.status);
-  return { ...vazio, ...await r.json() };
-}
-
-// Salva o arquivo inteiro no OneDrive. Um envio por vez, na ordem; se falhar, o próximo envio leva tudo de novo.
-let fila = Promise.resolve();
-function salvar() {
-  const corpo = JSON.stringify(db);
-  status('Salvando no OneDrive…');
-  fila = fila.then(async () => {
-    const r = await fetch(ARQ, { method: 'PUT', body: corpo,
-      headers: { Authorization: 'Bearer ' + await tokenGraph(), 'Content-Type': 'application/json' } });
-    if (!r.ok) throw new Error('OneDrive respondeu ' + r.status);
-    status('Salvo no OneDrive');
-  }).catch(e => status('NÃO SALVO no OneDrive (' + e.message + '). Não feche o app; a próxima alteração tenta de novo.', true));
-}
-
-async function iniciar() {
-  const msg = $('loginMsg');
-  if (!CLIENT_ID) { msg.textContent = 'App ainda não configurado: falta o ID do aplicativo da Microsoft (CLIENT_ID no index.html).'; return; }
-  try {
-    msalApp = new msal.PublicClientApplication({
-      auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/consumers', redirectUri: location.origin + location.pathname },
-      cache: { cacheLocation: 'localStorage' }, // mantém o login ao reabrir o app
-    });
-    await msalApp.initialize();
-    await msalApp.handleRedirectPromise();
-    if (!msalApp.getAllAccounts().length) {
-      msg.textContent = 'Seus dados ficam no seu OneDrive. Entre para continuar.';
-      $('btnLogin').hidden = false;
-      return;
-    }
-    msg.textContent = 'Lendo seus dados do OneDrive…';
-    db = await carregar();
-  } catch (e) {
-    msg.textContent = 'Erro ao abrir: ' + e.message;
-    $('btnLogin').hidden = false;
-    return;
-  }
-  $('conta').textContent = 'Conectado como ' + msalApp.getAllAccounts()[0].username;
-  $('cToken').value = db.token;
-  document.body.classList.remove('off');
-  status('Dados do OneDrive');
-  render();
-}
 const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const pct = n => n == null ? '—' : (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 const cor = n => n == null ? '' : n >= 0 ? 'up' : 'dn';
@@ -246,6 +179,11 @@ function render() {
     <div class="card row"><span><b>${o.tipo === 'C' ? 'Compra' : 'Venda'}</b> ${esc(o.ticker)}<br>
       <span class="mut">${o.data.split('-').reverse().join('/')} · ${o.qtd.toLocaleString('pt-BR')} × ${brl(o.preco)}</span></span>
       <button class="link" data-del="${o.id}">Excluir</button></div>`).join('');
+
+  const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
+  $('ultBackup').textContent = db.ultimoBackup ? `Último backup: ${db.ultimoBackup.split('-').reverse().join('/')}` : 'Nenhum backup feito ainda.';
+  $('lembrete').textContent = db.ops.length && (dias == null || dias >= 7)
+    ? `Faça um backup em Ajustes (${dias == null ? 'nenhum feito ainda' : 'último há ' + dias + ' dias'}).` : '';
 
   renderMensal();
 }
@@ -340,13 +278,17 @@ $('ops').onclick = e => {
   db.ops = resto; salvar(); render();
 };
 
+$('cToken').value = db.token;
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
-$('btnExp').onclick = () => {
+$('btnExp').onclick = async () => {
   const { token, ...dados } = db; // o token não vai no backup
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 1)], { type: 'application/json' }));
-  a.download = `carteira-bdr-${hoje()}.json`;
-  a.click();
+  const arq = new File([JSON.stringify(dados, null, 1)], `carteira-bdr-${hoje()}.json`, { type: 'application/json' });
+  try {
+    // celular: abre a tela de compartilhar (OneDrive, Drive, e-mail...); um site não consegue gravar direto numa pasta
+    if (navigator.canShare?.({ files: [arq] })) await navigator.share({ files: [arq], title: 'Backup Carteira BDR' });
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(arq); a.download = arq.name; a.click(); }
+  } catch (e) { if (e.name !== 'AbortError') alert('Não foi possível salvar o backup: ' + e.message); return; }
+  db.ultimoBackup = hoje(); salvar(); render();
 };
 $('btnImp').onclick = () => $('fileImp').click();
 $('fileImp').onchange = async e => {
@@ -363,9 +305,7 @@ $('fileImp').onchange = async e => {
   e.target.value = '';
 };
 
-$('btnLogin').onclick = () => msalApp ? msalApp.loginRedirect({ scopes: SCOPES }) : location.reload();
-$('btnSair').onclick = () => confirm('Sair da conta Microsoft neste aparelho?') && msalApp.logoutRedirect();
-iniciar();
+render();
 </script>
 </body>
 </html>
