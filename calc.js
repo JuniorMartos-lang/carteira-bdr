@@ -6,6 +6,7 @@ function posicoes(ops, precos) {
   const pos = {};
   [...ops].sort((a, b) => a.data.localeCompare(b.data)).forEach(o => {
     const p = pos[o.ticker] ||= { ticker: o.ticker, qtd: 0, investido: 0, realizado: 0, custoVendido: 0 };
+    p.classe = o.classe || p.classe; // 'A' ação / 'F' fundo; vale o último lançamento que informou
     if (o.tipo === 'C') {
       p.qtd += o.qtd;
       p.investido += o.qtd * o.preco;

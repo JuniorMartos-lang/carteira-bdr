@@ -45,12 +45,19 @@ td:first-child, th:first-child { text-align:left; }
 h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
+.topo { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:4px 16px; }
+#hClasses { font-size:13px; line-height:1.35; margin-bottom:4px; }
+#hClasses b { font-size:14px; }
+.tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
 </style>
 </head>
 <body>
 <header>
-  <small>Lucro da carteira (em aberto)</small>
-  <div class="big" id="hLucro">—</div>
+  <div class="topo">
+    <div><small>Lucro da carteira (em aberto)</small>
+      <div class="big" id="hLucro">—</div></div>
+    <div id="hClasses"></div>
+  </div>
   <small id="hResumo"></small>
 </header>
 
@@ -74,9 +81,13 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
           <select id="fTipo"><option value="C">Compra</option><option value="V">Venda</option></select></div>
         <div><label for="fData">Data</label><input id="fData" type="date" required></div>
       </div>
-      <label for="fTicker">Ativo (ex.: AAPL34)</label>
-      <input id="fTicker" list="tickers" autocapitalize="characters" required>
-      <datalist id="tickers"></datalist>
+      <div class="two">
+        <div><label for="fTicker">Ativo (ex.: AAPL34)</label>
+          <input id="fTicker" list="tickers" autocapitalize="characters" required>
+          <datalist id="tickers"></datalist></div>
+        <div><label for="fClasse">Tipo de ativo</label>
+          <select id="fClasse" required><option value="">Escolha…</option><option value="A">Ação</option><option value="F">Fundo</option></select></div>
+      </div>
       <div class="two">
         <div><label for="fQtd">Quantidade</label><input id="fQtd" inputmode="decimal" required></div>
         <div><label for="fPreco">Preço unitário (R$)</label><input id="fPreco" inputmode="decimal" required></div>
@@ -142,9 +153,12 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const num = s => { s = String(s).trim(); return Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s); };
 const hoje = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
 const ehB3 = t => /^[A-Z]{4}\d{1,2}F?$/.test(t);
+const NOME_CLASSE = { A: 'Ação', F: 'Fundo' };
+// posições com tipo; lançamentos antigos sem tipo: código da B3 = ação, resto = fundo
+const posicoesComClasse = () => posicoes(db.ops, db.precos).map(p => ({ ...p, classe: p.classe || (ehB3(p.ticker) ? 'A' : 'F') }));
 
 function render() {
-  const ps = posicoes(db.ops, db.precos);
+  const ps = posicoesComClasse();
   const abertos = ps.filter(p => !p.encerrado).sort((a, b) => (b.pct ?? -9) - (a.pct ?? -9));
   const enc = ps.filter(p => p.encerrado);
 
@@ -153,13 +167,21 @@ function render() {
   const lucro = comPreco.reduce((s, p) => s + p.lucro, 0);
   const valor = comPreco.reduce((s, p) => s + p.valor, 0);
   $('hLucro').textContent = brl(lucro) + '  (' + pct(inv ? lucro / inv : null) + ')';
+  // lucro por tipo; só aparece o tipo que tem posição em aberto
+  $('hClasses').innerHTML = [['A', 'Carteira Ações'], ['F', 'Carteira Fundos']].map(([c, nome]) => {
+    const ab = abertos.filter(p => p.classe === c);
+    if (!ab.length) return '';
+    const l = ab.filter(p => p.valor != null).reduce((s, p) => s + p.lucro, 0);
+    const i = ab.reduce((s, p) => s + p.investido, 0);
+    return `<div>${nome}: <b>${brl(l)}</b> (${pct(i ? l / i : null)})</div>`;
+  }).join('');
   $('hResumo').textContent = `Investido ${brl(inv)} · Atual ${brl(valor)}` +
     (comPreco.length < abertos.length ? ' · faltam cotações' : '');
   $('atualizado').textContent = db.atualizado ? 'Cotações de ' + new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem cotações ainda';
 
   $('lista').innerHTML = abertos.map((p, i) => `
     <div class="card">
-      <div class="row"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
+      <div class="row"><span class="tk">${i + 1}º ${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></span>
         <span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
       <div class="grid">
         <div><span class="mut">Qtd</span>${p.qtd.toLocaleString('pt-BR')}</div>
@@ -174,7 +196,7 @@ function render() {
 
   $('tEnc').hidden = !enc.length;
   $('encerrados').innerHTML = enc.map(p => `
-    <div class="card"><div class="row"><span class="tk">${esc(p.ticker)}</span>
+    <div class="card"><div class="row"><span class="tk">${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></span>
       <span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
       <div class="mut">Custo ${brl(p.custoVendido)} · vendido</div></div>`).join('');
 
@@ -258,18 +280,25 @@ $('lista').onclick = e => {
 };
 
 $('fData').value = hoje();
+// ativo já lançado (sem diferenciar maiúsculas): usa o nome e o tipo que já existem
+const ativoExistente = v => posicoesComClasse().find(p => p.ticker.toUpperCase() === v.trim().toUpperCase());
+$('fTicker').onchange = () => {
+  const p = ativoExistente($('fTicker').value);
+  if (p) $('fClasse').value = p.classe;
+};
 $('form').onsubmit = e => {
   e.preventDefault();
-  const o = { id: Date.now(), data: $('fData').value, ticker: $('fTicker').value.trim().toUpperCase(),
-    tipo: $('fTipo').value, qtd: num($('fQtd').value), preco: num($('fPreco').value) };
+  const o = { id: Date.now(), data: $('fData').value,
+    ticker: ativoExistente($('fTicker').value)?.ticker ?? $('fTicker').value.trim().toUpperCase(),
+    tipo: $('fTipo').value, classe: $('fClasse').value, qtd: num($('fQtd').value), preco: num($('fPreco').value) };
   const msg = $('fMsg');
-  if (!o.data || !o.ticker || !(o.qtd > 0) || !(o.preco > 0)) { msg.className = 'msg dn'; msg.textContent = 'Preencha data, ativo, quantidade e preço maiores que zero.'; return; }
+  if (!o.data || !o.ticker || !o.classe || !(o.qtd > 0) || !(o.preco > 0)) { msg.className = 'msg dn'; msg.textContent = 'Preencha data, ativo, tipo de ativo, quantidade e preço maiores que zero.'; return; }
   if (o.tipo === 'V' && o.qtd > qtdEm(db.ops, o.ticker, o.data)) {
     msg.className = 'msg dn'; msg.textContent = `Você tinha ${qtdEm(db.ops, o.ticker, o.data)} de ${o.ticker} nessa data. Não dá para vender ${o.qtd}.`; return;
   }
   db.ops.push(o); salvar(); render();
   msg.className = 'msg up'; msg.textContent = `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} salva.`;
-  $('fQtd').value = $('fPreco').value = '';
+  $('fQtd').value = $('fPreco').value = $('fTicker').value = $('fClasse').value = '';
 };
 $('ops').onclick = e => {
   const id = Number(e.target.dataset.del); if (!id) return;
@@ -299,7 +328,7 @@ $('fileImp').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
     const d = JSON.parse(await f.text());
-    const ok = Array.isArray(d.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && o.qtd > 0 && o.preco > 0);
+    const ok = Array.isArray(d.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && [undefined, 'A', 'F'].includes(o.classe) && o.qtd > 0 && o.preco > 0);
     if (!ok) throw new Error('arquivo não parece um backup deste app');
     if (db.ops.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
     db = { ...vazio, ...d, token: db.token };

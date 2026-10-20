@@ -18,6 +18,11 @@ assert.ok(disb.encerrado);
 perto(disb.lucro, -166); // igual à aba Ativos Encerrados
 perto(disb.pct, -166 / 8769);
 
+// Tipo do ativo (ação/fundo) vem dos lançamentos
+const [f] = posicoes([{ data: '2026-01-01', ticker: 'FUNDO X', tipo: 'C', qtd: 1, preco: 100, classe: 'F' },
+  { data: '2026-01-02', ticker: 'FUNDO X', tipo: 'C', qtd: 1, preco: 100 }], {});
+assert.strictEqual(f.classe, 'F');
+
 // Venda parcial mantém o preço médio
 const [p] = posicoes([
   { data: '2026-01-01', ticker: 'X', tipo: 'C', qtd: 10, preco: 10 },
