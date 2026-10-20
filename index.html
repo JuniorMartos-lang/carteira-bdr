@@ -197,7 +197,10 @@ function render() {
   }).join('');
   $('hResumo').textContent = `Total: Investido ${brl(inv)} · Atual ${brl(valor)}` +
     (comPreco.length < abertos.length ? ' · faltam cotações' : '');
-  $('atualizado').textContent = db.atualizado ? 'Cotações de ' + new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem cotações ainda';
+  const quando = db.atualizado && new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  $('atualizado').innerHTML = falhou
+    ? `<b class="dn">Não foi possível atualizar</b><br>${quando ? 'Última: ' + quando : 'Nenhuma cotação ainda'}`
+    : quando ? 'Cotações de ' + quando : 'Sem cotações ainda';
 
   $('lista').innerHTML = abertos.map((p, i) => `
     <div class="card">
@@ -258,8 +261,9 @@ function registrarDia() {
   db.historico = db.historico.filter(s => s.data !== d).concat({ data: d, v });
 }
 
+let falhou = false; // última tentativa de atualizar não trouxe nenhuma cotação
 async function atualizar() {
-  if (!db.token) { $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
+  if (!db.token) { falhou = true; render(); $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
   const tks = posicoes(db.ops, {}).filter(p => !p.encerrado && ehB3(p.ticker)).map(p => p.ticker);
   $('btnAtualizar').disabled = true; $('erroCot').textContent = '';
   const erros = [];
@@ -285,9 +289,16 @@ async function atualizar() {
   fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL').then(r => r.json())
     .then(j => { if (!j.USDBRL) throw new Error('sem dados'); db.indices.usd = { v: +j.USDBRL.bid, pct: +j.USDBRL.pctChange }; })
     .catch(e => erros.push('Dólar: ' + e.message))]);
-  if (tks.some(t => !erros.some(e => e.startsWith(t + ':')))) { db.atualizado = new Date().toISOString(); registrarDia(); }
+  const algumAtivo = tks.some(t => !erros.some(e => e.startsWith(t + ':')));
+  if (algumAtivo) { db.atualizado = new Date().toISOString(); registrarDia(); }
+  // sem ativos da B3 na carteira, conta como falha só se IBOV e dólar falharem
+  falhou = tks.length ? !algumAtivo : erros.length >= 2;
   salvar(); render();
-  $('erroCot').textContent = erros.length ? 'Sem cotação para ' + erros.join(' · ') : '';
+  // falha total: só o motivo; falha parcial: quais ativos ficaram sem cotação
+  const motivo = (erros[0] || '').split(': ').slice(1).join(': ');
+  $('erroCot').textContent = falhou
+    ? 'Motivo: ' + (/fetch|network/i.test(motivo) ? 'sem conexão com a internet ou com o serviço de cotações.' : motivo)
+    : erros.length ? 'Sem cotação para ' + erros.join(' · ') : '';
   $('btnAtualizar').disabled = false;
 }
 
