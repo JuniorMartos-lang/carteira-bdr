@@ -134,6 +134,9 @@ const $ = id => document.getElementById(id);
 const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const pct = n => n == null ? '—' : (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 const cor = n => n == null ? '' : n >= 0 ? 'up' : 'dn';
+// variação do dia (vem do brapi em %, ex.: 1.26): ▲ verde / ▼ vermelho
+const dia = v => v == null ? '<span class="mut">—</span>' :
+  `<b class="${cor(v)}">${v >= 0 ? '▲ +' : '▼ '}${pct(v / 100)}</b>`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // aceita "1.234,56" e "40.75"; com vírgula, o ponto é separador de milhar
 const num = s => { s = String(s).trim(); return Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s); };
@@ -162,9 +165,10 @@ function render() {
         <div><span class="mut">Qtd</span>${p.qtd.toLocaleString('pt-BR')}</div>
         <div><span class="mut">Preço médio</span>${brl(p.pm)}</div>
         <div ${ehB3(p.ticker) ? '' : `data-manual="${esc(p.ticker)}" style="cursor:pointer;text-decoration:underline dotted"`}>
-          <span class="mut">Cotação ${db.variacao[p.ticker] != null ? `<span class="${cor(db.variacao[p.ticker])}">${pct(db.variacao[p.ticker] / 100)}</span>` : ''}</span>${brl(p.preco)}</div>
+          <span class="mut">Cotação</span>${brl(p.preco)}</div>
         <div><span class="mut">Investido</span>${brl(p.investido)}</div>
         <div><span class="mut">Valor atual</span>${brl(p.valor)}</div>
+        <div><span class="mut">Hoje</span>${dia(db.variacao[p.ticker])}</div>
       </div>
     </div>`).join('') || '<p class="mut">Nenhum ativo. Lance uma compra na aba Lançar ou importe um backup em Ajustes.</p>';
 
