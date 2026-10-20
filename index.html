@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carteira BDR</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root { --bg:#f5f6f8; --card:#fff; --tx:#16181d; --mut:#6b7280; --bd:#e5e7eb; --pri:#0f766e; --up:#15803d; --dn:#b91c1c; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#0f1115; --card:#1a1d23; --tx:#e8eaed; --mut:#9aa0a6; --bd:#2b2f36; --pri:#2dd4bf; --up:#4ade80; --dn:#f87171; }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-bottom:72px; }
+header { background:var(--pri); color:#fff; padding:16px 16px 14px; padding-top:max(16px, env(safe-area-inset-top)); }
+@media (prefers-color-scheme: dark) { header { color:#06201d; } }
+header small { opacity:.85; }
+header .big { font-size:26px; font-weight:700; margin:2px 0; }
+main { padding:12px 16px; max-width:640px; margin:0 auto; }
+.card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+.row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.tk { font-weight:700; font-size:17px; }
+.mut { color:var(--mut); font-size:13px; }
+.up { color:var(--up); } .dn { color:var(--dn); }
+.grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 8px; margin-top:6px; }
+.grid div span { display:block; }
+button, .btn { font:inherit; border:0; border-radius:10px; padding:11px 14px; background:var(--pri); color:#fff; font-weight:600; cursor:pointer; }
+@media (prefers-color-scheme: dark) { button, .btn { color:#06201d; } }
+button.sec { background:transparent; color:var(--pri); border:1px solid var(--bd); }
+button.link { background:none; color:var(--dn); padding:4px 6px; font-weight:500; }
+button:disabled { opacity:.5; }
+label { display:block; font-size:13px; color:var(--mut); margin:8px 0 3px; }
+input, select { width:100%; font:inherit; padding:10px; border:1px solid var(--bd); border-radius:8px; background:var(--card); color:var(--tx); }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--card); border-top:1px solid var(--bd); padding-bottom:env(safe-area-inset-bottom); }
+nav button { flex:1; background:none; color:var(--mut); border-radius:0; padding:14px 0; font-weight:500; }
+nav button.on { color:var(--pri); font-weight:700; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+td, th { padding:6px 4px; text-align:right; border-bottom:1px solid var(--bd); }
+td:first-child, th:first-child { text-align:left; }
+h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
+.msg { font-size:13px; margin-top:8px; }
+[hidden] { display:none !important; }
+body.off header, body.off main, body.off nav { display:none; }
+#login { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:24px 16px; gap:12px; }
+body:not(.off) #login { display:none; }
+</style>
+</head>
+<body class="off">
+<div id="login">
+  <img src="icon.svg" width="72" height="72" alt="">
+  <b style="font-size:20px">Carteira BDR</b>
+  <p class="mut" id="loginMsg">Carregando…</p>
+  <button id="btnLogin" hidden>Entrar com a conta Microsoft</button>
+</div>
+<header>
+  <small>Lucro da carteira (em aberto)</small>
+  <div class="big" id="hLucro">—</div>
+  <small id="hResumo"></small><br>
+  <small id="status"></small>
+</header>
+
+<main>
+  <section id="tab-carteira">
+    <div class="row" style="margin-bottom:10px">
+      <span class="mut" id="atualizado"></span>
+      <button id="btnAtualizar">Atualizar cotações</button>
+    </div>
+    <div class="msg dn" id="erroCot"></div>
+    <div id="lista"></div>
+    <h2 id="tEnc" hidden>Encerrados</h2>
+    <div id="encerrados"></div>
+  </section>
+
+  <section id="tab-lancar" hidden>
+    <form class="card" id="form">
+      <div class="two">
+        <div><label for="fTipo">Operação</label>
+          <select id="fTipo"><option value="C">Compra</option><option value="V">Venda</option></select></div>
+        <div><label for="fData">Data</label><input id="fData" type="date" required></div>
+      </div>
+      <label for="fTicker">Ativo (ex.: AAPL34)</label>
+      <input id="fTicker" list="tickers" autocapitalize="characters" required>
+      <datalist id="tickers"></datalist>
+      <div class="two">
+        <div><label for="fQtd">Quantidade</label><input id="fQtd" inputmode="decimal" required></div>
+        <div><label for="fPreco">Preço unitário (R$)</label><input id="fPreco" inputmode="decimal" required></div>
+      </div>
+      <div class="msg" id="fMsg"></div>
+      <button style="width:100%;margin-top:12px">Salvar</button>
+    </form>
+    <h2>Lançamentos</h2>
+    <div id="ops"></div>
+  </section>
+
+  <section id="tab-mensal" hidden>
+    <div class="card" style="overflow-x:auto"><table id="tMensal"></table></div>
+    <p class="mut">O app guarda o valor da carteira a cada atualização de cotação (um registro por dia). O lucro do mês é a diferença do lucro acumulado entre o fim de um mês e o fim do anterior.</p>
+  </section>
+
+  <section id="tab-config" hidden>
+    <div class="card">
+      <label for="cToken">Token do brapi.dev (cotações da B3)</label>
+      <input id="cToken" autocomplete="off" spellcheck="false">
+      <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado no seu OneDrive.</p>
+      <button id="btnToken">Salvar token</button>
+    </div>
+    <div class="card">
+      <b>Backup</b>
+      <p class="mut">Os dados ficam no seu OneDrive, em Aplicativos › Carteira BDR › carteira.json. Use Importar para carregar o arquivo dados-iniciais.json da planilha.</p>
+      <div class="two">
+        <button id="btnExp" class="sec">Exportar</button>
+        <button id="btnImp" class="sec">Importar</button>
+      </div>
+      <input type="file" id="fileImp" accept=".json,application/json" hidden>
+      <div class="msg" id="cMsg"></div>
+    </div>
+    <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
+    <div class="card row"><span class="mut" id="conta"></span><button class="sec" id="btnSair">Sair</button></div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="carteira" class="on">Carteira</button>
+  <button data-tab="lancar">Lançar</button>
+  <button data-tab="mensal">Mensal</button>
+  <button data-tab="config">Ajustes</button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@4.30.0/lib/msal-browser.min.js" integrity="sha384-RGxxfG5yRS8DLU7ZJ8OoLhbV/BsJFHyPuMVHrTLbpj3t5Z15LnviJmaznKY/a7LZ" crossorigin="anonymous"></script>
+<script src="calc.js"></script>
+<script>
+// "ID do aplicativo (cliente)" do cadastro no portal Azure (Entra). Não é senha: o acesso exige o login da sua conta.
+const CLIENT_ID = '';
+const ARQ = 'https://graph.microsoft.com/v1.0/me/drive/special/approot:/carteira.json:/content';
+const SCOPES = ['Files.ReadWrite.AppFolder'];
+const vazio = { ops: [], historico: [], precos: {}, variacao: {}, token: '', atualizado: null };
+let db = { ...vazio }, msalApp;
+
+const $ = id => document.getElementById(id);
+const status = (txt, erro) => { $('status').textContent = txt; $('status').style.color = erro ? '#fecaca' : ''; };
+
+async function tokenGraph() {
+  const account = msalApp.getAllAccounts()[0];
+  try { return (await msalApp.acquireTokenSilent({ scopes: SCOPES, account })).accessToken; }
+  catch { await msalApp.acquireTokenRedirect({ scopes: SCOPES, account }); throw new Error('entrando de novo…'); }
+}
+
+async function carregar() {
+  const r = await fetch(ARQ, { headers: { Authorization: 'Bearer ' + await tokenGraph() } });
+  if (r.status === 404) return { ...vazio }; // primeiro uso: ainda não existe arquivo
+  if (!r.ok) throw new Error('OneDrive respondeu ' + r.status);
+  return { ...vazio, ...await r.json() };
+}
+
+// Salva o arquivo inteiro no OneDrive. Um envio por vez, na ordem; se falhar, o próximo envio leva tudo de novo.
+let fila = Promise.resolve();
+function salvar() {
+  const corpo = JSON.stringify(db);
+  status('Salvando no OneDrive…');
+  fila = fila.then(async () => {
+    const r = await fetch(ARQ, { method: 'PUT', body: corpo,
+      headers: { Authorization: 'Bearer ' + await tokenGraph(), 'Content-Type': 'application/json' } });
+    if (!r.ok) throw new Error('OneDrive respondeu ' + r.status);
+    status('Salvo no OneDrive');
+  }).catch(e => status('NÃO SALVO no OneDrive (' + e.message + '). Não feche o app; a próxima alteração tenta de novo.', true));
+}
+
+async function iniciar() {
+  const msg = $('loginMsg');
+  if (!CLIENT_ID) { msg.textContent = 'App ainda não configurado: falta o ID do aplicativo da Microsoft (CLIENT_ID no index.html).'; return; }
+  try {
+    msalApp = new msal.PublicClientApplication({
+      auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/consumers', redirectUri: location.origin + location.pathname },
+      cache: { cacheLocation: 'localStorage' }, // mantém o login ao reabrir o app
+    });
+    await msalApp.initialize();
+    await msalApp.handleRedirectPromise();
+    if (!msalApp.getAllAccounts().length) {
+      msg.textContent = 'Seus dados ficam no seu OneDrive. Entre para continuar.';
+      $('btnLogin').hidden = false;
+      return;
+    }
+    msg.textContent = 'Lendo seus dados do OneDrive…';
+    db = await carregar();
+  } catch (e) {
+    msg.textContent = 'Erro ao abrir: ' + e.message;
+    $('btnLogin').hidden = false;
+    return;
+  }
+  $('conta').textContent = 'Conectado como ' + msalApp.getAllAccounts()[0].username;
+  $('cToken').value = db.token;
+  document.body.classList.remove('off');
+  status('Dados do OneDrive');
+  render();
+}
+const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const pct = n => n == null ? '—' : (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+const cor = n => n == null ? '' : n >= 0 ? 'up' : 'dn';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// aceita "1.234,56" e "40.75"; com vírgula, o ponto é separador de milhar
+const num = s => { s = String(s).trim(); return Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s); };
+const hoje = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
+const ehB3 = t => /^[A-Z]{4}\d{1,2}F?$/.test(t);
+
+function render() {
+  const ps = posicoes(db.ops, db.precos);
+  const abertos = ps.filter(p => !p.encerrado).sort((a, b) => (b.pct ?? -9) - (a.pct ?? -9));
+  const enc = ps.filter(p => p.encerrado);
+
+  const inv = abertos.reduce((s, p) => s + p.investido, 0);
+  const comPreco = abertos.filter(p => p.valor != null);
+  const lucro = comPreco.reduce((s, p) => s + p.lucro, 0);
+  const valor = comPreco.reduce((s, p) => s + p.valor, 0);
+  $('hLucro').textContent = brl(lucro) + '  (' + pct(inv ? lucro / inv : null) + ')';
+  $('hResumo').textContent = `Investido ${brl(inv)} · Atual ${brl(valor)}` +
+    (comPreco.length < abertos.length ? ' · faltam cotações' : '');
+  $('atualizado').textContent = db.atualizado ? 'Cotações de ' + new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem cotações ainda';
+
+  $('lista').innerHTML = abertos.map((p, i) => `
+    <div class="card">
+      <div class="row"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
+        <span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
+      <div class="grid">
+        <div><span class="mut">Qtd</span>${p.qtd.toLocaleString('pt-BR')}</div>
+        <div><span class="mut">Preço médio</span>${brl(p.pm)}</div>
+        <div ${ehB3(p.ticker) ? '' : `data-manual="${esc(p.ticker)}" style="cursor:pointer;text-decoration:underline dotted"`}>
+          <span class="mut">Cotação ${db.variacao[p.ticker] != null ? `<span class="${cor(db.variacao[p.ticker])}">${pct(db.variacao[p.ticker] / 100)}</span>` : ''}</span>${brl(p.preco)}</div>
+        <div><span class="mut">Investido</span>${brl(p.investido)}</div>
+        <div><span class="mut">Valor atual</span>${brl(p.valor)}</div>
+      </div>
+    </div>`).join('') || '<p class="mut">Nenhum ativo. Lance uma compra na aba Lançar ou importe um backup em Ajustes.</p>';
+
+  $('tEnc').hidden = !enc.length;
+  $('encerrados').innerHTML = enc.map(p => `
+    <div class="card"><div class="row"><span class="tk">${esc(p.ticker)}</span>
+      <span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
+      <div class="mut">Custo ${brl(p.custoVendido)} · vendido</div></div>`).join('');
+
+  $('tickers').innerHTML = ps.map(p => `<option value="${esc(p.ticker)}">`).join('');
+  $('ops').innerHTML = [...db.ops].sort((a, b) => b.data.localeCompare(a.data)).map(o => `
+    <div class="card row"><span><b>${o.tipo === 'C' ? 'Compra' : 'Venda'}</b> ${esc(o.ticker)}<br>
+      <span class="mut">${o.data.split('-').reverse().join('/')} · ${o.qtd.toLocaleString('pt-BR')} × ${brl(o.preco)}</span></span>
+      <button class="link" data-del="${o.id}">Excluir</button></div>`).join('');
+
+  renderMensal();
+}
+
+function renderMensal() {
+  const ms = mensal(db.historico);
+  const tks = [...new Set(ms.flatMap(m => Object.keys(m.linhas)))].sort();
+  const nomeMes = m => new Date(m + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+  $('tMensal').innerHTML = !ms.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
+    `<tr><th>Ativo</th>${ms.map(m => `<th>${nomeMes(m.mes)}</th>`).join('')}</tr>` +
+    tks.map(t => `<tr><td>${esc(t)}</td>${ms.map(m => { const l = m.linhas[t]; return `<td class="${cor(l?.pct)}">${l ? pct(l.pct) : ''}</td>`; }).join('')}</tr>`).join('') +
+    `<tr><th>Total %</th>${ms.map(m => `<th class="${cor(m.pct)}">${pct(m.pct)}</th>`).join('')}</tr>` +
+    `<tr><th>Lucro R$</th>${ms.map(m => `<th class="${cor(m.lucro)}">${brl(m.lucro)}</th>`).join('')}</tr>`;
+}
+
+// Guarda o valor de cada posição hoje (um registro por dia) para a aba Mensal
+function registrarDia() {
+  const d = hoje(), mes = d.slice(0, 7), v = {};
+  posicoes(db.ops, db.precos).forEach(p => {
+    if (!p.encerrado && p.valor != null) v[p.ticker] = [p.valor, p.investido];
+    // encerrado neste mês: registra o resultado final para entrar no lucro do mês
+    // shortcut: usa o resultado acumulado do ticker; se recomprar e vender de novo no mesmo ticker, o mensal mistura as rodadas
+    const ultima = db.ops.filter(o => o.ticker === p.ticker).map(o => o.data).sort().pop();
+    if (p.encerrado && ultima.slice(0, 7) === mes) v[p.ticker] = [p.custoVendido + p.realizado, p.custoVendido];
+  });
+  db.historico = db.historico.filter(s => s.data !== d).concat({ data: d, v });
+}
+
+async function atualizar() {
+  if (!db.token) { $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
+  const tks = posicoes(db.ops, {}).filter(p => !p.encerrado && ehB3(p.ticker)).map(p => p.ticker);
+  $('btnAtualizar').disabled = true; $('erroCot').textContent = '';
+  const erros = [];
+  // uma requisição por ativo: o plano grátis do brapi aceita 1 ativo por chamada
+  await Promise.all(tks.map(async t => {
+    try {
+      const r = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?token=${encodeURIComponent(db.token)}`);
+      const j = await r.json();
+      const q = j.results?.[0];
+      if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
+      db.precos[t] = q.regularMarketPrice;
+      db.variacao[t] = q.regularMarketChangePercent;
+    } catch (e) { erros.push(`${t}: ${e.message}`); }
+  }));
+  if (erros.length < tks.length) { db.atualizado = new Date().toISOString(); registrarDia(); }
+  salvar(); render();
+  $('erroCot').textContent = erros.length ? 'Sem cotação para ' + erros.join(' · ') : '';
+  $('btnAtualizar').disabled = false;
+}
+
+// --- eventos ---
+document.querySelector('nav').onclick = e => {
+  const t = e.target.dataset.tab; if (!t) return;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b === e.target));
+  document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
+  scrollTo(0, 0);
+};
+$('btnAtualizar').onclick = atualizar;
+
+$('lista').onclick = e => {
+  const el = e.target.closest('[data-manual]'); if (!el) return;
+  const t = el.dataset.manual;
+  const v = prompt(`Valor atual por cota de ${t} (R$):`, db.precos[t] ?? '');
+  if (v == null) return;
+  const n = num(v);
+  if (!(n > 0)) return alert('Valor inválido.');
+  db.precos[t] = n; registrarDia(); salvar(); render();
+};
+
+$('fData').value = hoje();
+$('form').onsubmit = e => {
+  e.preventDefault();
+  const o = { id: Date.now(), data: $('fData').value, ticker: $('fTicker').value.trim().toUpperCase(),
+    tipo: $('fTipo').value, qtd: num($('fQtd').value), preco: num($('fPreco').value) };
+  const msg = $('fMsg');
+  if (!o.data || !o.ticker || !(o.qtd > 0) || !(o.preco > 0)) { msg.className = 'msg dn'; msg.textContent = 'Preencha data, ativo, quantidade e preço maiores que zero.'; return; }
+  if (o.tipo === 'V' && o.qtd > qtdEm(db.ops, o.ticker, o.data)) {
+    msg.className = 'msg dn'; msg.textContent = `Você tinha ${qtdEm(db.ops, o.ticker, o.data)} de ${o.ticker} nessa data. Não dá para vender ${o.qtd}.`; return;
+  }
+  db.ops.push(o); salvar(); render();
+  msg.className = 'msg up'; msg.textContent = `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} salva.`;
+  $('fQtd').value = $('fPreco').value = '';
+};
+$('ops').onclick = e => {
+  const id = Number(e.target.dataset.del); if (!id) return;
+  const o = db.ops.find(x => x.id === id);
+  const resto = db.ops.filter(x => x !== o);
+  // não deixa apagar uma compra que deixaria uma venda posterior sem saldo
+  const furo = o.tipo === 'C' && resto.some(v => v.tipo === 'V' && v.ticker === o.ticker && qtdEm(resto, o.ticker, v.data) < 0);
+  if (furo) return alert('Essa compra cobre uma venda posterior. Exclua a venda primeiro.');
+  if (!confirm(`Excluir ${o.tipo === 'C' ? 'compra' : 'venda'} de ${o.ticker} em ${o.data.split('-').reverse().join('/')}?`)) return;
+  db.ops = resto; salvar(); render();
+};
+
+$('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
+$('btnExp').onclick = () => {
+  const { token, ...dados } = db; // o token não vai no backup
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 1)], { type: 'application/json' }));
+  a.download = `carteira-bdr-${hoje()}.json`;
+  a.click();
+};
+$('btnImp').onclick = () => $('fileImp').click();
+$('fileImp').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    const ok = Array.isArray(d.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && o.qtd > 0 && o.preco > 0);
+    if (!ok) throw new Error('arquivo não parece um backup deste app');
+    if (db.ops.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
+    db = { ...vazio, ...d, token: db.token };
+    salvar(); render();
+    $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.ops.length} lançamentos.`;
+  } catch (err) { $('cMsg').className = 'msg dn'; $('cMsg').textContent = 'Erro ao importar: ' + err.message; }
+  e.target.value = '';
+};
+
+$('btnLogin').onclick = () => msalApp ? msalApp.loginRedirect({ scopes: SCOPES }) : location.reload();
+$('btnSair').onclick = () => confirm('Sair da conta Microsoft neste aparelho?') && msalApp.logoutRedirect();
+iniciar();
+</script>
+</body>
+</html>
