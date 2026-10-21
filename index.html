@@ -9,15 +9,24 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script>
+// Tema (Ajustes → Aparência): 'auto' segue o celular. Roda antes de desenhar a tela, para não piscar.
+function aplicarTema() {
+  let t = 'auto'; try { t = localStorage.getItem('carteira-bdr-tema') || 'auto'; } catch {}
+  const escuro = t === 'escuro' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = escuro ? 'dark' : 'light';
+}
+aplicarTema();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicarTema);
+</script>
 <style>
 :root { --bg:#f5f6f8; --card:#fff; --tx:#16181d; --mut:#6b7280; --bd:#e5e7eb; --pri:#0f766e; --up:#15803d; --dn:#b91c1c; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg:#0f1115; --card:#1a1d23; --tx:#e8eaed; --mut:#9aa0a6; --bd:#2b2f36; --pri:#2dd4bf; --up:#4ade80; --dn:#f87171; }
-}
+/* modo escuro: data-theme é definido no <head> pela escolha em Ajustes (Automático segue o celular) */
+:root[data-theme=dark] { color-scheme:dark; --bg:#0f1115; --card:#1a1d23; --tx:#e8eaed; --mut:#9aa0a6; --bd:#2b2f36; --pri:#2dd4bf; --up:#4ade80; --dn:#f87171; }
 * { box-sizing: border-box; }
 body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-bottom:72px; }
 header { background:var(--pri); color:#fff; padding:16px 16px 14px; padding-top:max(16px, env(safe-area-inset-top)); }
-@media (prefers-color-scheme: dark) { header { color:#06201d; } }
+:where(:root[data-theme=dark]) header { color:#06201d; }
 header small { opacity:.85; }
 header .big { font-size:26px; font-weight:700; margin:2px 0; }
 main { padding:12px 16px; max-width:640px; margin:0 auto; }
@@ -30,7 +39,7 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 .grid { margin-top:6px; }
 .grid > div { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-top:1px dashed var(--bd); }
 button, .btn { font:inherit; border:0; border-radius:10px; padding:11px 14px; background:var(--pri); color:#fff; font-weight:600; cursor:pointer; }
-@media (prefers-color-scheme: dark) { button, .btn { color:#06201d; } }
+:where(:root[data-theme=dark]) button, :where(:root[data-theme=dark]) .btn { color:#06201d; } /* mesma força de 'button' e '.btn': o menu e os botões secundários mantêm a cor deles */
 button.sec { background:transparent; color:var(--pri); border:1px solid var(--bd); }
 button.link { background:none; color:var(--dn); padding:4px 6px; font-weight:500; }
 button:disabled { opacity:.5; }
@@ -54,14 +63,14 @@ header .centro { text-align:center; }
 #hIndices { display:flex; justify-content:flex-end; gap:12px; font-size:12px; margin:-4px 0 6px; }
 #hIndices:empty { display:none; }
 #hIndices .iup { color:#bbf7d0; } #hIndices .idn { color:#fecaca; }
-@media (prefers-color-scheme: dark) { #hIndices .iup { color:#14532d; } #hIndices .idn { color:#7f1d1d; } }
+:where(:root[data-theme=dark]) #hIndices .iup { color:#14532d; } :where(:root[data-theme=dark]) #hIndices .idn { color:#7f1d1d; }
 /* um retângulo por tipo; se só houver um tipo, ocupa a largura toda */
 #hClasses { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-top:12px; }
 #hClasses .cls { border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.1); border-radius:10px; padding:8px 10px; font-size:12px; line-height:1.45; }
 #hClasses .cls .tit { font-size:12px; font-weight:600; opacity:.9; }
 #hClasses .cls .luc { font-size:16px; font-weight:700; }
 #hClasses .cls .det { opacity:.85; }
-@media (prefers-color-scheme: dark) { #hClasses .cls { border-color:rgba(0,0,0,.25); background:rgba(0,0,0,.08); } }
+:where(:root[data-theme=dark]) #hClasses .cls { border-color:rgba(0,0,0,.25); background:rgba(0,0,0,.08); }
 /* código, nome e tipo na mesma linha; nome longo é cortado com "…" */
 .topo { display:flex; align-items:center; gap:6px; }
 .topo .tk, .topo .tag { flex-shrink:0; }
@@ -208,6 +217,14 @@ label.check input { width:auto; margin:0; }
   </section>
 
   <section id="tab-config" hidden>
+    <div class="card">
+      <label for="cTema" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Aparência</b></label>
+      <select id="cTema">
+        <option value="auto">Automático (igual ao celular)</option>
+        <option value="claro">Claro</option>
+        <option value="escuro">Escuro</option>
+      </select>
+    </div>
     <div class="card">
       <b>Senha do app</b>
       <p class="mut" id="sStatus"></p>
@@ -676,6 +693,8 @@ $('ops').onclick = e => {
   db.ops = resto; salvar(); render();
 };
 
+try { $('cTema').value = localStorage.getItem('carteira-bdr-tema') || 'auto'; } catch {}
+$('cTema').onchange = e => { localStorage.setItem('carteira-bdr-tema', e.target.value); aplicarTema(); };
 $('cToken').value = db.token;
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
 $('btnExp').onclick = async () => {
