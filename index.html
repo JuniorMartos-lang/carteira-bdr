@@ -436,16 +436,24 @@ function render() {
   const ant = {};
   [...db.historico].sort((a, b) => a.data.localeCompare(b.data)).forEach(s => { if (s.data < dataPregao()) Object.assign(ant, s.v); });
   const doDia = p => { const a = ant[p.ticker]; if (!a || p.valor == null) return {};
-    const r = p.lucro - (a[0] - a[1]); return { r, p: r / a[0] }; };
+    const r = p.lucro - (a[0] - a[1]); return { r, p: r / a[0], base: a[0] }; };
   const comDia = abertos.map(p => ({ ...p, d: doDia(p) }));
+  // linha Total do Resumo: R$ somados; % da carteira inteira (não a soma dos %), igual ao topo do app
+  const comHoje = comDia.filter(p => p.d.r != null);
+  const hojeR = comHoje.length ? comHoje.reduce((s, p) => s + p.d.r, 0) : null;
+  const hojeP = hojeR == null ? null : hojeR / comHoje.reduce((s, p) => s + p.d.base, 0);
+  const lucroP = inv ? lucro / inv : null;
   tabelas.resumo = !comDia.length ? null : [['Ativo', 'Hoje %', 'Hoje R$', 'Lucro R$', 'Lucro %'],
-    ...comDia.map((p, i) => [`${i + 1}º ${p.ticker}`, xP(p.d.p), xR(p.d.r), xR(p.lucro), xP(p.pct)])];
+    ...comDia.map((p, i) => [`${i + 1}º ${p.ticker}`, xP(p.d.p), xR(p.d.r), xR(p.lucro), xP(p.pct)]),
+    ['Total', xP(hojeP), xR(hojeR), xR(lucro), xP(lucroP)]];
   // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
   $('tResumo').innerHTML = !comDia.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
     '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro R$ e %</th></tr>' +
     comDia.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td>
       <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${reais(p.d.r)}</td>
-      <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('');
+      <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('') +
+    `<tr class="soma"><th>Total</th><th class="${cor(hojeP)}">${pct(hojeP)}</th><th class="${cor(hojeR)}">${reais(hojeR)}</th>
+      <th class="${cor(lucro)}">${reais(lucro)} <small>${pct(lucroP)}</small></th></tr>`;
   $('lista').innerHTML = comDia.map((p, i) => `
     <div class="card">
       <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
