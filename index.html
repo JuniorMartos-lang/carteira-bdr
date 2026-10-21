@@ -107,19 +107,23 @@ label.check input { width:auto; margin:0; }
 </header>
 
 <main>
-  <section id="tab-carteira">
-    <div class="row" style="margin-bottom:10px">
+  <!-- barra de cotações: aparece no Resumo e na Carteira -->
+  <div id="barra" style="margin-bottom:10px">
+    <div class="row">
       <span class="mut" id="atualizado"></span>
       <button id="btnAtualizar">Atualizar cotações</button>
     </div>
     <div class="msg dn" id="erroCot"></div>
     <div class="msg dn" id="lembrete"></div>
+  </div>
+
+  <section id="tab-carteira" hidden>
     <div id="lista"></div>
     <h2 id="tEnc" hidden>Encerrados</h2>
     <div id="encerrados"></div>
   </section>
 
-  <section id="tab-resumo" hidden>
+  <section id="tab-resumo">
     <div class="card" style="padding:6px 8px; overflow-x:auto"><table id="tResumo"></table></div>
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
   </section>
@@ -200,8 +204,8 @@ label.check input { width:auto; margin:0; }
 </main>
 
 <nav>
-  <button data-tab="carteira" class="on">Carteira</button>
-  <button data-tab="resumo">Resumo</button>
+  <button data-tab="resumo" class="on">Resumo</button>
+  <button data-tab="carteira">Carteira</button>
   <button data-tab="lancar">Lançar</button>
   <button data-tab="diario">Diário</button>
   <button data-tab="mensal">Mensal</button>
@@ -470,6 +474,7 @@ document.querySelector('nav').onclick = e => {
   const t = e.target.dataset.tab; if (!t) return;
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b === e.target));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
+  $('barra').hidden = !['resumo', 'carteira'].includes(t);
   scrollTo(0, 0);
 };
 $('btnAtualizar').onclick = atualizar;
