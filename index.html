@@ -39,7 +39,7 @@ input, select { width:100%; font:inherit; padding:10px; border:1px solid var(--b
 .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .two > div { min-width:0; } /* campo de data não estoura a coluna */
 nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--card); border-top:1px solid var(--bd); padding-bottom:env(safe-area-inset-bottom); }
-nav button { flex:1; background:none; color:var(--mut); border-radius:0; padding:14px 0; font-weight:500; }
+nav button { flex:1; background:none; color:var(--mut); border-radius:0; padding:14px 0; font-weight:500; font-size:13px; }
 nav button.on { color:var(--pri); font-weight:700; }
 table { width:100%; border-collapse:collapse; font-size:14px; }
 td, th { padding:6px 4px; text-align:right; border-bottom:1px solid var(--bd); }
@@ -79,6 +79,10 @@ header .centro { text-align:center; }
 .combo .lista { border:1px solid var(--bd); border-radius:8px; margin-top:4px; max-height:220px; overflow:auto; }
 .combo .lista label { display:flex; align-items:center; gap:10px; margin:0; padding:9px 10px; color:var(--tx); font-size:15px; border-bottom:1px solid var(--bd); }
 .combo .lista input { width:auto; margin:0; }
+/* Resumo: tabela compacta para caber na largura do celular */
+#tResumo { font-size:13px; }
+#tResumo td, #tResumo th { padding:7px 3px; white-space:nowrap; }
+#tResumo td:first-child { white-space:normal; }
 .tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
 </style>
 </head>
@@ -104,6 +108,11 @@ header .centro { text-align:center; }
     <div id="lista"></div>
     <h2 id="tEnc" hidden>Encerrados</h2>
     <div id="encerrados"></div>
+  </section>
+
+  <section id="tab-resumo" hidden>
+    <div class="card" style="padding:6px 8px; overflow-x:auto"><table id="tResumo"></table></div>
+    <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
   </section>
 
   <section id="tab-lancar" hidden>
@@ -182,6 +191,7 @@ header .centro { text-align:center; }
 
 <nav>
   <button data-tab="carteira" class="on">Carteira</button>
+  <button data-tab="resumo">Resumo</button>
   <button data-tab="lancar">Lançar</button>
   <button data-tab="diario">Diário</button>
   <button data-tab="mensal">Mensal</button>
@@ -252,7 +262,14 @@ function render() {
   [...db.historico].sort((a, b) => a.data.localeCompare(b.data)).forEach(s => { if (s.data < dataPregao()) Object.assign(ant, s.v); });
   const doDia = p => { const a = ant[p.ticker]; if (!a || p.valor == null) return {};
     const r = p.lucro - (a[0] - a[1]); return { r, p: r / a[0] }; };
-  $('lista').innerHTML = abertos.map(p => ({ ...p, d: doDia(p) })).map((p, i) => `
+  const comDia = abertos.map(p => ({ ...p, d: doDia(p) }));
+  // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
+  $('tResumo').innerHTML = !comDia.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
+    '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro</th></tr>' +
+    comDia.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td>
+      <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${brl(p.d.r)}</td>
+      <td class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b><br><small>${pct(p.pct)}</small></td></tr>`).join('');
+  $('lista').innerHTML = comDia.map((p, i) => `
     <div class="card">
       <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
         ${db.nomes[p.ticker] ? `<span class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</span>` : ''}
