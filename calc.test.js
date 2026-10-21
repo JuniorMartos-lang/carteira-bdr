@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo } = require('./calc.js');
+const { posicoes, qtdEm, irDe, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -32,6 +32,13 @@ const [p] = posicoes([
 perto(p.pm, 15);
 perto(p.realizado, 75);
 assert.strictEqual(qtdEm(ops, 'DISB34', '2026-09-01'), 250);
+
+// Encerrado: totais de compra e venda, data de encerramento e IR (15% só sobre lucro de BDR; fundo = retido na fonte)
+perto(disb.custoVendido, 8769); perto(disb.vendido, 8603); assert.strictEqual(disb.qtdVendida, 250);
+assert.strictEqual(disb.fim, '2026-10-06');
+perto(irDe(disb), 0); // prejuízo não paga
+perto(irDe({ classe: 'A', lucro: 1000 }), 150);
+assert.strictEqual(irDe({ classe: 'F', lucro: 1000 }), null);
 
 // Lucro mensal = diferença do lucro acumulado entre fins de mês
 const m = mensal([

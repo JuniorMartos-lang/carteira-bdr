@@ -90,6 +90,7 @@ header .centro { text-align:center; }
 .cf.rec { background:#70ad47; color:#fff; }
 tr.soma th, tr.soma td { border-top:2px solid var(--tx); border-bottom:0; }
 button.exp { width:100%; margin-bottom:10px; }
+.card.total { border:2px solid var(--pri); }
 /* tela de bloqueio cobre tudo, inclusive o menu */
 #trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
 .codigo { margin-top:12px; padding:12px; border:2px dashed var(--pri); border-radius:10px; }
@@ -192,6 +193,19 @@ label.check input { width:auto; margin:0; }
     <p class="mut">O app guarda o valor da carteira a cada atualização de cotação (um registro por dia). O lucro do mês é a diferença do lucro acumulado entre o fim de um mês e o fim do anterior.</p>
   </section>
 
+  <section id="tab-result" hidden>
+    <div class="card">
+      <label>Ativos</label>
+      <details class="combo"><summary id="rResumo">Todos</summary><div id="rAtivos" class="lista"></div></details>
+      <div class="two">
+        <div><label for="rIni">Mês inicial (encerramento)</label><select id="rIni"></select></div>
+        <div><label for="rFim">Mês final</label><select id="rFim"></select></div>
+      </div>
+    </div>
+    <div id="rLista"></div>
+    <p class="mut">Só ativos encerrados (vendidos por completo), pelo mês da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
+  </section>
+
   <section id="tab-config" hidden>
     <div class="card">
       <b>Senha do app</b>
@@ -263,6 +277,7 @@ label.check input { width:auto; margin:0; }
   <button data-tab="lancar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
   <button data-tab="diario"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Diário</button>
   <button data-tab="mensal"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Mensal</button>
+  <button data-tab="result"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Resultados</button>
   <button data-tab="config"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Ajustes</button>
 </nav>
 
@@ -289,6 +304,8 @@ const num = s => { s = String(s).trim(); return Number(s.includes(',') ? s.repla
 const hoje = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
 const ehB3 = t => /^[A-Z]{4}\d{1,2}F?$/.test(t);
 const NOME_CLASSE = { A: 'Ação', F: 'Fundo' };
+const nomeMes = m => new Date(m + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }); // '2026-08' → 'ago. de 26'
+const opcao = (v, txt, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(txt)}</option>`;
 // Exportar para Excel (CSV): cada aba guarda aqui as linhas que está mostrando (com os filtros).
 // Números no padrão brasileiro, sem separador de milhar, para o Excel reconhecer como número.
 const tabelas = {};
@@ -394,15 +411,14 @@ function render() {
 
   renderMensal();
   renderDiario();
+  renderResultados();
 }
 
 function renderMensal() {
   const ms = mensal(db.historico);
   const tks = [...new Set(ms.flatMap(m => Object.keys(m.linhas)))].sort();
-  const nomeMes = m => new Date(m + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
   const cols = comboAtivos('m', tks);
   const ini = $('mIni').value, fim = $('mFim').value;
-  const opcao = (v, txt, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(txt)}</option>`;
   $('mIni').innerHTML = opcao('', 'Todos os meses', !ini) + ms.map(m => opcao(m.mes, nomeMes(m.mes), m.mes === ini)).join('');
   $('mFim').innerHTML = opcao('', 'Todos os meses', !fim) + ms.map(m => opcao(m.mes, nomeMes(m.mes), m.mes === fim)).join('');
 
@@ -429,7 +445,49 @@ function renderMensal() {
   tabelas.mensal = linhas.length ? exp : null;
 }
 
-// Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
+// Aba Resultados: só ativos encerrados, com IR e lucro líquido; filtro de ativos e mês do encerramento
+function renderResultados() {
+  const enc = posicoesComClasse().filter(p => p.encerrado).sort((a, b) => b.fim.localeCompare(a.fim));
+  const cols = comboAtivos('r', [...new Set(enc.map(p => p.ticker))].sort());
+  const meses = [...new Set(enc.map(p => p.fim.slice(0, 7)))].sort();
+  const ini = $('rIni').value, fim = $('rFim').value;
+  $('rIni').innerHTML = opcao('', 'Todos os meses', !ini) + meses.map(m => opcao(m, nomeMes(m), m === ini)).join('');
+  $('rFim').innerHTML = opcao('', 'Todos os meses', !fim) + meses.map(m => opcao(m, nomeMes(m), m === fim)).join('');
+  const lista = enc.filter(p => cols.includes(p.ticker) && (!ini || p.fim.slice(0, 7) >= ini) && (!fim || p.fim.slice(0, 7) <= fim))
+    .map(p => ({ ...p, ir: irDe(p) }));
+  const liq = p => p.lucro - (p.ir || 0);
+  const linha = (nome, v, c = '') => `<div><span class="mut">${nome}</span><span class="${c}">${v}</span></div>`;
+  const t = lista.reduce((s, p) => ({ compra: s.compra + p.custoVendido, venda: s.venda + p.vendido, lucro: s.lucro + p.lucro,
+    ir: s.ir + (p.ir || 0), liq: s.liq + liq(p) }), { compra: 0, venda: 0, lucro: 0, ir: 0, liq: 0 });
+  $('rLista').innerHTML = !enc.length ? '<p class="mut">Nenhum ativo encerrado ainda.</p>' :
+    !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
+    lista.map(p => `<div class="card">
+      <div class="topo"><span class="tk">${esc(p.ticker)}</span>
+        ${db.nomes[p.ticker] ? `<span class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</span>` : ''}
+        <span class="tag">${NOME_CLASSE[p.classe]}</span></div>
+      <div class="grid">
+        ${linha('Encerrado em', p.fim.split('-').reverse().join('/'))}
+        ${linha('Total de compra', brl(p.custoVendido))}
+        ${linha('Preço médio de compra', brl(p.custoVendido / p.qtdVendida))}
+        ${linha('Total de venda', brl(p.vendido))}
+        ${linha('Preço médio de venda', brl(p.vendido / p.qtdVendida))}
+        ${linha('Lucro / prejuízo', `<b>${brl(p.lucro)}</b>`, cor(p.lucro))}
+        ${linha('Lucro / prejuízo %', pct(p.pct), cor(p.pct))}
+        ${linha('IR a pagar', p.ir == null ? 'retido na fonte' : brl(p.ir))}
+        ${linha('Lucro líquido', `<b>${brl(liq(p))}</b>`, cor(liq(p)))}
+      </div></div>`).join('') +
+    `<div class="card total"><b>Total (${lista.length} ${lista.length === 1 ? 'ativo' : 'ativos'})</b>
+      <div class="grid">
+        ${linha('Total de compra', brl(t.compra))}
+        ${linha('Total de venda', brl(t.venda))}
+        ${linha('Lucro / prejuízo', `<b>${brl(t.lucro)}</b>`, cor(t.lucro))}
+        ${linha('Lucro / prejuízo %', pct(t.compra ? t.lucro / t.compra : null), cor(t.lucro))}
+        ${linha('IR a pagar', brl(t.ir))}
+        ${linha('Lucro líquido', `<b>${brl(t.liq)}</b>`, cor(t.liq))}
+      </div></div>`;
+}
+
+// Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário, 'r' = Resultados): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
 function comboAtivos(p, tks) {
   const escolhidos = [...$(p + 'Ativos').querySelectorAll('input:checked')].map(o => o.value);
   const todos = !escolhidos.length || escolhidos.includes('*');
@@ -478,9 +536,10 @@ function renderDiario() {
       `<th class="${cor(lucro)}">${vs.length ? brl(lucro) : '—'}</th></tr>`).join('');
 }
 
-[['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal],['dIni', renderDiario], ['dFim', renderDiario]].forEach(([id, f]) => $(id).onchange = f);
+[['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['dIni', renderDiario], ['dFim', renderDiario],
+ ['rIni', renderResultados], ['rFim', renderResultados]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
-[['m', renderMensal], ['d', renderDiario]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
+[['m', renderMensal], ['d', renderDiario], ['r', renderResultados]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
   $(p + 'Ativos').querySelectorAll('input').forEach(i => { if (e.target.checked && (i.value === '*') !== tudo) i.checked = false; });
   f();

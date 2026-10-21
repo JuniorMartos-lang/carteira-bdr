@@ -5,8 +5,9 @@
 function posicoes(ops, precos) {
   const pos = {};
   [...ops].sort((a, b) => a.data.localeCompare(b.data)).forEach(o => {
-    const p = pos[o.ticker] ||= { ticker: o.ticker, qtd: 0, investido: 0, realizado: 0, custoVendido: 0 };
+    const p = pos[o.ticker] ||= { ticker: o.ticker, qtd: 0, investido: 0, realizado: 0, custoVendido: 0, vendido: 0, qtdVendida: 0 };
     p.classe = o.classe || p.classe; // 'A' ação / 'F' fundo; vale o último lançamento que informou
+    p.fim = o.data; // data da última operação (para encerrados: quando foi encerrado)
     if (o.tipo === 'C') {
       p.qtd += o.qtd;
       p.investido += o.qtd * o.preco;
@@ -14,6 +15,8 @@ function posicoes(ops, precos) {
       const pm = p.investido / p.qtd;
       p.realizado += (o.preco - pm) * o.qtd;
       p.custoVendido += pm * o.qtd;
+      p.vendido += o.preco * o.qtd;
+      p.qtdVendida += o.qtd;
       p.investido -= pm * o.qtd;
       p.qtd -= o.qtd;
       if (p.qtd === 0) p.investido = 0; // evita resíduo de arredondamento
@@ -29,6 +32,11 @@ function posicoes(ops, precos) {
     return { ...p, encerrado, pm, preco, valor, lucro, pct: lucro == null ? null : lucro / base };
   });
 }
+
+// IR sobre o lucro de um ativo encerrado: BDR/ação 15% (BDR não tem a isenção de R$ 20 mil); prejuízo não paga.
+// Fundo: null = IR retido na fonte pelo próprio fundo.
+// shortcut: não compensa prejuízos de outros meses nem day trade (20%); para isso, apurar por mês num ledger de IR.
+const irDe = p => p.classe === 'F' ? null : Math.max(0, p.lucro) * 0.15;
 
 // Quantidade em carteira de um ticker numa data (para validar vendas)
 function qtdEm(ops, ticker, data) {
@@ -98,5 +106,5 @@ const LETRAS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const gerarCodigo = () => [...aleatorio(12)].map(x => LETRAS[x % LETRAS.length]).join('').replace(/(.{4})(?!$)/g, '$1-');
 const limpaCodigo = c => c.toUpperCase().replace(/[^A-Z0-9]/g, ''); // aceita com ou sem traços/espaços
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, mensal, pregaoDe, tendencia,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, mensal, pregaoDe, tendencia,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo };
