@@ -131,6 +131,10 @@ label.check input { width:auto; margin:0; }
 #tResumo { font-size:13px; }
 #tResumo td, #tResumo th { padding:7px 4px; white-space:nowrap; }
 #tResumo td:first-child { white-space:normal; }
+/* Diário Resumido: mesma ideia, cabe na largura do celular */
+.rolagem table.compacto { font-size:12px; }
+.rolagem table.compacto th, .rolagem table.compacto td { padding:6px 3px; }
+.rolagem table.compacto .cf { padding:1px 3px; }
 .tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
 </style>
 </head>
@@ -203,6 +207,7 @@ label.check input { width:auto; margin:0; }
         <div><label for="dFim">Data final</label><input id="dFim" type="date"></div>
       </div>
       <p class="mut" style="margin:6px 0 0">Datas em branco = todos os dias.</p>
+      <label class="check"><input type="checkbox" id="dResumido"> Resumido (só Data, Dia %, Dia R$, Total R$, Lucro % e Lucro R$)</label>
     </div>
     <div class="card rolagem"><table id="tDiario"></table></div>
     <button class="sec exp" data-exp="diario">Exportar para Excel</button>
@@ -671,7 +676,10 @@ function renderDiario() {
   const tendTot = tendencia(todas.map(l => l.vs.length ? l.p : null));
   const linhas = todas.filter(l => (!ini || l.s.data >= ini) && (!fim || l.s.data <= fim)).reverse(); // mais recente em cima
   const data = d => d.split('-').reverse().join('/');
-  const vis = cols.filter(t => linhas.some(l => l.s.v[t])); // esconde ativo sem nenhum registro no período (ex.: já vendido)
+  // esconde ativo sem nenhum registro no período (ex.: já vendido); "Resumido" esconde todos (os totais continuam somando os escolhidos)
+  const resumido = $('dResumido').checked;
+  const vis = resumido ? [] : cols.filter(t => linhas.some(l => l.s.v[t]));
+  const din = resumido ? reais : brl; // Resumido: sem "R$" nos valores (já está no título), para caber na tela
   // exportação: valor e % de cada ativo em colunas separadas (na tela o % fica embaixo do valor)
   tabelas.diario = !linhas.length ? null : [
     ['Data', ...vis.flatMap(t => [t + ' R$', t + ' %']), 'Dia %', 'Dia R$', 'Total R$', 'Lucro %', 'Lucro R$'],
@@ -682,14 +690,15 @@ function renderDiario() {
     !linhas.length ? '<tr><td class="mut">Nenhum dia nesse período (a data inicial está depois da final?).</td></tr>' :
     `<tr><th>Data</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Dia %</th><th>Dia R$</th><th>Total R$</th><th>Lucro %</th><th>Lucro R$</th></tr>` +
     linhas.map(({ s, i, vs, valor, lucro, p, noDia, pDia }) =>
-      `<tr><td>${data(s.data)}</td>${vis.map(t => { const x = s.v[t]; if (!x) return '<td></td>';
+      `<tr><td>${resumido ? data(s.data).slice(0, 6) + s.data.slice(2, 4) : data(s.data)}</td>${vis.map(t => { const x = s.v[t]; if (!x) return '<td></td>';
         return `<td>${brl(x[0])}<br><small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
-      `<th class="${cor(pDia)}">${pct(pDia)}</th><th class="${cor(noDia)}">${brl(noDia)}</th>` +
-      `<th>${vs.length ? brl(valor) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
-      `<th class="${cor(lucro)}">${vs.length ? brl(lucro) : '—'}</th></tr>`).join('');
+      `<th class="${cor(pDia)}">${pct(pDia)}</th><th class="${cor(noDia)}">${din(noDia)}</th>` +
+      `<th>${vs.length ? din(valor) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
+      `<th class="${cor(lucro)}">${vs.length ? din(lucro) : '—'}</th></tr>`).join('');
+  $('tDiario').classList.toggle('compacto', resumido);
 }
 
-[['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['dIni', renderDiario], ['dFim', renderDiario],
+[['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['dIni', renderDiario], ['dFim', renderDiario], ['dResumido', renderDiario],
  ['rIni', renderResultados], ['rFim', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
 [['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
