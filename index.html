@@ -25,10 +25,21 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicarTem
 :root[data-theme=dark] { color-scheme:dark; --bg:#0f1115; --card:#1a1d23; --tx:#e8eaed; --mut:#9aa0a6; --bd:#2b2f36; --pri:#2dd4bf; --up:#4ade80; --dn:#f87171; }
 * { box-sizing: border-box; }
 body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-bottom:72px; }
-header { background:var(--pri); color:#fff; padding:16px 16px 14px; padding-top:max(16px, env(safe-area-inset-top)); }
+/* topo: faixa na cor do app; o cartão do lucro sobe por cima dela */
+header { background:var(--pri); color:#fff; padding:12px 16px 40px; padding-top:max(12px, env(safe-area-inset-top));
+  display:flex; align-items:center; gap:12px; min-height:52px; }
 :where(:root[data-theme=dark]) header { color:#06201d; }
-header small { opacity:.85; }
-header .big { font-size:26px; font-weight:700; margin:2px 0; }
+#topo { max-width:640px; margin:-34px auto 0; padding:0 16px; }
+.lucroCard { padding:12px 14px; margin-bottom:8px; }
+#hLucro { font-size:28px; font-weight:600; margin:2px 0 4px; font-variant-numeric:tabular-nums; }
+.lucroCard .row { align-items:center; }
+.lucroCard b { font-weight:600; font-variant-numeric:tabular-nums; }
+.lucroCard .divide { margin-top:10px; padding-top:8px; border-top:1px solid var(--bd); }
+#hFaltam:empty { display:none; }
+.pill { font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px; }
+.pill.up { background:color-mix(in srgb, var(--up) 15%, transparent); }
+.pill.dn { background:color-mix(in srgb, var(--dn) 15%, transparent); }
+#hHoje { font-size:13px; }
 main { padding:12px 16px; max-width:640px; margin:0 auto; }
 .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
 .row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
@@ -62,21 +73,14 @@ td:first-child, th:first-child { text-align:left; }
 h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
-header .centro { text-align:center; }
-/* foto no canto esquerdo superior do topo (o IBOV e o dólar ficam à direita; o lucro começa abaixo dela) */
-header { position:relative; }
-#hFoto { position:absolute; left:16px; top:max(12px, env(safe-area-inset-top)); width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.7); }
-#hIndices { display:flex; justify-content:flex-end; gap:12px; font-size:12px; margin:-4px 0 6px; }
-#hIndices:empty { display:none; }
+#hFoto { width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.7); flex:none; }
+#hIndices { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-left:auto; }
 #hIndices .iup { color:#bbf7d0; } #hIndices .idn { color:#fecaca; }
 :where(:root[data-theme=dark]) #hIndices .iup { color:#14532d; } :where(:root[data-theme=dark]) #hIndices .idn { color:#7f1d1d; }
-/* um retângulo por tipo; se só houver um tipo, ocupa a largura toda */
-#hClasses { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-top:12px; }
-#hClasses .cls { border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.1); border-radius:10px; padding:8px 10px; font-size:12px; line-height:1.45; }
-#hClasses .cls .tit { font-size:12px; font-weight:600; opacity:.9; }
-#hClasses .cls .luc { font-size:16px; font-weight:700; }
-#hClasses .cls .det { opacity:.85; }
-:where(:root[data-theme=dark]) #hClasses .cls { border-color:rgba(0,0,0,.25); background:rgba(0,0,0,.08); }
+/* um cartão por tipo (Ações / Fundos); se só houver um tipo, ocupa a largura toda */
+#hClasses { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; }
+#hClasses .cls { margin:0; padding:8px 12px; font-size:13px; }
+#hClasses .cls b { font-weight:600; font-variant-numeric:tabular-nums; }
 /* código, nome e tipo na mesma linha; nome longo é cortado com "…" */
 .topo { display:flex; align-items:center; gap:6px; }
 .topo .tk, .topo .tag { flex-shrink:0; }
@@ -139,16 +143,22 @@ label.check input { width:auto; margin:0; }
 </style>
 </head>
 <body>
+<!-- topo: faixa verde fina (foto, IBOV, dólar) e o cartão do lucro por cima dela -->
 <header>
-  <div id="hIndices"></div>
   <img id="hFoto" alt="Foto" hidden>
-  <div class="centro">
-    <small>Lucro da carteira (em aberto)</small>
-    <div class="big" id="hLucro">—</div>
-    <small id="hResumo"></small>
+  <div id="hIndices"></div>
+</header>
+<div id="topo">
+  <div class="card lucroCard">
+    <div class="mut">Lucro da carteira</div>
+    <div id="hLucro">—</div>
+    <div class="row"><span id="hPct" class="pill"></span><span id="hHoje"></span></div>
+    <div class="row divide"><span><span class="mut">Investido</span><br><b id="hInv"></b></span>
+      <span style="text-align:right"><span class="mut">Atual</span><br><b id="hAtual"></b></span></div>
+    <div class="mut" id="hFaltam"></div>
   </div>
   <div id="hClasses"></div>
-</header>
+</div>
 
 <main>
   <!-- barra de cotações: aparece no Resumo e na Carteira -->
@@ -408,25 +418,27 @@ function render() {
   const comPreco = abertos.filter(p => p.valor != null);
   const lucro = comPreco.reduce((s, p) => s + p.lucro, 0);
   const valor = comPreco.reduce((s, p) => s + p.valor, 0);
-  $('hLucro').textContent = brl(lucro) + '  (' + pct(inv ? lucro / inv : null) + ')';
+  const seta = v => v == null ? '' : v >= 0 ? '▲ ' : '▼ ';
+  $('hLucro').textContent = brl(lucro); $('hLucro').className = cor(lucro);
+  const pTot = inv ? lucro / inv : null;
+  $('hPct').textContent = seta(pTot) + pct(pTot); $('hPct').className = 'pill ' + cor(pTot);
+  $('hInv').textContent = brl(inv); $('hAtual').textContent = brl(valor);
   const ind = (nome, x, fmt) => !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
     <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`;
   $('hIndices').innerHTML = ind('IBOV', db.indices.ibov, v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })) +
     ind('Dólar', db.indices.usd, v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 }));
   // lucro por tipo; só aparece o tipo que tem posição em aberto
-  $('hClasses').innerHTML = [['A', 'Carteira Ações'], ['F', 'Carteira Fundos']].map(([c, nome]) => {
+  $('hClasses').innerHTML = [['A', 'Ações'], ['F', 'Fundos']].map(([c, nome]) => {
     const ab = abertos.filter(p => p.classe === c);
     if (!ab.length) return '';
     const cp = ab.filter(p => p.valor != null);
     const l = cp.reduce((s, p) => s + p.lucro, 0);
     const v = cp.reduce((s, p) => s + p.valor, 0);
     const i = ab.reduce((s, p) => s + p.investido, 0);
-    return `<div class="cls"><div class="tit">${nome}</div>
-      <div class="luc">${brl(l)} <small>(${pct(i ? l / i : null)})</small></div>
-      <div class="det">Investido ${brl(i)}<br>Atual ${brl(v)}</div></div>`;
+    return `<div class="card cls"><span class="mut">${nome}</span><br>
+      <b class="${cor(l)}">${brl(l)} · ${pct(i ? l / i : null)}</b></div>`;
   }).join('');
-  $('hResumo').textContent = `Total: Investido ${brl(inv)} · Atual ${brl(valor)}` +
-    (comPreco.length < abertos.length ? ' · faltam cotações' : '');
+  $('hFaltam').textContent = comPreco.length < abertos.length ? 'Faltam cotações de alguns ativos.' : '';
   const quando = db.atualizado && new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
   $('atualizado').innerHTML = falhou
     ? `<b class="dn">Não foi possível atualizar</b><br>${quando ? 'Última: ' + quando : 'Nenhuma cotação ainda'}`
@@ -443,6 +455,8 @@ function render() {
   const hojeR = comHoje.length ? comHoje.reduce((s, p) => s + p.d.r, 0) : null;
   const hojeP = hojeR == null ? null : hojeR / comHoje.reduce((s, p) => s + p.d.base, 0);
   const lucroP = inv ? lucro / inv : null;
+  // topo: "Hoje" = quanto a carteira subiu/caiu desde o pregão anterior (o mesmo % da linha Total do Resumo)
+  $('hHoje').innerHTML = hojeP == null ? '' : `<span class="mut">Hoje:</span> <b class="${cor(hojeP)}">${seta(hojeP)}${pct(hojeP)}</b>`;
   tabelas.resumo = !comDia.length ? null : [['Ativo', 'Hoje %', 'Hoje R$', 'Lucro R$', 'Lucro %'],
     ...comDia.map((p, i) => [`${i + 1}º ${p.ticker}`, xP(p.d.p), xR(p.d.r), xR(p.lucro), xP(p.pct)]),
     ['Total', xP(hojeP), xR(hojeR), xR(lucro), xP(lucroP)]];
