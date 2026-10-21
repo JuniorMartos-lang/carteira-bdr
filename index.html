@@ -81,7 +81,7 @@ header .centro { text-align:center; }
 .combo .lista input { width:auto; margin:0; }
 /* Resumo: tabela compacta para caber na largura do celular */
 #tResumo { font-size:13px; }
-#tResumo td, #tResumo th { padding:7px 3px; white-space:nowrap; }
+#tResumo td, #tResumo th { padding:7px 4px; white-space:nowrap; }
 #tResumo td:first-child { white-space:normal; }
 .tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
 </style>
@@ -208,6 +208,8 @@ const salvar = () => localStorage.setItem(KEY, JSON.stringify(db));
 
 const $ = id => document.getElementById(id);
 const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+// valor em reais sem o "R$" (para tabelas em que o título da coluna já diz R$)
+const reais = n => n == null ? '—' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = n => n == null ? '—' : (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 const cor = n => n == null ? '' : n >= 0 ? 'up' : 'dn';
 // variação do dia (vem do brapi em %, ex.: 1.26): ▲ verde / ▼ vermelho
@@ -265,10 +267,10 @@ function render() {
   const comDia = abertos.map(p => ({ ...p, d: doDia(p) }));
   // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
   $('tResumo').innerHTML = !comDia.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
-    '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro</th></tr>' +
+    '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro R$ e %</th></tr>' +
     comDia.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td>
-      <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${brl(p.d.r)}</td>
-      <td class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b><br><small>${pct(p.pct)}</small></td></tr>`).join('');
+      <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${reais(p.d.r)}</td>
+      <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('');
   $('lista').innerHTML = comDia.map((p, i) => `
     <div class="card">
       <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
