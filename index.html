@@ -59,7 +59,11 @@ td:first-child, th:first-child { text-align:left; }
 h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
-header .centro { text-align:center; }
+header .centro { text-align:center; position:relative; }
+/* foto no canto direito do bloco do lucro */
+#hFoto { position:absolute; right:0; top:0; width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.7); }
+/* com foto, o lucro deixa espaço dos dois lados (continua centralizado e não passa por baixo da foto) */
+.centro:has(#hFoto:not([hidden])) .big { padding:0 42px; }
 #hIndices { display:flex; justify-content:flex-end; gap:12px; font-size:12px; margin:-4px 0 6px; }
 #hIndices:empty { display:none; }
 #hIndices .iup { color:#bbf7d0; } #hIndices .idn { color:#fecaca; }
@@ -117,6 +121,7 @@ label.check input { width:auto; margin:0; }
 <header>
   <div id="hIndices"></div>
   <div class="centro">
+    <img id="hFoto" alt="Foto" hidden>
     <small>Lucro da carteira (em aberto)</small>
     <div class="big" id="hLucro">—</div>
     <small id="hResumo"></small>
@@ -224,6 +229,12 @@ label.check input { width:auto; margin:0; }
         <option value="claro">Claro</option>
         <option value="escuro">Escuro</option>
       </select>
+      <label>Foto (aparece no topo, ao lado do lucro)</label>
+      <div class="two">
+        <button id="cFotoEsc" class="sec">Escolher foto</button>
+        <button id="cFotoRem" class="sec">Remover foto</button>
+      </div>
+      <input type="file" id="cFotoArq" accept="image/*" hidden>
     </div>
     <div class="card">
       <b>Senha do app</b>
@@ -695,6 +706,27 @@ $('ops').onclick = e => {
 
 try { $('cTema').value = localStorage.getItem('carteira-bdr-tema') || 'auto'; } catch {}
 $('cTema').onchange = e => { localStorage.setItem('carteira-bdr-tema', e.target.value); aplicarTema(); };
+
+// Foto do topo: guardada reduzida (160 px, JPEG) na chave carteira-bdr-foto, fora do backup
+const KEY_FOTO = 'carteira-bdr-foto';
+function mostrarFoto() {
+  let f = null; try { f = localStorage.getItem(KEY_FOTO); } catch {}
+  $('hFoto').hidden = !f; if (f) $('hFoto').src = f; else $('hFoto').removeAttribute('src');
+  $('cFotoRem').disabled = !f;
+}
+$('cFotoEsc').onclick = () => $('cFotoArq').click();
+$('cFotoArq').onchange = async e => {
+  const arq = e.target.files[0]; e.target.value = ''; if (!arq) return;
+  try {
+    const img = await createImageBitmap(arq);
+    const lado = Math.min(img.width, img.height), c = document.createElement('canvas');
+    c.width = c.height = 160; // recorta o centro em quadrado
+    c.getContext('2d').drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 160, 160);
+    localStorage.setItem(KEY_FOTO, c.toDataURL('image/jpeg', 0.85)); mostrarFoto();
+  } catch (err) { alert('Não foi possível usar essa imagem: ' + err.message); }
+};
+$('cFotoRem').onclick = () => { localStorage.removeItem(KEY_FOTO); mostrarFoto(); };
+mostrarFoto();
 $('cToken').value = db.token;
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
 $('btnExp').onclick = async () => {
