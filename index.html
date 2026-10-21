@@ -587,6 +587,10 @@ async function atualizar() {
       if (q.longName || q.shortName) db.nomes[t] = q.longName || q.shortName;
     } catch (e) { erros.push(`${t}: ${e.message}`); }
   }
+    // nome dos encerrados (aba Resultados): busca só uma vez por ativo; falha aqui não conta como erro de cotação
+    for (const p of posicoes(db.ops, {}).filter(p => p.encerrado && ehB3(p.ticker) && !db.nomes[p.ticker])) {
+      try { const q = await brapi(p.ticker); if (q.longName || q.shortName) db.nomes[p.ticker] = q.longName || q.shortName; } catch {}
+    }
     await brapi('^BVSP').then(q => db.indices.ibov = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent })
       .catch(e => erros.push('IBOV: ' + e.message));
   };
