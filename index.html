@@ -85,6 +85,7 @@ header .centro { text-align:center; }
 .cf.sobe { background:#5b9bd5; color:#fff; }
 .cf.desce { background:#f4b183; color:#7f4125; }
 .cf.rec { background:#70ad47; color:#fff; }
+tr.soma th, tr.soma td { border-top:2px solid var(--tx); border-bottom:0; }
 label.check { display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--tx); font-size:14px; }
 label.check input { width:auto; margin:0; }
 /* Resumo: tabela compacta para caber na largura do celular */
@@ -333,6 +334,7 @@ function renderMensal() {
   const linhas = ms.filter(m => (!ini || m.mes >= ini) && (!fim || m.mes <= fim));
   // esconde ativo sem nenhum registro no período (ex.: já vendido); "Resumido" esconde todos (os totais continuam somando os escolhidos)
   const vis = $('mResumido').checked ? [] : cols.filter(t => linhas.some(m => m.linhas[t]));
+  let somaP = 0, somaL = 0; // linha final: soma do Total % e do Lucro R$ dos meses mostrados
   $('tMensal').innerHTML = !ms.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
     !linhas.length ? '<tr><td class="mut">Nenhum mês nesse período (o mês inicial está depois do final?).</td></tr>' :
     `<tr><th>Mês</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Total %</th><th>Lucro R$</th></tr>` +
@@ -341,9 +343,11 @@ function renderMensal() {
       const ls = cols.map(t => m.linhas[t]).filter(Boolean);
       const lucro = ls.reduce((s, l) => s + l.lucro, 0), inv = ls.reduce((s, l) => s + l.inv, 0);
       const p = inv ? lucro / inv : null;
+      somaP += p || 0; somaL += lucro;
       return `<tr><td>${nomeMes(m.mes)}</td>${vis.map(t => { const l = m.linhas[t]; return `<td class="${cor(l?.pct)}">${l ? pct(l.pct) : ''}</td>`; }).join('')}` +
         `<th class="${cor(p)}">${pct(p)}</th><th class="${cor(lucro)}">${ls.length ? brl(lucro) : '—'}</th></tr>`;
-    }).join('');
+    }).join('') +
+    `<tr class="soma"><th>Soma</th>${vis.map(() => '<td></td>').join('')}<th class="${cor(somaP)}">${pct(somaP)}</th><th class="${cor(somaL)}">${brl(somaL)}</th></tr>`;
 }
 
 // Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
