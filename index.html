@@ -79,6 +79,12 @@ header .centro { text-align:center; }
 .combo .lista { border:1px solid var(--bd); border-radius:8px; margin-top:4px; max-height:220px; overflow:auto; }
 .combo .lista label { display:flex; align-items:center; gap:10px; margin:0; padding:9px 10px; color:var(--tx); font-size:15px; border-bottom:1px solid var(--bd); }
 .combo .lista input { width:auto; margin:0; }
+/* Diário: cores do % de lucro iguais às da planilha (fundo colorido, negrito) */
+.cf { display:inline-block; padding:1px 5px; border-radius:4px; font-weight:700; }
+.cf.neg { background:#c00000; color:#fff; }
+.cf.sobe { background:#5b9bd5; color:#fff; }
+.cf.desce { background:#f4b183; color:#7f4125; }
+.cf.rec { background:#70ad47; color:#fff; }
 /* Resumo: tabela compacta para caber na largura do celular */
 #tResumo { font-size:13px; }
 #tResumo td, #tResumo th { padding:7px 4px; white-space:nowrap; }
@@ -353,24 +359,29 @@ function renderDiario() {
   const cols = comboAtivos('d', tks);
   const ini = $('dIni').value, fim = $('dFim').value;
   let antes = null; // lucro e valor do dia anterior registrado, para o "no dia"
-  const linhas = h.map(s => {
+  const pctDe = x => x ? (x[0] - x[1]) / x[1] : null;
+  // cor de cada % (regra da planilha), calculada sobre todos os dias, antes do filtro de datas
+  const tend = Object.fromEntries(tks.map(t => [t, tendencia(h.map(s => pctDe(s.v[t])))]));
+  const todas = h.map((s, i) => {
     const vs = cols.map(t => s.v[t]).filter(Boolean);
     const valor = vs.reduce((x, [v]) => x + v, 0), inv = vs.reduce((x, [, i]) => x + i, 0);
     const lucro = valor - inv, noDia = vs.length && antes ? lucro - antes.lucro : null;
     const pDia = noDia != null && antes.valor ? noDia / antes.valor : null; // % do dia sobre o valor do dia anterior
     if (vs.length) antes = { lucro, valor };
-    return { s, vs, valor, lucro, p: inv ? lucro / inv : null, noDia, pDia };
-  }).filter(l => (!ini || l.s.data >= ini) && (!fim || l.s.data <= fim)).reverse(); // mais recente em cima
+    return { s, i, vs, valor, lucro, p: inv ? lucro / inv : null, noDia, pDia };
+  });
+  const tendTot = tendencia(todas.map(l => l.vs.length ? l.p : null));
+  const linhas = todas.filter(l => (!ini || l.s.data >= ini) && (!fim || l.s.data <= fim)).reverse(); // mais recente em cima
   const data = d => d.split('-').reverse().join('/');
   const vis = cols.filter(t => linhas.some(l => l.s.v[t])); // esconde ativo sem nenhum registro no período (ex.: já vendido)
   $('tDiario').innerHTML = !h.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
     !linhas.length ? '<tr><td class="mut">Nenhum dia nesse período (a data inicial está depois da final?).</td></tr>' :
     `<tr><th>Data</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Dia %</th><th>Dia R$</th><th>Total R$</th><th>Lucro %</th><th>Lucro R$</th></tr>` +
-    linhas.map(({ s, vs, valor, lucro, p, noDia, pDia }) =>
+    linhas.map(({ s, i, vs, valor, lucro, p, noDia, pDia }) =>
       `<tr><td>${data(s.data)}</td>${vis.map(t => { const x = s.v[t]; if (!x) return '<td></td>';
-        const pp = (x[0] - x[1]) / x[1]; return `<td>${brl(x[0])}<br><small class="${cor(pp)}">${pct(pp)}</small></td>`; }).join('')}` +
+        return `<td>${brl(x[0])}<br><small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
       `<th class="${cor(pDia)}">${pct(pDia)}</th><th class="${cor(noDia)}">${brl(noDia)}</th>` +
-      `<th>${vs.length ? brl(valor) : '—'}</th><th class="${cor(p)}">${pct(p)}</th>` +
+      `<th>${vs.length ? brl(valor) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
       `<th class="${cor(lucro)}">${vs.length ? brl(lucro) : '—'}</th></tr>`).join('');
 }
 

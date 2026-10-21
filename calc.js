@@ -71,4 +71,14 @@ function pregaoDe(iso) {
   return d.toISOString().slice(0, 10);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, mensal, pregaoDe };
+// Cor do % de lucro por dia, como a formatação condicional da aba "Agora Investimentos" da planilha.
+// vals: % em ordem cronológica (null = sem posição no dia). Devolve, por dia:
+// 'neg' negativo · 'rec' recorde (maior % de todos, última vez que ocorreu) ·
+// 'sobe' positivo e maior que o dia anterior · 'desce' positivo e menor ou igual · '' zero/vazio
+function tendencia(vals) {
+  const max = Math.max(...vals.filter(v => v != null)), ultMax = vals.lastIndexOf(max);
+  return vals.map((v, i) => v == null || v === 0 ? '' : v < 0 ? 'neg' : i === ultMax ? 'rec'
+    : (vals[i - 1] != null && v > vals[i - 1]) || v === max ? 'sobe' : 'desce');
+}
+
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, mensal, pregaoDe, tendencia };

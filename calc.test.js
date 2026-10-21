@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, mensal, pregaoDe } = require('./calc.js');
+const { posicoes, qtdEm, mensal, pregaoDe, tendencia } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -59,5 +59,11 @@ assert.strictEqual(pregaoDe('2026-10-21T15:00:00.000Z'), '2026-10-21'); // qua 1
 assert.strictEqual(pregaoDe('2026-10-20T21:00:00.000Z'), '2026-10-20'); // ter 18h, após o fechamento
 assert.strictEqual(pregaoDe('2026-10-19T04:00:00.000Z'), '2026-10-16'); // seg 01h → sexta
 assert.strictEqual(pregaoDe('2026-10-17T15:00:00.000Z'), '2026-10-16'); // sábado → sexta
+
+// Cores do % diário (regra da planilha)
+assert.deepStrictEqual(tendencia([0.01, 0.03, 0.02, 0.05, 0.04, -0.01, null, 0.02]),
+  ['desce', 'sobe', 'desce', 'rec', 'desce', 'neg', '', 'desce']);
+assert.deepStrictEqual(tendencia([0.05, 0.05]), ['sobe', 'rec']); // recorde repetido: verde só na última vez
+assert.deepStrictEqual(tendencia([null, null]), ['', '']);
 
 console.log('ok');
