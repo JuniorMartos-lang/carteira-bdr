@@ -206,6 +206,8 @@ const num = s => { s = String(s).trim(); return Number(s.includes(',') ? s.repla
 const hoje = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
 const ehB3 = t => /^[A-Z]{4}\d{1,2}F?$/.test(t);
 const NOME_CLASSE = { A: 'Ação', F: 'Fundo' };
+// nome da empresa sem o texto técnico do BDR: "Apple Inc. Shs Unsponsored ..." → "Apple Inc."
+const nomeCurto = n => n.split(/\s+(?:Shs|Unsponsored|Sponsored)\b/i)[0];
 // posições com tipo; lançamentos antigos sem tipo: código da B3 = ação, resto = fundo
 const posicoesComClasse = () => posicoes(db.ops, db.precos).map(p => ({ ...p, classe: p.classe || (ehB3(p.ticker) ? 'A' : 'F') }));
 
@@ -250,7 +252,7 @@ function render() {
   $('lista').innerHTML = abertos.map(p => ({ ...p, d: doDia(p) })).map((p, i) => `
     <div class="card">
       <span class="tk">${i + 1}º ${esc(p.ticker)}</span> <span class="tag">${NOME_CLASSE[p.classe]}</span>
-      ${db.nomes[p.ticker] ? `<div class="nome">${esc(db.nomes[p.ticker])}</div>` : ''}
+      ${db.nomes[p.ticker] ? `<div class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</div>` : ''}
       <div class="grid">
         <div><span class="mut">Lucro</span><span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
         <div><span class="mut">Qtd</span>${p.qtd.toLocaleString('pt-BR')}</div>
