@@ -85,6 +85,8 @@ header .centro { text-align:center; }
 .cf.sobe { background:#5b9bd5; color:#fff; }
 .cf.desce { background:#f4b183; color:#7f4125; }
 .cf.rec { background:#70ad47; color:#fff; }
+label.check { display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--tx); font-size:14px; }
+label.check input { width:auto; margin:0; }
 /* Resumo: tabela compacta para caber na largura do celular */
 #tResumo { font-size:13px; }
 #tResumo td, #tResumo th { padding:7px 4px; white-space:nowrap; }
@@ -168,6 +170,7 @@ header .centro { text-align:center; }
         <div><label for="mIni">Mês inicial</label><select id="mIni"></select></div>
         <div><label for="mFim">Mês final</label><select id="mFim"></select></div>
       </div>
+      <label class="check"><input type="checkbox" id="mResumido"> Resumido (só Mês, Total % e Lucro R$)</label>
     </div>
     <div class="card rolagem"><table id="tMensal"></table></div>
     <p class="mut">O app guarda o valor da carteira a cada atualização de cotação (um registro por dia). O lucro do mês é a diferença do lucro acumulado entre o fim de um mês e o fim do anterior.</p>
@@ -328,7 +331,8 @@ function renderMensal() {
   $('mFim').innerHTML = opcao('', 'Todos os meses', !fim) + ms.map(m => opcao(m.mes, nomeMes(m.mes), m.mes === fim)).join('');
 
   const linhas = ms.filter(m => (!ini || m.mes >= ini) && (!fim || m.mes <= fim));
-  const vis = cols.filter(t => linhas.some(m => m.linhas[t])); // esconde ativo sem nenhum registro no período (ex.: já vendido)
+  // esconde ativo sem nenhum registro no período (ex.: já vendido); "Resumido" esconde todos (os totais continuam somando os escolhidos)
+  const vis = $('mResumido').checked ? [] : cols.filter(t => linhas.some(m => m.linhas[t]));
   $('tMensal').innerHTML = !ms.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
     !linhas.length ? '<tr><td class="mut">Nenhum mês nesse período (o mês inicial está depois do final?).</td></tr>' :
     `<tr><th>Mês</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Total %</th><th>Lucro R$</th></tr>` +
@@ -385,7 +389,7 @@ function renderDiario() {
       `<th class="${cor(lucro)}">${vs.length ? brl(lucro) : '—'}</th></tr>`).join('');
 }
 
-[['mIni', renderMensal], ['mFim', renderMensal], ['dIni', renderDiario], ['dFim', renderDiario]].forEach(([id, f]) => $(id).onchange = f);
+[['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal],['dIni', renderDiario], ['dFim', renderDiario]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
 [['m', renderMensal], ['d', renderDiario]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
