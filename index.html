@@ -26,8 +26,9 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 .tk { font-weight:700; font-size:17px; }
 .mut { color:var(--mut); font-size:13px; }
 .up { color:var(--up); } .dn { color:var(--dn); }
-.grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 8px; margin-top:6px; }
-.grid div span { display:block; }
+/* dados do card: uma informação por linha, nome à esquerda e valor à direita */
+.grid { margin-top:6px; }
+.grid > div { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-top:1px dashed var(--bd); }
 button, .btn { font:inherit; border:0; border-radius:10px; padding:11px 14px; background:var(--pri); color:#fff; font-weight:600; cursor:pointer; }
 @media (prefers-color-scheme: dark) { button, .btn { color:#06201d; } }
 button.sec { background:transparent; color:var(--pri); border:1px solid var(--bd); }
@@ -252,10 +253,10 @@ function render() {
         <span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
       <div class="grid">
         <div><span class="mut">Qtd</span>${p.qtd.toLocaleString('pt-BR')}</div>
+        <div><span class="mut">Investido</span>${brl(p.investido)}</div>
         <div><span class="mut">Preço médio</span>${brl(p.pm)}</div>
         <div ${ehB3(p.ticker) ? '' : `data-manual="${esc(p.ticker)}" style="cursor:pointer;text-decoration:underline dotted"`}>
           <span class="mut">Cotação</span>${brl(p.preco)}</div>
-        <div><span class="mut">Investido</span>${brl(p.investido)}</div>
         <div><span class="mut">Valor atual</span>${brl(p.valor)}</div>
         <div><span class="mut">Hoje</span>${dia(db.variacao[p.ticker])}</div>
         <div><span class="mut">Dia % (posição)</span><b class="${cor(p.d.p)}">${pct(p.d.p)}</b></div>
