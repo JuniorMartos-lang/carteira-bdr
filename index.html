@@ -48,7 +48,10 @@ input, select { width:100%; font:inherit; padding:10px; border:1px solid var(--b
 .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .two > div { min-width:0; } /* campo de data não estoura a coluna */
 nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--card); border-top:1px solid var(--bd); padding-bottom:env(safe-area-inset-bottom); }
-nav button { flex:1; background:none; color:var(--mut); border-radius:0; padding:8px 0 10px; font-weight:500; font-size:12px;
+/* 8 abas não cabem em 375 px: o menu rola para os lados */
+nav { overflow-x:auto; scrollbar-width:none; }
+nav::-webkit-scrollbar { display:none; }
+nav button { flex:1 0 58px; background:none; color:var(--mut); border-radius:0; padding:8px 0 10px; font-weight:500; font-size:12px;
   display:flex; flex-direction:column; align-items:center; gap:3px; }
 /* ícone acima do nome da aba; usa a cor do texto (cinza ou cor da aba ativa) */
 nav svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
@@ -102,6 +105,21 @@ header { position:relative; }
 .cf.rec { background:#70ad47; color:#fff; }
 tr.soma th, tr.soma td { border-top:2px solid var(--tx); border-bottom:0; }
 button.exp { width:100%; margin-bottom:10px; }
+/* Gráficos: cores das linhas em ordem fixa (paleta validada para daltonismo), versão própria no modo escuro */
+.viz { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; }
+:root[data-theme=dark] .viz { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; }
+#gArea { position:relative; margin-top:6px; touch-action:pan-y; }
+#gSvg { display:block; width:100%; height:240px; }
+#gSvg text { fill:var(--mut); font-size:11px; }
+#gSvg .grade { stroke:var(--bd); stroke-width:1; }
+#gSvg .zero { stroke:var(--mut); stroke-width:1; }
+#gSvg .linha { fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+#gSvg .mira { stroke:var(--mut); stroke-width:1; stroke-dasharray:3 3; }
+#gSvg .ponto { stroke:var(--card); stroke-width:2; }
+#gLegenda { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:6px; }
+.marca { display:inline-block; width:12px; height:3px; border-radius:2px; vertical-align:middle; margin-right:4px; }
+#gDica { position:absolute; top:0; pointer-events:none; background:var(--card); border:1px solid var(--bd); border-radius:8px;
+  padding:6px 8px; font-size:12px; line-height:1.5; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; }
 .card.total { border:2px solid var(--pri); }
 /* tela de bloqueio cobre tudo, inclusive o menu */
 #trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
@@ -206,6 +224,24 @@ label.check input { width:auto; margin:0; }
     <p class="mut">O app guarda o valor da carteira a cada atualização de cotação (um registro por dia). O lucro do mês é a diferença do lucro acumulado entre o fim de um mês e o fim do anterior.</p>
   </section>
 
+  <section id="tab-graf" hidden>
+    <div class="card">
+      <label>Ativos</label>
+      <details class="combo"><summary id="gResumo">Todos</summary><div id="gAtivos" class="lista"></div></details>
+      <div class="two">
+        <div><label for="gIni">Mês inicial</label><select id="gIni"></select></div>
+        <div><label for="gFim">Mês final</label><select id="gFim"></select></div>
+      </div>
+    </div>
+    <div class="card viz">
+      <b id="gTitulo">Rentabilidade acumulada (%)</b>
+      <div id="gLegenda"></div>
+      <div id="gArea"><svg id="gSvg"></svg><div id="gDica" hidden></div></div>
+      <p class="mut" id="gAviso" style="margin:6px 0 0"></p>
+    </div>
+    <p class="mut">Toque no gráfico para ver a data e os valores. Com "Todos", aparece a linha da carteira inteira; escolha ativos (até 8) para comparar um com o outro. A % é o lucro acumulado sobre o valor investido, como na aba Diário.</p>
+  </section>
+
   <section id="tab-result" hidden>
     <div class="card">
       <label>Ativos</label>
@@ -305,6 +341,7 @@ label.check input { width:auto; margin:0; }
   <button data-tab="lancar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
   <button data-tab="diario"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Diário</button>
   <button data-tab="mensal"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Mensal</button>
+  <button data-tab="graf"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 6-7"/></svg>Gráficos</button>
   <button data-tab="result"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Resultados</button>
   <button data-tab="config"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Ajustes</button>
 </nav>
@@ -440,6 +477,7 @@ function render() {
   renderMensal();
   renderDiario();
   renderResultados();
+  if (!$('tab-graf').hidden) renderGraficos();
 }
 
 function renderMensal() {
@@ -525,7 +563,70 @@ function renderResultados() {
       </div></div>`;
 }
 
-// Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário, 'r' = Resultados): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
+// Aba Gráficos: rentabilidade acumulada (%) por dia. "Todos" = uma linha da carteira; ativos escolhidos = uma linha cada (até 8).
+function renderGraficos() {
+  const h = [...db.historico].sort((a, b) => a.data.localeCompare(b.data));
+  const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].sort();
+  const cols = comboAtivos('g', tks), todos = cols === tks || cols.length === tks.length;
+  const meses = [...new Set(h.map(s => s.data.slice(0, 7)))];
+  const ini = $('gIni').value, fim = $('gFim').value;
+  $('gIni').innerHTML = opcao('', 'Todos os meses', !ini) + meses.map(m => opcao(m, nomeMes(m), m === ini)).join('');
+  $('gFim').innerHTML = opcao('', 'Todos os meses', !fim) + meses.map(m => opcao(m, nomeMes(m), m === fim)).join('');
+  const dias = h.filter(s => (!ini || s.data.slice(0, 7) >= ini) && (!fim || s.data.slice(0, 7) <= fim));
+  const pctDe = x => x ? (x[0] - x[1]) / x[1] : null;
+  const total = s => { const vs = Object.values(s.v); const inv = vs.reduce((a, x) => a + x[1], 0);
+    return inv ? (vs.reduce((a, x) => a + x[0], 0) - inv) / inv : null; };
+  // shortcut: a cor segue a posição entre os escolhidos (não o ativo); com até 8 escolhidos não repete cor
+  const series = todos ? [{ nome: 'Carteira', cor: 'var(--s1)', vals: dias.map(total) }]
+    : cols.slice(0, 8).map((t, i) => ({ nome: t, cor: `var(--s${i + 1})`, vals: dias.map(s => pctDe(s.v[t])) }));
+  $('gAviso').textContent = !todos && cols.length > 8 ? `Mostrando os 8 primeiros de ${cols.length} ativos escolhidos.` : '';
+  $('gLegenda').innerHTML = series.length < 2 ? '' :
+    series.map(s => `<span><i class="marca" style="background:${s.cor}"></i>${esc(s.nome)}</span>`).join('');
+  $('gTitulo').textContent = todos ? 'Rentabilidade acumulada da carteira (%)' : 'Rentabilidade acumulada (%)';
+
+  const svg = $('gSvg'), W = svg.clientWidth, H = 240, L = 44, R = 10, T = 10, B = 24;
+  $('gDica').hidden = true;
+  if (!W) return; // aba escondida: desenha quando abrir
+  const todosVals = series.flatMap(s => s.vals).filter(v => v != null);
+  if (!dias.length || !todosVals.length) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sem dados nesse período.</text>`; return; }
+  let min = Math.min(0, ...todosVals), max = Math.max(0, ...todosVals);
+  const passo = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1].find(p => (max - min) / p <= 5) || 1; // linhas de grade "redondas"
+  min = Math.floor(min / passo) * passo; max = Math.ceil(max / passo) * passo || passo;
+  const n = dias.length, x = i => n === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (n - 1);
+  const y = v => T + (max - v) / (max - min) * (H - T - B);
+  const fmtP = v => (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: passo < 0.01 ? 1 : 0 }) + '%';
+  let g = '';
+  for (let v = min; v <= max + 1e-9; v += passo)
+    g += `<line class="${Math.abs(v) < 1e-9 ? 'zero' : 'grade'}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>` +
+      `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtP(v)}</text>`;
+  const marcasX = Math.min(n, Math.max(2, Math.floor((W - L - R) / 70))); // datas no eixo X sem se encostar
+  for (let k = 0; k < marcasX; k++) {
+    const i = marcasX === 1 ? 0 : Math.round(k * (n - 1) / (marcasX - 1));
+    g += `<text x="${x(i)}" y="${H - 6}" text-anchor="${k === 0 ? 'start' : k === marcasX - 1 ? 'end' : 'middle'}">${dias[i].data.slice(8)}/${dias[i].data.slice(5, 7)}</text>`;
+  }
+  // linha interrompida nos dias sem posição
+  g += series.map(s => `<path class="linha" stroke="${s.cor}" d="${s.vals.map((v, i) => v == null ? '' :
+    `${i && s.vals[i - 1] != null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')}"/>`).join('');
+  svg.innerHTML = g + `<line class="mira" id="gMira" y1="${T}" y2="${H - B}" visibility="hidden"/><g id="gPontos"></g>`;
+
+  // toque/mouse: linha vertical no dia mais próximo + caixa com a data e os valores
+  const mostrar = e => {
+    const r = svg.getBoundingClientRect(), px = e.clientX - r.left;
+    const i = Math.max(0, Math.min(n - 1, Math.round(n === 1 ? 0 : (px - L) / ((W - L - R) / (n - 1)))));
+    $('gMira').setAttribute('x1', x(i)); $('gMira').setAttribute('x2', x(i)); $('gMira').setAttribute('visibility', 'visible');
+    $('gPontos').innerHTML = series.map(s => s.vals[i] == null ? '' : `<circle class="ponto" r="4" cx="${x(i)}" cy="${y(s.vals[i])}" fill="${s.cor}"/>`).join('');
+    const d = $('gDica'); d.hidden = false;
+    d.innerHTML = `<b>${dias[i].data.split('-').reverse().join('/')}</b><br>` + series.map(s =>
+      `<i class="marca" style="background:${s.cor}"></i>${esc(s.nome)}: <b class="${cor(s.vals[i])}">${pct(s.vals[i])}</b>`).join('<br>');
+    d.style.left = Math.max(0, Math.min(W - d.offsetWidth, x(i) + (x(i) > W / 2 ? -d.offsetWidth - 10 : 10))) + 'px';
+  };
+  svg.onpointerdown = svg.onpointermove = mostrar;
+  svg.onpointerleave = e => { if (e.pointerType !== 'mouse') return; // no celular a caixa fica até o próximo toque
+    $('gDica').hidden = true; $('gMira').setAttribute('visibility', 'hidden'); $('gPontos').innerHTML = ''; };
+}
+addEventListener('resize', () => { if (!$('tab-graf').hidden) renderGraficos(); });
+
+// Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário, 'r' = Resultados, 'g' = Gráficos): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
 function comboAtivos(p, tks) {
   const escolhidos = [...$(p + 'Ativos').querySelectorAll('input:checked')].map(o => o.value);
   const todos = !escolhidos.length || escolhidos.includes('*');
@@ -575,9 +676,9 @@ function renderDiario() {
 }
 
 [['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['dIni', renderDiario], ['dFim', renderDiario],
- ['rIni', renderResultados], ['rFim', renderResultados]].forEach(([id, f]) => $(id).onchange = f);
+ ['rIni', renderResultados], ['rFim', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
-[['m', renderMensal], ['d', renderDiario], ['r', renderResultados]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
+[['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
   $(p + 'Ativos').querySelectorAll('input').forEach(i => { if (e.target.checked && (i.value === '*') !== tudo) i.checked = false; });
   f();
@@ -657,6 +758,8 @@ document.querySelector('nav').onclick = e => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   $('barra').hidden = !['resumo', 'carteira'].includes(t);
+  if (t === 'graf') renderGraficos(); // o gráfico precisa da largura da tela, que só existe com a aba visível
+  b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados: mantém a aba visível
   scrollTo(0, 0);
 };
 $('btnAtualizar').onclick = atualizar;
