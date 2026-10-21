@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, mensal, pregaoDe, tendencia } = require('./calc.js');
+const { posicoes, qtdEm, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -66,4 +66,15 @@ assert.deepStrictEqual(tendencia([0.01, 0.03, 0.02, 0.05, 0.04, -0.01, null, 0.0
 assert.deepStrictEqual(tendencia([0.05, 0.05]), ['sobe', 'rec']); // recorde repetido: verde só na última vez
 assert.deepStrictEqual(tendencia([null, null]), ['', '']);
 
-console.log('ok');
+// Senha: confere a certa, recusa a errada; código de recuperação no formato XXXX-XXXX-XXXX
+(async () => {
+  const g = await protegerSenha('minha senha');
+  assert.ok(await confereSenha('minha senha', g));
+  assert.ok(!await confereSenha('minha senhA', g));
+  assert.ok(!await confereSenha('x', null));
+  assert.notStrictEqual((await protegerSenha('minha senha')).hash, g.hash); // sal diferente a cada vez
+  const c = gerarCodigo();
+  assert.match(c, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  assert.strictEqual(limpaCodigo(' 7k3p 9qxm-2b4t '), '7K3P9QXM2B4T');
+  console.log('ok');
+})();

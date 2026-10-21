@@ -90,6 +90,10 @@ header .centro { text-align:center; }
 .cf.rec { background:#70ad47; color:#fff; }
 tr.soma th, tr.soma td { border-top:2px solid var(--tx); border-bottom:0; }
 button.exp { width:100%; margin-bottom:10px; }
+/* tela de bloqueio cobre tudo, inclusive o menu */
+#trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
+.codigo { margin-top:12px; padding:12px; border:2px dashed var(--pri); border-radius:10px; }
+#sCodigo { font:700 22px/1.4 ui-monospace, monospace; letter-spacing:2px; text-align:center; margin:8px 0; }
 label.check { display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--tx); font-size:14px; }
 label.check input { width:auto; margin:0; }
 /* Resumo: tabela compacta para caber na largura do celular */
@@ -190,6 +194,26 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-config" hidden>
     <div class="card">
+      <b>Senha do app</b>
+      <p class="mut" id="sStatus"></p>
+      <div id="sAtualBox"><label for="sAtual">Senha atual</label><input id="sAtual" type="password" autocomplete="current-password"></div>
+      <label for="sNova">Nova senha (mínimo 4 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
+      <label for="sConf">Repita a nova senha</label><input id="sConf" type="password" autocomplete="new-password">
+      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
+      <div class="two" style="margin-top:10px">
+        <button id="sSalvar">Criar senha</button>
+        <button id="sRemover" class="sec">Remover senha</button>
+      </div>
+      <label class="check" id="sBioBox"><input type="checkbox" id="sBio"> Entrar com a digital / rosto do celular</label>
+      <div class="msg" id="sMsg"></div>
+      <div id="sCodigoBox" class="codigo" hidden>
+        <b>Seu código de recuperação</b>
+        <div id="sCodigo"></div>
+        <p class="mut">Anote ou tire foto e guarde fora do celular. Se esquecer a senha, é com ele que você cria outra. Ele só aparece agora.</p>
+        <button id="sCodigoOk" class="sec" style="width:100%">Já anotei</button>
+      </div>
+    </div>
+    <div class="card">
       <label for="cToken">Token do brapi.dev (cotações da B3)</label>
       <input id="cToken" autocomplete="off" spellcheck="false">
       <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado só neste celular.</p>
@@ -209,6 +233,29 @@ label.check input { width:auto; margin:0; }
     <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
   </section>
 </main>
+
+<!-- tela de bloqueio: aparece ao abrir o app quando há senha -->
+<div id="trava" hidden>
+  <form class="card" id="tForm" style="width:100%; max-width:360px">
+    <div style="text-align:center"><b style="font-size:18px">Carteira BDR</b><p class="mut">Digite sua senha para entrar</p></div>
+    <div id="tEntrar">
+      <input id="tSenha" type="password" autocomplete="current-password" aria-label="Senha">
+      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
+      <button style="width:100%; margin-top:12px">Entrar</button>
+      <button type="button" id="tBio" class="sec" style="width:100%; margin-top:8px" hidden>Entrar com a digital</button>
+      <button type="button" id="tEsqueci" class="link" style="width:100%; margin-top:8px; color:var(--pri)">Esqueci a senha</button>
+    </div>
+    <div id="tRecuperar" hidden>
+      <label for="tCodigo">Código de recuperação</label><input id="tCodigo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
+      <label for="tNova">Nova senha (mínimo 4 caracteres)</label><input id="tNova" type="password" autocomplete="new-password">
+      <label for="tConf">Repita a nova senha</label><input id="tConf" type="password" autocomplete="new-password">
+      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
+      <button style="width:100%; margin-top:12px">Criar nova senha e entrar</button>
+      <button type="button" id="tVoltar" class="link" style="width:100%; margin-top:8px; color:var(--pri)">Voltar</button>
+    </div>
+    <div class="msg dn" id="tMsg"></div>
+  </form>
+</div>
 
 <nav>
   <button data-tab="resumo" class="on"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Resumo</button>
@@ -588,6 +635,102 @@ $('fileImp').onchange = async e => {
   } catch (err) { $('cMsg').className = 'msg dn'; $('cMsg').textContent = 'Erro ao importar: ' + err.message; }
   e.target.value = '';
 };
+
+// --- Senha do app (guardada à parte: não entra no backup) ---
+// shortcut: é uma trava de tela; os dados no celular não ficam criptografados. Para isso, cifrar o db com a senha.
+const KEY_SENHA = 'carteira-bdr-senha';
+let trava; try { trava = JSON.parse(localStorage.getItem(KEY_SENHA)) || {}; } catch { trava = {}; }
+const salvarTrava = () => localStorage.setItem(KEY_SENHA, JSON.stringify(trava));
+const temSenha = () => !!trava.senha;
+const novaRuim = (a, b) => a.length < 4 ? 'A senha precisa ter pelo menos 4 caracteres.' : a !== b ? 'As duas senhas não são iguais.' : '';
+let bioDisponivel = false;
+
+// "Mostrar senha": vale para os campos de senha do mesmo bloco
+document.addEventListener('change', e => {
+  if (!e.target.classList.contains('verSenha')) return;
+  e.target.closest('#tEntrar, #tRecuperar, .card').querySelectorAll('input[type=password], input[data-senha]')
+    .forEach(i => { i.dataset.senha = 1; i.type = e.target.checked ? 'text' : 'password'; });
+});
+
+function renderSenha() {
+  $('sStatus').textContent = temSenha() ? 'O app pede senha ao abrir.' : 'Sem senha: o app abre direto.';
+  $('sAtualBox').hidden = $('sRemover').hidden = !temSenha();
+  $('sSalvar').textContent = temSenha() ? 'Trocar senha' : 'Criar senha';
+  $('sBioBox').hidden = !temSenha() || !bioDisponivel;
+  $('sBio').checked = !!trava.bio;
+}
+const msgSenha = (txt, ok) => { $('sMsg').className = 'msg ' + (ok ? 'up' : 'dn'); $('sMsg').textContent = txt; };
+const limpaCampos = (...ids) => ids.forEach(id => $(id).value = '');
+
+$('sSalvar').onclick = async () => {
+  if (temSenha() && !await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Senha atual errada.');
+  const erro = novaRuim($('sNova').value, $('sConf').value); if (erro) return msgSenha(erro);
+  const criando = !temSenha();
+  trava.senha = await protegerSenha($('sNova').value);
+  if (!trava.codigo) { // código de recuperação: gerado uma vez e mostrado só agora
+    const c = gerarCodigo(); trava.codigo = await protegerSenha(limpaCodigo(c));
+    $('sCodigo').textContent = c; $('sCodigoBox').hidden = false;
+  }
+  salvarTrava(); limpaCampos('sAtual', 'sNova', 'sConf'); renderSenha();
+  msgSenha(criando ? 'Senha criada.' : 'Senha trocada.', true);
+};
+$('sCodigoOk').onclick = () => { $('sCodigoBox').hidden = true; $('sCodigo').textContent = ''; };
+$('sRemover').onclick = async () => {
+  if (!await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Digite a senha atual para remover.');
+  if (!confirm('Remover a senha? O app vai abrir sem pedir senha.')) return;
+  trava = {}; salvarTrava(); limpaCampos('sAtual', 'sNova', 'sConf'); renderSenha(); msgSenha('Senha removida.', true);
+};
+// Digital/rosto (WebAuthn): o celular confirma a pessoa; o app só guarda o identificador da credencial.
+// shortcut: não verifica a assinatura num servidor (não há servidor); serve como trava local, igual à senha.
+$('sBio').onchange = async e => {
+  if (!e.target.checked) { delete trava.bio; salvarTrava(); return msgSenha('Entrada com digital desligada.', true); }
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: aleatorio(32), rp: { name: 'Carteira BDR' },
+      user: { id: aleatorio(16), name: 'carteira-bdr', displayName: 'Carteira BDR' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+      timeout: 60000 } });
+    trava.bio = b64(new Uint8Array(cred.rawId)); salvarTrava(); msgSenha('Pronto: ao abrir, o app pede a digital.', true);
+  } catch (err) { e.target.checked = false; msgSenha('Não foi possível ligar a digital: ' + err.message); }
+};
+
+// Tela de bloqueio
+const msgTrava = t => $('tMsg').textContent = t;
+function modoRecuperar(sim) { $('tEntrar').hidden = sim; $('tRecuperar').hidden = !sim; msgTrava(''); }
+async function entrarBio() {
+  try {
+    await navigator.credentials.get({ publicKey: { challenge: aleatorio(32), userVerification: 'required', timeout: 60000,
+      allowCredentials: [{ type: 'public-key', id: deB64(trava.bio) }] } });
+    liberar();
+  } catch { msgTrava('Digital não confirmada. Use a senha.'); }
+}
+function bloquear() {
+  $('trava').hidden = false; modoRecuperar(false); limpaCampos('tSenha', 'tCodigo', 'tNova', 'tConf');
+  $('tBio').hidden = !trava.bio;
+  if (trava.bio) entrarBio(); else $('tSenha').focus();
+}
+function liberar() { $('trava').hidden = true; limpaCampos('tSenha', 'tCodigo', 'tNova', 'tConf'); msgTrava(''); }
+$('tBio').onclick = entrarBio;
+$('tEsqueci').onclick = () => modoRecuperar(true);
+$('tVoltar').onclick = () => modoRecuperar(false);
+$('tForm').onsubmit = async e => {
+  e.preventDefault();
+  if ($('tRecuperar').hidden) return await confereSenha($('tSenha').value, trava.senha) ? liberar() : msgTrava('Senha errada.');
+  if (!await confereSenha(limpaCodigo($('tCodigo').value), trava.codigo)) return msgTrava('Código de recuperação errado.');
+  const erro = novaRuim($('tNova').value, $('tConf').value); if (erro) return msgTrava(erro);
+  trava.senha = await protegerSenha($('tNova').value); salvarTrava(); liberar(); alert('Senha nova criada.');
+};
+// voltou ao app depois de mais de 1 minuto em segundo plano: pede a senha de novo
+let saiu = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) saiu = Date.now();
+  else if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear();
+});
+if (temSenha()) bloquear();
+renderSenha();
+window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
+  .then(ok => { bioDisponivel = ok; renderSenha(); }).catch(() => {});
 
 render();
 </script>
