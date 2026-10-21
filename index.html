@@ -163,8 +163,6 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-carteira" hidden>
     <div id="lista"></div>
-    <h2 id="tEnc" hidden>Encerrados</h2>
-    <div id="encerrados"></div>
   </section>
 
   <section id="tab-resumo">
@@ -405,7 +403,6 @@ const posicoesComClasse = () => posicoes(db.ops, db.precos).map(p => ({ ...p, cl
 function render() {
   const ps = posicoesComClasse();
   const abertos = ps.filter(p => !p.encerrado).sort((a, b) => (b.pct ?? -9) - (a.pct ?? -9));
-  const enc = ps.filter(p => p.encerrado);
 
   const inv = abertos.reduce((s, p) => s + p.investido, 0);
   const comPreco = abertos.filter(p => p.valor != null);
@@ -467,12 +464,6 @@ function render() {
         <div><span class="mut">Dia R$ (posição)</span><b class="${cor(p.d.r)}">${brl(p.d.r)}</b></div>
       </div>
     </div>`).join('') || '<p class="mut">Nenhum ativo. Lance uma compra na aba Lançar ou importe um backup em Ajustes.</p>';
-
-  $('tEnc').hidden = !enc.length;
-  $('encerrados').innerHTML = enc.map(p => `
-    <div class="card"><div class="row"><span class="tk">${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></span>
-      <span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
-      <div class="mut">Custo ${brl(p.custoVendido)} · vendido</div></div>`).join('');
 
   $('tickers').innerHTML = ps.map(p => `<option value="${esc(p.ticker)}">`).join('');
   $('ops').innerHTML = [...db.ops].sort((a, b) => b.data.localeCompare(a.data)).map(o => `
