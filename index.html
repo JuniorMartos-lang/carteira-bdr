@@ -605,8 +605,15 @@ function renderGraficos() {
     g += `<text x="${x(i)}" y="${H - 6}" text-anchor="${k === 0 ? 'start' : k === marcasX - 1 ? 'end' : 'middle'}">${dias[i].data.slice(8)}/${dias[i].data.slice(5, 7)}</text>`;
   }
   // linha interrompida nos dias sem posição
-  g += series.map(s => `<path class="linha" stroke="${s.cor}" d="${s.vals.map((v, i) => v == null ? '' :
-    `${i && s.vals[i - 1] != null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')}"/>`).join('');
+  const caminho = s => s.vals.map((v, i) => v == null ? '' : `${i && s.vals[i - 1] != null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  if (series.length === 1) {
+    // uma linha só: azul acima de 0% e vermelha abaixo; o corte no 0% troca a cor exatamente onde a linha cruza
+    const z = y(0), d = caminho(series[0]);
+    g += `<clipPath id="gAcima"><rect x="0" y="0" width="${W}" height="${z}"/></clipPath>` +
+      `<clipPath id="gAbaixo"><rect x="0" y="${z}" width="${W}" height="${H - z}"/></clipPath>` +
+      `<path class="linha" stroke="var(--s1)" clip-path="url(#gAcima)" d="${d}"/>` +
+      `<path class="linha" stroke="var(--s8)" clip-path="url(#gAbaixo)" d="${d}"/>`;
+  } else g += series.map(s => `<path class="linha" stroke="${s.cor}" d="${caminho(s)}"/>`).join('');
   svg.innerHTML = g + `<line class="mira" id="gMira" y1="${T}" y2="${H - B}" visibility="hidden"/><g id="gPontos"></g>`;
 
   // toque/mouse: linha vertical no dia mais próximo + caixa com a data e os valores
@@ -614,10 +621,11 @@ function renderGraficos() {
     const r = svg.getBoundingClientRect(), px = e.clientX - r.left;
     const i = Math.max(0, Math.min(n - 1, Math.round(n === 1 ? 0 : (px - L) / ((W - L - R) / (n - 1)))));
     $('gMira').setAttribute('x1', x(i)); $('gMira').setAttribute('x2', x(i)); $('gMira').setAttribute('visibility', 'visible');
-    $('gPontos').innerHTML = series.map(s => s.vals[i] == null ? '' : `<circle class="ponto" r="4" cx="${x(i)}" cy="${y(s.vals[i])}" fill="${s.cor}"/>`).join('');
+    const corPonto = (s, v) => series.length === 1 ? (v < 0 ? 'var(--s8)' : 'var(--s1)') : s.cor;
+    $('gPontos').innerHTML = series.map(s => s.vals[i] == null ? '' : `<circle class="ponto" r="4" cx="${x(i)}" cy="${y(s.vals[i])}" fill="${corPonto(s, s.vals[i])}"/>`).join('');
     const d = $('gDica'); d.hidden = false;
     d.innerHTML = `<b>${dias[i].data.split('-').reverse().join('/')}</b><br>` + series.map(s =>
-      `<i class="marca" style="background:${s.cor}"></i>${esc(s.nome)}: <b class="${cor(s.vals[i])}">${pct(s.vals[i])}</b>`).join('<br>');
+      `<i class="marca" style="background:${corPonto(s, s.vals[i])}"></i>${esc(s.nome)}: <b class="${cor(s.vals[i])}">${pct(s.vals[i])}</b>`).join('<br>');
     d.style.left = Math.max(0, Math.min(W - d.offsetWidth, x(i) + (x(i) > W / 2 ? -d.offsetWidth - 10 : 10))) + 'px';
   };
   svg.onpointerdown = svg.onpointermove = mostrar;
