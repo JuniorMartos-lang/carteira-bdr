@@ -203,6 +203,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div id="rLista"></div>
+    <button class="sec exp" data-exp="resultados">Exportar para Excel</button>
     <p class="mut">Só ativos encerrados (vendidos por completo), pelo mês da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
   </section>
 
@@ -456,9 +457,18 @@ function renderResultados() {
   const lista = enc.filter(p => cols.includes(p.ticker) && (!ini || p.fim.slice(0, 7) >= ini) && (!fim || p.fim.slice(0, 7) <= fim))
     .map(p => ({ ...p, ir: irDe(p) }));
   const liq = p => p.lucro - (p.ir || 0);
+  const dt = d => d.split('-').reverse().join('/');
   const linha = (nome, v, c = '') => `<div><span class="mut">${nome}</span><span class="${c}">${v}</span></div>`;
   const t = lista.reduce((s, p) => ({ compra: s.compra + p.custoVendido, venda: s.venda + p.vendido, lucro: s.lucro + p.lucro,
     ir: s.ir + (p.ir || 0), liq: s.liq + liq(p) }), { compra: 0, venda: 0, lucro: 0, ir: 0, liq: 0 });
+  // exportação: uma linha por ativo, cada informação do card vira uma coluna; linha Total no fim
+  tabelas.resultados = !lista.length ? null : [
+    ['Ativo', 'Nome', 'Tipo', 'Data da compra', 'Encerrado em', 'Total de compra', 'Preço médio de compra', 'Total de venda',
+      'Preço médio de venda', 'Lucro / prejuízo R$', 'Lucro / prejuízo %', 'IR a pagar', 'Lucro líquido'],
+    ...lista.map(p => [p.ticker, db.nomes[p.ticker] ? nomeCurto(db.nomes[p.ticker]) : '', NOME_CLASSE[p.classe], dt(p.inicio), dt(p.fim),
+      xR(p.custoVendido), xR(p.custoVendido / p.qtdVendida), xR(p.vendido), xR(p.vendido / p.qtdVendida),
+      xR(p.lucro), xP(p.pct), p.ir == null ? 'retido na fonte' : xR(p.ir), xR(liq(p))]),
+    ['Total', '', '', '', '', xR(t.compra), '', xR(t.venda), '', xR(t.lucro), xP(t.compra ? t.lucro / t.compra : null), xR(t.ir), xR(t.liq)]];
   $('rLista').innerHTML = !enc.length ? '<p class="mut">Nenhum ativo encerrado ainda.</p>' :
     !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
     lista.map(p => `<div class="card">
@@ -466,8 +476,8 @@ function renderResultados() {
         ${db.nomes[p.ticker] ? `<span class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</span>` : ''}
         <span class="tag">${NOME_CLASSE[p.classe]}</span></div>
       <div class="grid">
-        ${linha('Data da compra', p.inicio.split('-').reverse().join('/'))}
-        ${linha('Encerrado em', p.fim.split('-').reverse().join('/'))}
+        ${linha('Data da compra', dt(p.inicio))}
+        ${linha('Encerrado em', dt(p.fim))}
         ${linha('Total de compra', brl(p.custoVendido))}
         ${linha('Preço médio de compra', brl(p.custoVendido / p.qtdVendida))}
         ${linha('Total de venda', brl(p.vendido))}
