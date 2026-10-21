@@ -89,6 +89,7 @@ header .centro { text-align:center; }
 .cf.desce { background:#f4b183; color:#7f4125; }
 .cf.rec { background:#70ad47; color:#fff; }
 tr.soma th, tr.soma td { border-top:2px solid var(--tx); border-bottom:0; }
+button.exp { width:100%; margin-bottom:10px; }
 label.check { display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--tx); font-size:14px; }
 label.check input { width:auto; margin:0; }
 /* Resumo: tabela compacta para caber na largura do celular */
@@ -128,6 +129,7 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-resumo">
     <div class="card" style="padding:6px 8px; overflow-x:auto"><table id="tResumo"></table></div>
+    <button class="sec exp" data-exp="resumo">Exportar para Excel</button>
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
   </section>
 
@@ -167,6 +169,7 @@ label.check input { width:auto; margin:0; }
       <p class="mut" style="margin:6px 0 0">Datas em branco = todos os dias.</p>
     </div>
     <div class="card rolagem"><table id="tDiario"></table></div>
+    <button class="sec exp" data-exp="diario">Exportar para Excel</button>
     <p class="mut">Cada ativo mostra o valor da posição no dia e, embaixo, o % de lucro acumulado. O app grava um registro por dia ao atualizar as cotações.</p>
   </section>
 
@@ -181,6 +184,7 @@ label.check input { width:auto; margin:0; }
       <label class="check"><input type="checkbox" id="mResumido"> Resumido (só Mês, Total % e Lucro R$)</label>
     </div>
     <div class="card rolagem"><table id="tMensal"></table></div>
+    <button class="sec exp" data-exp="mensal">Exportar para Excel</button>
     <p class="mut">O app guarda o valor da carteira a cada atualização de cotação (um registro por dia). O lucro do mês é a diferença do lucro acumulado entre o fim de um mês e o fim do anterior.</p>
   </section>
 
@@ -238,6 +242,21 @@ const num = s => { s = String(s).trim(); return Number(s.includes(',') ? s.repla
 const hoje = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
 const ehB3 = t => /^[A-Z]{4}\d{1,2}F?$/.test(t);
 const NOME_CLASSE = { A: 'Ação', F: 'Fundo' };
+// Exportar para Excel (CSV): cada aba guarda aqui as linhas que está mostrando (com os filtros).
+// Números no padrão brasileiro, sem separador de milhar, para o Excel reconhecer como número.
+const tabelas = {};
+const xN = (v, p) => v == null || isNaN(v) ? '' :
+  (p ? v * 100 : v).toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (p ? '%' : '');
+const xR = v => xN(v), xP = v => xN(v, true);
+// celular: abre a tela de compartilhar (WhatsApp, Drive, OneDrive...); no computador, baixa o arquivo.
+// Devolve false se a pessoa cancelou.
+async function compartilhar(arq, titulo) {
+  try {
+    if (navigator.canShare?.({ files: [arq] })) await navigator.share({ files: [arq], title: titulo });
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(arq); a.download = arq.name; a.click(); }
+    return true;
+  } catch (e) { if (e.name !== 'AbortError') alert('Não foi possível compartilhar: ' + e.message); return false; }
+}
 // nome da empresa sem o texto técnico do BDR: "Apple Inc. Shs Unsponsored ..." → "Apple Inc."
 const nomeCurto = n => n.split(/\s+(?:Shs|Unsponsored|Sponsored)\b/i)[0];
 // posições com tipo; lançamentos antigos sem tipo: código da B3 = ação, resto = fundo
@@ -282,6 +301,8 @@ function render() {
   const doDia = p => { const a = ant[p.ticker]; if (!a || p.valor == null) return {};
     const r = p.lucro - (a[0] - a[1]); return { r, p: r / a[0] }; };
   const comDia = abertos.map(p => ({ ...p, d: doDia(p) }));
+  tabelas.resumo = !comDia.length ? null : [['Ativo', 'Hoje %', 'Hoje R$', 'Lucro R$', 'Lucro %'],
+    ...comDia.map((p, i) => [`${i + 1}º ${p.ticker}`, xP(p.d.p), xR(p.d.r), xR(p.lucro), xP(p.pct)])];
   // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
   $('tResumo').innerHTML = !comDia.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
     '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro R$ e %</th></tr>' +
@@ -342,6 +363,7 @@ function renderMensal() {
   // esconde ativo sem nenhum registro no período (ex.: já vendido); "Resumido" esconde todos (os totais continuam somando os escolhidos)
   const vis = $('mResumido').checked ? [] : cols.filter(t => linhas.some(m => m.linhas[t]));
   let somaP = 0, somaL = 0; // linha final: soma do Total % e do Lucro R$ dos meses mostrados
+  const exp = [['Mês', ...vis, 'Total %', 'Lucro R$']];
   $('tMensal').innerHTML = !ms.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
     !linhas.length ? '<tr><td class="mut">Nenhum mês nesse período (o mês inicial está depois do final?).</td></tr>' :
     `<tr><th>Mês</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Total %</th><th>Lucro R$</th></tr>` +
@@ -351,10 +373,13 @@ function renderMensal() {
       const lucro = ls.reduce((s, l) => s + l.lucro, 0), inv = ls.reduce((s, l) => s + l.inv, 0);
       const p = inv ? lucro / inv : null;
       somaP += p || 0; somaL += lucro;
+      exp.push([nomeMes(m.mes), ...vis.map(t => xP(m.linhas[t]?.pct)), xP(p), ls.length ? xR(lucro) : '']);
       return `<tr><td>${nomeMes(m.mes)}</td>${vis.map(t => { const l = m.linhas[t]; return `<td class="${cor(l?.pct)}">${l ? pct(l.pct) : ''}</td>`; }).join('')}` +
         `<th class="${cor(p)}">${pct(p)}</th><th class="${cor(lucro)}">${ls.length ? brl(lucro) : '—'}</th></tr>`;
     }).join('') +
     `<tr class="soma"><th>Soma</th>${vis.map(() => '<td></td>').join('')}<th class="${cor(somaP)}">${pct(somaP)}</th><th class="${cor(somaL)}">${brl(somaL)}</th></tr>`;
+  exp.push(['Soma', ...vis.map(() => ''), xP(somaP), xR(somaL)]);
+  tabelas.mensal = linhas.length ? exp : null;
 }
 
 // Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
@@ -389,6 +414,12 @@ function renderDiario() {
   const linhas = todas.filter(l => (!ini || l.s.data >= ini) && (!fim || l.s.data <= fim)).reverse(); // mais recente em cima
   const data = d => d.split('-').reverse().join('/');
   const vis = cols.filter(t => linhas.some(l => l.s.v[t])); // esconde ativo sem nenhum registro no período (ex.: já vendido)
+  // exportação: valor e % de cada ativo em colunas separadas (na tela o % fica embaixo do valor)
+  tabelas.diario = !linhas.length ? null : [
+    ['Data', ...vis.flatMap(t => [t + ' R$', t + ' %']), 'Dia %', 'Dia R$', 'Total R$', 'Lucro %', 'Lucro R$'],
+    ...linhas.map(({ s, vs, valor, lucro, p, noDia, pDia }) => [data(s.data),
+      ...vis.flatMap(t => s.v[t] ? [xR(s.v[t][0]), xP(pctDe(s.v[t]))] : ['', '']),
+      xP(pDia), xR(noDia), vs.length ? xR(valor) : '', xP(p), vs.length ? xR(lucro) : ''])];
   $('tDiario').innerHTML = !h.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
     !linhas.length ? '<tr><td class="mut">Nenhum dia nesse período (a data inicial está depois da final?).</td></tr>' :
     `<tr><th>Data</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Dia %</th><th>Dia R$</th><th>Total R$</th><th>Lucro %</th><th>Lucro R$</th></tr>` +
@@ -529,13 +560,20 @@ $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $
 $('btnExp').onclick = async () => {
   const { token, ...dados } = db; // o token não vai no backup
   const arq = new File([JSON.stringify(dados, null, 1)], `carteira-bdr-${hoje()}.json`, { type: 'application/json' });
-  try {
-    // celular: abre a tela de compartilhar (OneDrive, Drive, e-mail...); um site não consegue gravar direto numa pasta
-    if (navigator.canShare?.({ files: [arq] })) await navigator.share({ files: [arq], title: 'Backup Carteira BDR' });
-    else { const a = document.createElement('a'); a.href = URL.createObjectURL(arq); a.download = arq.name; a.click(); }
-  } catch (e) { if (e.name !== 'AbortError') alert('Não foi possível salvar o backup: ' + e.message); return; }
+  // um site não consegue gravar direto numa pasta: usa a tela de compartilhar
+  if (!await compartilhar(arq, 'Backup Carteira BDR')) return;
   db.ultimoBackup = hoje(); salvar(); render();
 };
+// Exportar Resumo / Diário / Mensal: o que está na tela, com os filtros. CSV abre no Excel e no Google Planilhas.
+document.querySelector('main').addEventListener('click', e => {
+  const aba = e.target.closest('[data-exp]')?.dataset.exp; if (!aba) return;
+  const linhas = tabelas[aba];
+  if (!linhas) return alert('Nada para exportar com os filtros atuais.');
+  const csv = s => /[;"\n]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s;
+  // ﻿: avisa o Excel que o arquivo é UTF-8 (acentos); ";" é o separador do Excel em português
+  const txt = '﻿' + linhas.map(l => l.map(csv).join(';')).join('\r\n');
+  compartilhar(new File([txt], `carteira-${aba}-${hoje()}.csv`, { type: 'text/csv' }), 'Carteira BDR - ' + aba);
+});
 $('btnImp').onclick = () => $('fileImp').click();
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
