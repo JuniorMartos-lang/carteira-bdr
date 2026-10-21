@@ -50,7 +50,7 @@ function mensal(historico) {
     let lucro = 0, investido = 0;
     Object.entries(fimDoMes[m]).forEach(([t, [valor, inv]]) => {
       const l = valor - inv;
-      linhas[t] = { lucro: l - (acum[t] || 0), pct: (l - (acum[t] || 0)) / inv };
+      linhas[t] = { lucro: l - (acum[t] || 0), pct: (l - (acum[t] || 0)) / inv, inv };
       acum[t] = l;
       lucro += linhas[t].lucro;
       investido += inv;
@@ -59,4 +59,16 @@ function mensal(historico) {
   });
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, mensal };
+// Data do pregão (AAAA-MM-DD) de uma cotação. O brapi marca o fechamento com a hora em que
+// atualizou os dados (ex.: 01h37 do dia seguinte); antes das 10h de Brasília ainda é o pregão anterior.
+// shortcut: pula só fim de semana, não feriados da B3; num feriado o fechamento do dia anterior cai no feriado.
+function pregaoDe(iso) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric',
+    month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).map(x => [x.type, x.value]));
+  const d = new Date(Date.UTC(+p.year, p.month - 1, +p.day));
+  if (+p.hour < 10) d.setUTCDate(d.getUTCDate() - 1);
+  while ([0, 6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, mensal, pregaoDe };

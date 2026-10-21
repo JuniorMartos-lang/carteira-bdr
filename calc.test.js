@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, mensal } = require('./calc.js');
+const { posicoes, qtdEm, mensal, pregaoDe } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -51,5 +51,13 @@ const m2 = mensal([
 ]);
 perto(m2[1].linhas.A.lucro, -50);
 perto(m2[1].linhas.B.lucro, 100);
+perto(m2[1].linhas.A.inv, 1000);
+
+// Data do pregão a partir do horário do brapi
+assert.strictEqual(pregaoDe('2026-10-21T04:37:21.000Z'), '2026-10-20'); // qua 01h37 → fechamento de ter
+assert.strictEqual(pregaoDe('2026-10-21T15:00:00.000Z'), '2026-10-21'); // qua 12h, pregão aberto
+assert.strictEqual(pregaoDe('2026-10-20T21:00:00.000Z'), '2026-10-20'); // ter 18h, após o fechamento
+assert.strictEqual(pregaoDe('2026-10-19T04:00:00.000Z'), '2026-10-16'); // seg 01h → sexta
+assert.strictEqual(pregaoDe('2026-10-17T15:00:00.000Z'), '2026-10-16'); // sábado → sexta
 
 console.log('ok');
