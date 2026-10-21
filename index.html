@@ -466,6 +466,7 @@ function renderResultados() {
         ${db.nomes[p.ticker] ? `<span class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</span>` : ''}
         <span class="tag">${NOME_CLASSE[p.classe]}</span></div>
       <div class="grid">
+        ${linha('Data da compra', p.inicio.split('-').reverse().join('/'))}
         ${linha('Encerrado em', p.fim.split('-').reverse().join('/'))}
         ${linha('Total de compra', brl(p.custoVendido))}
         ${linha('Preço médio de compra', brl(p.custoVendido / p.qtdVendida))}

@@ -5,7 +5,8 @@
 function posicoes(ops, precos) {
   const pos = {};
   [...ops].sort((a, b) => a.data.localeCompare(b.data)).forEach(o => {
-    const p = pos[o.ticker] ||= { ticker: o.ticker, qtd: 0, investido: 0, realizado: 0, custoVendido: 0, vendido: 0, qtdVendida: 0 };
+    // inicio: data da primeira compra
+    const p = pos[o.ticker] ||= { ticker: o.ticker, inicio: o.data, qtd: 0, investido: 0, realizado: 0, custoVendido: 0, vendido: 0, qtdVendida: 0 };
     p.classe = o.classe || p.classe; // 'A' ação / 'F' fundo; vale o último lançamento que informou
     p.fim = o.data; // data da última operação (para encerrados: quando foi encerrado)
     if (o.tipo === 'C') {

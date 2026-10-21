@@ -35,7 +35,7 @@ assert.strictEqual(qtdEm(ops, 'DISB34', '2026-09-01'), 250);
 
 // Encerrado: totais de compra e venda, data de encerramento e IR (15% só sobre lucro de BDR; fundo = retido na fonte)
 perto(disb.custoVendido, 8769); perto(disb.vendido, 8603); assert.strictEqual(disb.qtdVendida, 250);
-assert.strictEqual(disb.fim, '2026-10-06');
+assert.strictEqual(disb.inicio, '2026-08-06'); assert.strictEqual(disb.fim, '2026-10-06');
 perto(irDe(disb), 0); // prejuízo não paga
 perto(irDe({ classe: 'A', lucro: 1000 }), 150);
 assert.strictEqual(irDe({ classe: 'F', lucro: 1000 }), null);
