@@ -305,7 +305,7 @@ label.check input { width:auto; margin:0; }
         <button id="btnExp">Salvar backup</button>
         <button id="btnImp" class="sec">Restaurar</button>
       </div>
-      <input type="file" id="fileImp" accept=".json,application/json" hidden>
+      <input type="file" id="fileImp" accept=".txt,.json,text/plain,application/json" hidden>
       <div class="msg" id="cMsg"></div>
     </div>
     <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
@@ -380,11 +380,17 @@ const xR = v => xN(v), xP = v => xN(v, true);
 // celular: abre a tela de compartilhar (WhatsApp, Drive, OneDrive...); no computador, baixa o arquivo.
 // Devolve false se a pessoa cancelou.
 async function compartilhar(arq, titulo) {
+  const baixar = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(arq); a.download = arq.name; a.click(); };
   try {
     if (navigator.canShare?.({ files: [arq] })) await navigator.share({ files: [arq], title: titulo });
-    else { const a = document.createElement('a'); a.href = URL.createObjectURL(arq); a.download = arq.name; a.click(); }
+    else baixar();
     return true;
-  } catch (e) { if (e.name !== 'AbortError') alert('Não foi possível compartilhar: ' + e.message); return false; }
+  } catch (e) {
+    if (e.name === 'AbortError') return false; // a pessoa fechou a tela de compartilhar
+    // o celular recusou compartilhar esse arquivo ("Permission denied"): baixa para Downloads
+    baixar(); alert(`O celular não deixou compartilhar. O arquivo ${arq.name} foi salvo na pasta Downloads.`);
+    return true;
+  }
 }
 // nome da empresa sem o texto técnico do BDR: "Apple Inc. Shs Unsponsored ..." → "Apple Inc."
 const nomeCurto = n => n.split(/\s+(?:Shs|Unsponsored|Sponsored)\b/i)[0];
@@ -841,7 +847,8 @@ $('cToken').value = db.token;
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
 $('btnExp').onclick = async () => {
   const { token, ...dados } = db; // o token não vai no backup
-  const arq = new File([JSON.stringify(dados, null, 1)], `carteira-bdr-${hoje()}.json`, { type: 'application/json' });
+  // .txt: o Chrome do Android recusa compartilhar .json ("Permission denied"); o conteúdo continua sendo JSON
+  const arq = new File([JSON.stringify(dados, null, 1)], `backup-carteira-bdr-${hoje()}.txt`, { type: 'text/plain' });
   // um site não consegue gravar direto numa pasta: usa a tela de compartilhar
   if (!await compartilhar(arq, 'Backup Carteira BDR')) return;
   db.ultimoBackup = hoje(); salvar(); render();
