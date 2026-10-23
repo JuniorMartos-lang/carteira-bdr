@@ -260,13 +260,14 @@ label.check input { width:auto; margin:0; }
       <label>Ativos</label>
       <details class="combo"><summary id="rResumo">Todos</summary><div id="rAtivos" class="lista"></div></details>
       <div class="two">
-        <div><label for="rIni">Mês inicial (encerramento)</label><select id="rIni"></select></div>
-        <div><label for="rFim">Mês final</label><select id="rFim"></select></div>
+        <div><label for="rIni">Mês inicial (venda)</label><select id="rIni"></select></div>
+        <div><label for="rFim">Mês final (venda)</label><select id="rFim"></select></div>
       </div>
+      <label class="check"><input type="checkbox" id="rResumido"> Resumido (lista com ativo, datas, venda, lucro, IR e líquido)</label>
     </div>
     <div id="rLista"></div>
     <button class="sec exp" data-exp="resultados">Exportar para Excel</button>
-    <p class="mut">Só ativos encerrados (vendidos por completo), pelo mês da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
+    <p class="mut">Só ativos encerrados (vendidos por completo). O filtro de meses usa a data da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
   </section>
 
   <section id="tab-config" hidden>
@@ -552,6 +553,25 @@ function renderResultados() {
   const linha = (nome, v, c = '') => `<div><span class="mut">${nome}</span><span class="${c}">${v}</span></div>`;
   const t = lista.reduce((s, p) => ({ compra: s.compra + p.custoVendido, venda: s.venda + p.vendido, lucro: s.lucro + p.lucro,
     ir: s.ir + (p.ir || 0), liq: s.liq + liq(p) }), { compra: 0, venda: 0, lucro: 0, ir: 0, liq: 0 });
+  const tP = t.compra ? t.lucro / t.compra : null, irTxt = p => p.ir == null ? 'retido' : reais(p.ir);
+  if ($('rResumido').checked) {
+    // Resumido: uma linha por ativo (lista compacta, como no Diário), com Total no fim; a exportação segue as mesmas colunas
+    const curta = d => dt(d).slice(0, 6) + d.slice(2, 4); // dd/mm/aa
+    tabelas.resultados = !lista.length ? null : [
+      ['Ativo', 'Data da compra', 'Data da venda', 'Total da venda', 'Lucro / prejuízo R$', 'Lucro / prejuízo %', 'IR a pagar', 'Lucro líquido'],
+      ...lista.map(p => [p.ticker, dt(p.inicio), dt(p.fim), xR(p.vendido), xR(p.lucro), xP(p.pct), p.ir == null ? 'retido na fonte' : xR(p.ir), xR(liq(p))]),
+      ['Total', '', '', xR(t.venda), xR(t.lucro), xP(tP), xR(t.ir), xR(t.liq)]];
+    $('rLista').innerHTML = !enc.length ? '<p class="mut">Nenhum ativo encerrado ainda.</p>' :
+      !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
+      `<div class="card rolagem"><table class="compacto">
+        <tr><th>Ativo</th><th>Compra</th><th>Venda</th><th>Total venda R$</th><th>Lucro R$</th><th>Lucro %</th><th>IR R$</th><th>Líquido R$</th></tr>` +
+      lista.map(p => `<tr><td><b>${esc(p.ticker)}</b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td><td>${reais(p.vendido)}</td>
+        <td class="${cor(p.lucro)}">${reais(p.lucro)}</td><td class="${cor(p.pct)}">${pct(p.pct)}</td><td>${irTxt(p)}</td>
+        <td class="${cor(liq(p))}"><b>${reais(liq(p))}</b></td></tr>`).join('') +
+      `<tr class="soma"><th>Total</th><td></td><td></td><th>${reais(t.venda)}</th><th class="${cor(t.lucro)}">${reais(t.lucro)}</th>
+        <th class="${cor(tP)}">${pct(tP)}</th><th>${reais(t.ir)}</th><th class="${cor(t.liq)}">${reais(t.liq)}</th></tr></table></div>`;
+    return;
+  }
   // exportação: uma linha por ativo, cada informação do card vira uma coluna; linha Total no fim
   tabelas.resultados = !lista.length ? null : [
     ['Ativo', 'Nome', 'Tipo', 'Data da compra', 'Encerrado em', 'Total de compra', 'Preço médio de compra', 'Total de venda',
@@ -714,7 +734,7 @@ function renderDiario() {
 }
 
 [['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['dIni', renderDiario], ['dFim', renderDiario], ['dResumido', renderDiario],
- ['rIni', renderResultados], ['rFim', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
+ ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
 [['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
