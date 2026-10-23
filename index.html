@@ -125,6 +125,13 @@ button.exp { width:100%; margin-bottom:10px; }
 #gDica { position:absolute; top:0; pointer-events:none; background:var(--card); border:1px solid var(--bd); border-radius:8px;
   padding:6px 8px; font-size:12px; line-height:1.5; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; }
 .card.total { border:2px solid var(--pri); }
+/* botão "i" de ajuda e o quadro que ele abre */
+button.info { width:24px; height:24px; padding:0; border-radius:50%; font:italic 700 14px/1 Georgia, serif; flex:none;
+  background:transparent; color:var(--pri); border:1.5px solid var(--pri); }
+.ajuda { border:1px solid var(--bd); border-radius:10px; padding:10px 12px; margin:6px 0 8px; font-size:14px; background:var(--bg); }
+.ajuda ol, .ajuda ul { margin:4px 0 10px; padding-left:20px; }
+.ajuda li { margin:3px 0; }
+.ajuda a { color:var(--pri); font-weight:600; }
 .azul { color:#185fa5; } :root[data-theme=dark] .azul { color:#60a5fa; }
 /* tela de bloqueio cobre tudo, inclusive o menu */
 #trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
@@ -307,7 +314,33 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card">
-      <label for="cToken">Token do brapi.dev (cotações da B3)</label>
+      <div class="row" style="align-items:center"><label for="cToken">Token do brapi.dev (cotações da B3)</label>
+        <button type="button" class="info" id="tokInfoBtn" aria-expanded="false" aria-controls="tokInfo" aria-label="Como conseguir o token">i</button></div>
+      <div id="tokInfo" class="ajuda" hidden>
+        <b>Como conseguir o token do brapi (grátis)</b>
+        <p class="mut">O token é uma "chave" que deixa o app buscar as cotações. É criado uma vez só.</p>
+        <b>1. Criar a conta e copiar o token</b>
+        <ol>
+          <li>Abra o navegador e entre em <a href="https://brapi.dev" target="_blank" rel="noopener">brapi.dev</a>.</li>
+          <li>Toque em <b>Entrar</b> ou <b>Criar conta</b> (no alto da página).</li>
+          <li>Cadastre-se com seu e-mail ou com a conta do Google. Se pedirem, confirme o e-mail pelo link que o brapi mandar.</li>
+          <li>Já dentro da conta, abra o <b>Painel</b> (Dashboard) e procure <b>Token</b> ou <b>Chave de API</b>.</li>
+          <li>Use o <b>plano gratuito</b> (Free): ele atende o app.</li>
+          <li><b>Copie o token</b> (um código comprido de letras e números; costuma ter um botão de copiar ao lado).</li>
+        </ol>
+        <b>2. Colocar o token aqui</b>
+        <ol>
+          <li>Toque no campo abaixo e <b>cole</b> o token (segure o dedo no campo → Colar).</li>
+          <li>Toque em <b>Salvar token</b>.</li>
+          <li>Vá para <b>Resumo</b> ou <b>Carteira</b> e toque em <b>Atualizar cotações</b>.</li>
+        </ol>
+        <b>3. Para saber se deu certo</b>
+        <ul>
+          <li>Aparece "Cotações de [data e hora]" ao lado do botão, e o IBOV e o dólar no topo.</li>
+          <li>Se aparecer "Não foi possível atualizar", leia o motivo: token incompleto (copie de novo, sem espaços no começo ou no fim) ou celular sem internet.</li>
+        </ul>
+        <p class="mut">Trocar de token: copie o novo no painel do brapi, apague o antigo deste campo, cole o novo e toque em Salvar token. O token fica só neste celular e não vai no backup. O plano grátis tem um limite de consultas por mês (veja no painel do brapi); cada atualização usa uma consulta por ativo.</p>
+      </div>
       <input id="cToken" autocomplete="off" spellcheck="false">
       <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado só neste celular.</p>
       <button id="btnToken">Salvar token</button>
@@ -892,6 +925,7 @@ $('cFotoArq').onchange = async e => {
 $('cFotoRem').onclick = () => { localStorage.removeItem(KEY_FOTO); mostrarFoto(); };
 mostrarFoto();
 $('cToken').value = db.token;
+$('tokInfoBtn').onclick = e => { const abre = $('tokInfo').hidden; $('tokInfo').hidden = !abre; e.currentTarget.setAttribute('aria-expanded', abre); };
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
 $('btnExp').onclick = async () => {
   const { token, ...dados } = db; // o token não vai no backup
