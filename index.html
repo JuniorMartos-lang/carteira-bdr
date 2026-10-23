@@ -294,7 +294,49 @@ label.check input { width:auto; margin:0; }
       <input type="file" id="cFotoArq" accept="image/*" hidden>
     </div>
     <div class="card">
-      <b>Senha do app</b>
+      <div class="row" style="align-items:center"><b>Senha do app</b>
+        <button type="button" class="info" aria-expanded="false" aria-controls="senhaInfo" aria-label="Como funciona a senha">i</button></div>
+      <div id="senhaInfo" class="ajuda" hidden>
+        <b>Como funciona a senha do app</b>
+        <p class="mut">A senha é opcional. Sem senha, o app abre direto. Com senha, ninguém abre o app no seu celular sem ela.</p>
+        <b>Criar a senha</b>
+        <ol>
+          <li>Digite a senha em <b>Nova senha</b> e repita em <b>Repita a nova senha</b>. Mínimo de <b>4 caracteres</b> (letras, números ou símbolos; maiúsculas e minúsculas contam como diferentes).</li>
+          <li>Toque em <b>Criar senha</b>.</li>
+          <li>Aparece o <b>código de recuperação</b> (ex.: 7K3P-9QXM-2B4T). <b>Anote ou tire foto e guarde fora do celular.</b> Ele aparece <b>só essa vez</b>. Depois toque em <b>Já anotei</b>.</li>
+        </ol>
+        <b>Quando o app pede a senha</b>
+        <ul>
+          <li>Toda vez que você abre o app.</li>
+          <li>Quando você volta para o app depois de <b>mais de 1 minuto</b> fora dele.</li>
+          <li>Os campos ficam escondidos (●●●●). Para ver o que digitou, marque <b>Mostrar senha</b>.</li>
+        </ul>
+        <b>Esqueci a senha</b>
+        <ol>
+          <li>Na tela de entrada, toque em <b>Esqueci a senha</b>.</li>
+          <li>Digite o <b>código de recuperação</b> (com ou sem traços, maiúsculas ou minúsculas).</li>
+          <li>Crie a senha nova (duas vezes) e toque em <b>Criar nova senha e entrar</b>. Nenhum dado se perde.</li>
+        </ol>
+        <p class="mut">O app não envia a senha por e-mail: ele não tem servidor e não guarda a senha, só uma versão "embaralhada" dela. Se perder a senha <b>e</b> o código, o único jeito é apagar os dados do app no navegador e restaurar o último backup.</p>
+        <b>Trocar ou remover</b>
+        <ul>
+          <li><b>Trocar:</b> digite a <b>senha atual</b>, a nova duas vezes e toque em <b>Trocar senha</b>. O código de recuperação continua o mesmo.</li>
+          <li><b>Remover:</b> digite a <b>senha atual</b> e toque em <b>Remover senha</b>. O app volta a abrir direto.</li>
+        </ul>
+        <b>Digital / rosto (biometria)</b>
+        <ol>
+          <li>Só aparece depois que a senha está criada, e só se o celular tiver digital ou reconhecimento de rosto cadastrado.</li>
+          <li>Marque <b>Entrar com a digital / rosto do celular</b>. O celular pede a sua digital (ou rosto) para confirmar.</li>
+          <li>Pronto: ao abrir o app, ele já pede a digital. Se não reconhecer, toque em <b>Entrar com a digital</b> de novo ou digite a senha.</li>
+          <li>Para desligar, desmarque a caixa.</li>
+        </ol>
+        <p class="mut">Se trocar de celular, apagar as digitais do aparelho ou a digital parar de funcionar, desmarque e marque a caixa de novo. A senha continua valendo sempre.</p>
+        <b>Bom saber</b>
+        <ul>
+          <li>A senha e a digital ficam só neste celular e <b>não vão no backup</b>. Ao restaurar o backup em outro celular, crie a senha lá.</li>
+          <li>É uma trava para abrir o app; os dados guardados no celular não ficam criptografados.</li>
+        </ul>
+      </div>
       <p class="mut" id="sStatus"></p>
       <div id="sAtualBox"><label for="sAtual">Senha atual</label><input id="sAtual" type="password" autocomplete="current-password"></div>
       <label for="sNova">Nova senha (mínimo 4 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
@@ -315,7 +357,7 @@ label.check input { width:auto; margin:0; }
     </div>
     <div class="card">
       <div class="row" style="align-items:center"><label for="cToken">Token do brapi.dev (cotações da B3)</label>
-        <button type="button" class="info" id="tokInfoBtn" aria-expanded="false" aria-controls="tokInfo" aria-label="Como conseguir o token">i</button></div>
+        <button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="Como conseguir o token">i</button></div>
       <div id="tokInfo" class="ajuda" hidden>
         <b>Como conseguir o token do brapi (grátis)</b>
         <p class="mut">O token é uma "chave" que deixa o app buscar as cotações. É criado uma vez só.</p>
@@ -925,7 +967,10 @@ $('cFotoArq').onchange = async e => {
 $('cFotoRem').onclick = () => { localStorage.removeItem(KEY_FOTO); mostrarFoto(); };
 mostrarFoto();
 $('cToken').value = db.token;
-$('tokInfoBtn').onclick = e => { const abre = $('tokInfo').hidden; $('tokInfo').hidden = !abre; e.currentTarget.setAttribute('aria-expanded', abre); };
+// botões "i": abrem/fecham o quadro de ajuda indicado em aria-controls
+document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
+  const q = $(b.getAttribute('aria-controls')), abre = q.hidden; q.hidden = !abre; b.setAttribute('aria-expanded', abre);
+});
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
 $('btnExp').onclick = async () => {
   const { token, ...dados } = db; // o token não vai no backup
