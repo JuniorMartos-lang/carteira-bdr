@@ -125,6 +125,7 @@ button.exp { width:100%; margin-bottom:10px; }
 #gDica { position:absolute; top:0; pointer-events:none; background:var(--card); border:1px solid var(--bd); border-radius:8px;
   padding:6px 8px; font-size:12px; line-height:1.5; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; }
 .card.total { border:2px solid var(--pri); }
+.azul { color:#185fa5; } :root[data-theme=dark] .azul { color:#60a5fa; }
 /* tela de bloqueio cobre tudo, inclusive o menu */
 #trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
 .codigo { margin-top:12px; padding:12px; border:2px dashed var(--pri); border-radius:10px; }
@@ -314,7 +315,7 @@ label.check input { width:auto; margin:0; }
     <div class="card">
       <b>Backup</b>
       <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo no OneDrive.</p>
-      <p class="mut" id="ultBackup"></p>
+      <p id="ultBackup"></p>
       <div class="two">
         <button id="btnExp">Salvar backup</button>
         <button id="btnImp" class="sec">Restaurar</button>
@@ -497,7 +498,10 @@ function render() {
       <button class="link" data-del="${o.id}">Excluir</button></div>`).join('');
 
   const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
-  $('ultBackup').textContent = db.ultimoBackup ? `Último backup: ${db.ultimoBackup.split('-').reverse().join('/')}` : 'Nenhum backup feito ainda.';
+  // último backup: data e hora em azul e negrito; sem backup, aviso em vermelho
+  const quandoBkp = db.ultimoBackupEm ? new Date(db.ultimoBackupEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')
+    : db.ultimoBackup && db.ultimoBackup.split('-').reverse().join('/'); // backups antigos só guardavam o dia
+  $('ultBackup').innerHTML = quandoBkp ? `Último backup: <b class="azul">${quandoBkp}</b>` : '<b class="dn">Nenhum backup feito ainda.</b>';
   $('lembrete').textContent = db.ops.length && (dias == null || dias >= 7)
     ? `Faça um backup em Ajustes (${dias == null ? 'nenhum feito ainda' : 'último há ' + dias + ' dias'}).` : '';
 
@@ -895,7 +899,7 @@ $('btnExp').onclick = async () => {
   const arq = new File([JSON.stringify(dados, null, 1)], `backup-carteira-bdr-${hoje()}.txt`, { type: 'text/plain' });
   // um site não consegue gravar direto numa pasta: usa a tela de compartilhar
   if (!await compartilhar(arq, 'Backup Carteira BDR')) return;
-  db.ultimoBackup = hoje(); salvar(); render();
+  db.ultimoBackup = hoje(); db.ultimoBackupEm = new Date().toISOString(); salvar(); render();
 };
 // Exportar Resumo / Diário / Mensal: o que está na tela, com os filtros. CSV abre no Excel e no Google Planilhas.
 document.querySelector('main').addEventListener('click', e => {
