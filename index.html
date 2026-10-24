@@ -64,7 +64,7 @@ input, select { width:100%; font:inherit; padding:10px; border:1px solid var(--b
 .two > div { min-width:0; } /* campo de data não estoura a coluna */
 nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--card); border-top:1px solid var(--bd); padding-bottom:env(safe-area-inset-bottom); }
 /* 8 abas não cabem em 375 px: o menu rola para os lados */
-nav { overflow-x:auto; scrollbar-width:none; }
+nav { overflow-x:auto; scrollbar-width:none; z-index:10; } /* acima dos cabeçalhos fixos das tabelas */
 nav::-webkit-scrollbar { display:none; }
 nav button { flex:1 0 58px; background:none; color:var(--mut); border-radius:0; padding:8px 0 10px; font-weight:500; font-size:12px;
   display:flex; flex-direction:column; align-items:center; gap:3px; }
@@ -113,6 +113,14 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .cf.rec { background:#70ad47; color:#fff; }
 tr.soma th, tr.soma td { border-top:2px solid var(--tx); border-bottom:0; }
 button.exp { width:100%; margin-bottom:10px; }
+/* Lançar: quantidade, preço e total na mesma linha; total só para ver */
+.tres { display:grid; grid-template-columns:.75fr 1fr 1.15fr; gap:8px; }
+.tres > div { min-width:0; }
+#fTotal { background:var(--bg); font-weight:600; }
+.botoes { display:flex; gap:8px; margin-top:12px; }
+.botoes button { padding:10px 26px; }
+#ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
+#ops button.link { padding:2px 0 2px 4px; font-size:15px; }
 /* Gráficos: cores das linhas em ordem fixa (paleta validada para daltonismo), versão própria no modo escuro */
 .viz { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; }
 :root[data-theme=dark] .viz { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; }
@@ -209,15 +217,23 @@ label.check input { width:auto; margin:0; }
         <div><label for="fClasse">Tipo de ativo</label>
           <select id="fClasse" required><option value="">Escolha…</option><option value="A">Ação</option><option value="F">Fundo</option></select></div>
       </div>
-      <div class="two">
-        <div><label for="fQtd">Quantidade</label><input id="fQtd" inputmode="decimal" required></div>
-        <div><label for="fPreco">Preço unitário (R$)</label><input id="fPreco" inputmode="decimal" required></div>
+      <div class="tres">
+        <div><label for="fQtd">Quantidade</label><input id="fQtd" inputmode="numeric" placeholder="0" required></div>
+        <div><label for="fPreco">Preço unitário</label><input id="fPreco" inputmode="numeric" placeholder="R$ 0,00" required></div>
+        <div><label for="fTotal">Valor total</label><input id="fTotal" readonly tabindex="-1" placeholder="R$ 0,00" aria-readonly="true"></div>
       </div>
       <div class="msg" id="fMsg"></div>
-      <button style="width:100%;margin-top:12px">Salvar</button>
+      <div class="botoes"><button>Salvar</button><button type="button" class="sec" id="fLimpar">Limpar</button></div>
     </form>
     <h2>Lançamentos</h2>
-    <div id="ops"></div>
+    <div class="card">
+      <div class="two">
+        <div><label for="lIni">Data inicial</label><input id="lIni" type="date" min="2023-07-01"></div>
+        <div><label for="lFim">Data final</label><input id="lFim" type="date" min="2023-07-01"></div>
+      </div>
+      <p class="mut" style="margin:6px 0 0">Datas em branco = todos os lançamentos (a partir de 01/07/2023).</p>
+    </div>
+    <div class="card rolagem"><table id="ops" class="compacto"></table></div>
   </section>
 
   <section id="tab-diario" hidden>
@@ -229,7 +245,8 @@ label.check input { width:auto; margin:0; }
         <div><label for="dFim">Data final</label><input id="dFim" type="date"></div>
       </div>
       <p class="mut" style="margin:6px 0 0">Datas em branco = todos os dias.</p>
-      <label class="check"><input type="checkbox" id="dResumido"> Resumido (só Data, Dia %, Dia R$, Total R$, Lucro % e Lucro R$)</label>
+      <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="dResumido"> Resumido</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="dResInfo" aria-label="O que é o Resumido">i</button></div>
+      <div id="dResInfo" class="ajuda" hidden>Marcado, a tabela mostra só <b>Data, Dia %, Dia R$, Total R$, Lucro % e Lucro R$</b>, sem as colunas de cada ativo, e cabe na tela do celular. Os totais continuam somando só os ativos escolhidos no filtro. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
     <div class="card rolagem"><table id="tDiario"></table></div>
     <button class="sec exp" data-exp="diario">Exportar para Excel</button>
@@ -277,7 +294,8 @@ label.check input { width:auto; margin:0; }
         <div><label for="rIni">Mês inicial (venda)</label><select id="rIni"></select></div>
         <div><label for="rFim">Mês final (venda)</label><select id="rFim"></select></div>
       </div>
-      <label class="check"><input type="checkbox" id="rResumido"> Resumido (lista com ativo, datas, venda, lucro, IR e líquido)</label>
+      <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="rResumido"> Resumido</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="rResInfo" aria-label="O que é o Resumido">i</button></div>
+      <div id="rResInfo" class="ajuda" hidden>Marcado, os cartões viram uma <b>lista com uma linha por ativo</b>: ativo, data da compra, data da venda, total da venda, lucro R$ e %, IR a pagar e lucro líquido, com a linha <b>Total</b> no fim. A lista rola para o lado e a coluna Ativo fica fixa. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
     <div id="rLista"></div>
     <button class="sec exp" data-exp="resultados">Exportar para Excel</button>
@@ -576,10 +594,16 @@ function render() {
     </div>`).join('') || '<p class="mut">Nenhum ativo. Lance uma compra na aba Lançar ou importe um backup em Ajustes.</p>';
 
   $('tickers').innerHTML = ps.map(p => `<option value="${esc(p.ticker)}">`).join('');
-  $('ops').innerHTML = [...db.ops].sort((a, b) => b.data.localeCompare(a.data)).map(o => `
-    <div class="card row"><span><b>${o.tipo === 'C' ? 'Compra' : 'Venda'}</b> ${esc(o.ticker)}<br>
-      <span class="mut">${o.data.split('-').reverse().join('/')} · ${o.qtd.toLocaleString('pt-BR')} × ${brl(o.preco)}</span></span>
-      <button class="link" data-del="${o.id}">Excluir</button></div>`).join('');
+  // Lançamentos: uma linha por operação (data, tipo, ativo, qtd, unitário, total), com filtro de datas
+  const lIni = $('lIni').value, lFim = $('lFim').value;
+  const lanc = [...db.ops].filter(o => (!lIni || o.data >= lIni) && (!lFim || o.data <= lFim)).sort((a, b) => b.data.localeCompare(a.data));
+  $('ops').innerHTML = !lanc.length ? `<tr><td class="mut">${db.ops.length ? 'Nenhum lançamento nesse período.' : 'Nenhum lançamento ainda.'}</td></tr>` :
+    '<tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd</th><th>Unit. R$</th><th>Total R$</th><th></th></tr>' +
+    lanc.map(o => `<tr><td>${o.data.slice(8)}/${o.data.slice(5, 7)}/${o.data.slice(2, 4)}</td>
+      <td class="${o.tipo === 'C' ? 'up' : 'dn'}">${o.tipo === 'C' ? 'Compra' : 'Venda'}</td>
+      <td><div class="tk2" title="${esc(o.ticker)}"><b>${esc(o.ticker)}</b></div></td><td>${o.qtd.toLocaleString('pt-BR')}</td>
+      <td>${reais(o.preco)}</td><td>${reais(o.qtd * o.preco)}</td>
+      <td><button class="link" data-del="${o.id}" aria-label="Excluir lançamento">✕</button></td></tr>`).join('');
 
   const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
   // último backup: data e hora em azul e negrito; sem backup, aviso em vermelho
@@ -937,18 +961,34 @@ $('form').onsubmit = e => {
   e.preventDefault();
   const o = { id: Date.now(), data: $('fData').value,
     ticker: ativoExistente($('fTicker').value)?.ticker ?? $('fTicker').value.trim().toUpperCase(),
-    tipo: $('fTipo').value, classe: $('fClasse').value, qtd: num($('fQtd').value), preco: num($('fPreco').value) };
+    tipo: $('fTipo').value, classe: $('fClasse').value, qtd: qtdDigitada(), preco: precoDigitado() };
   const msg = $('fMsg');
   if (!o.data || !o.ticker || !o.classe || !(o.qtd > 0) || !(o.preco > 0)) { msg.className = 'msg dn'; msg.textContent = 'Preencha data, ativo, tipo de ativo, quantidade e preço maiores que zero.'; return; }
   if (o.tipo === 'V' && o.qtd > qtdEm(db.ops, o.ticker, o.data)) {
     msg.className = 'msg dn'; msg.textContent = `Você tinha ${qtdEm(db.ops, o.ticker, o.data)} de ${o.ticker} nessa data. Não dá para vender ${o.qtd}.`; return;
   }
   db.ops.push(o); salvar(); render();
-  msg.className = 'msg up'; msg.textContent = `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} salva.`;
-  $('fQtd').value = $('fPreco').value = $('fTicker').value = $('fClasse').value = '';
+  limparLancamento(false);
+  alert('Dados salvos com sucesso!');
 };
+// Lançar: formata enquanto digita — ativo em maiúsculas, quantidade só números inteiros, preço em R$ com 2 casas
+const qtdDigitada = () => Number($('fQtd').value.replace(/\D/g, ''));
+const precoDigitado = () => Number($('fPreco').value.replace(/\D/g, '')) / 100;
+const atualizaTotal = () => { const q = qtdDigitada(), p = precoDigitado(); $('fTotal').value = q && p ? brl(q * p) : ''; };
+$('fTicker').oninput = e => { const i = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(i, i); };
+$('fQtd').oninput = e => { const d = e.target.value.replace(/\D/g, '').replace(/^0+/, ''); e.target.value = d ? Number(d).toLocaleString('pt-BR') : ''; atualizaTotal(); };
+$('fPreco').oninput = e => { const d = e.target.value.replace(/\D/g, '').replace(/^0+/, ''); e.target.value = d ? brl(Number(d) / 100) : ''; atualizaTotal(); };
+// Limpar (e depois de salvar): esvazia os campos; o botão Limpar volta também a operação para Compra e a data para hoje
+function limparLancamento(tudo = true) {
+  $('fQtd').value = $('fPreco').value = $('fTotal').value = $('fTicker').value = $('fClasse').value = '';
+  $('fMsg').textContent = '';
+  if (tudo) { $('fTipo').value = 'C'; $('fData').value = hoje(); }
+}
+$('fLimpar').onclick = () => limparLancamento();
+// filtro de datas dos lançamentos: começa em 01/07/2023
+['lIni', 'lFim'].forEach(id => $(id).onchange = e => { if (e.target.value && e.target.value < '2023-07-01') e.target.value = '2023-07-01'; render(); });
 $('ops').onclick = e => {
-  const id = Number(e.target.dataset.del); if (!id) return;
+  const id = Number(e.target.closest('[data-del]')?.dataset.del); if (!id) return;
   const o = db.ops.find(x => x.id === id);
   const resto = db.ops.filter(x => x !== o);
   // não deixa apagar uma compra que deixaria uma venda posterior sem saldo
