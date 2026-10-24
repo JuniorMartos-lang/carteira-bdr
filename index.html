@@ -35,6 +35,10 @@ header { background:var(--pri); color:#fff; padding:12px 16px 40px; padding-top:
 .lucroCard .row { align-items:center; }
 .lucroCard b { font-weight:600; font-variant-numeric:tabular-nums; }
 .lucroCard .divide { margin-top:10px; padding-top:8px; border-top:1px solid var(--bd); }
+/* olhinho: mostra/esconde Investido e Atual; o risco some quando os valores estão visíveis */
+button.olho { background:none; border:0; padding:6px; color:var(--mut); align-self:center; }
+button.olho svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; display:block; }
+button.olho[aria-pressed=true] .risco { display:none; }
 #hFaltam:empty { display:none; }
 .pill { font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px; }
 .pill.up { background:color-mix(in srgb, var(--up) 15%, transparent); }
@@ -162,6 +166,8 @@ label.check input { width:auto; margin:0; }
     <div id="hLucro">—</div>
     <div class="row"><span id="hPct" class="pill"></span><span id="hHoje"></span></div>
     <div class="row divide"><span><span class="mut">Investido</span><br><b id="hInv"></b></span>
+      <button type="button" class="olho" id="hOlho" aria-pressed="false" aria-label="Mostrar valores">
+        <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path class="risco" d="M3 3l18 18"/></svg></button>
       <span style="text-align:right"><span class="mut">Atual</span><br><b id="hAtual"></b></span></div>
     <div class="mut" id="hFaltam"></div>
   </div>
@@ -501,7 +507,8 @@ function render() {
   $('hLucro').textContent = brl(lucro); $('hLucro').className = cor(lucro);
   const pTot = inv ? lucro / inv : null;
   $('hPct').textContent = seta(pTot) + pct(pTot); $('hPct').className = 'pill ' + cor(pTot);
-  $('hInv').textContent = brl(inv); $('hAtual').textContent = brl(valor);
+  // Investido e Atual começam escondidos a cada abertura do app (mostrarValores não é gravado)
+  $('hInv').textContent = mostrarValores ? brl(inv) : 'R$ ••••••'; $('hAtual').textContent = mostrarValores ? brl(valor) : 'R$ ••••••';
   const ind = (nome, x, fmt) => !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
     <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`;
   $('hIndices').innerHTML = ind('IBOV', db.indices.ibov, v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })) +
@@ -839,6 +846,7 @@ function registrarDia() {
   db.historico = db.historico.filter(s => s.data !== d).concat({ data: d, v });
 }
 
+let mostrarValores = false; // olhinho do topo
 let falhou = false; // última tentativa de atualizar não trouxe nenhuma cotação
 async function atualizar() {
   if (!db.token) { falhou = true; render(); $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
@@ -900,6 +908,11 @@ document.querySelector('nav').onclick = e => {
   scrollTo(0, 0);
 };
 $('btnAtualizar').onclick = atualizar;
+$('hOlho').onclick = () => {
+  mostrarValores = !mostrarValores;
+  $('hOlho').setAttribute('aria-pressed', mostrarValores); $('hOlho').setAttribute('aria-label', mostrarValores ? 'Esconder valores' : 'Mostrar valores');
+  render();
+};
 
 $('lista').onclick = e => {
   const el = e.target.closest('[data-manual]'); if (!el) return;
