@@ -1115,7 +1115,9 @@ async function fazerBackup() {
   let txt = JSON.stringify(dados, null, 1);
   if (trava.backup) txt = JSON.stringify({ carteiraBdrProtegido: 1, sal: trava.backup.sal, ...await cifrar(txt, trava.backup.chave) });
   // .txt: o Chrome do Android recusa compartilhar .json ("Permission denied"); o conteúdo continua sendo JSON
-  const arq = new File([txt], `backup-carteira-bdr-${hoje()}.txt`, { type: 'text/plain' });
+  // nome com data e hora (AAAA-MM-DD_HH-MM-SS): vários backups no mesmo dia não colidem; ':' não vale em nome de arquivo
+  const quando = new Date().toLocaleString('sv-SE').replace(' ', '_').replace(/:/g, '-');
+  const arq = new File([txt], `backup-carteira-bdr-${quando}.txt`, { type: 'text/plain' });
   // um site não consegue gravar direto numa pasta: usa a tela de compartilhar
   if (!await compartilhar(arq, 'Backup Carteira BDR')) return false;
   db.ultimoBackup = hoje(); db.ultimoBackupEm = new Date().toISOString(); salvar(); render();
