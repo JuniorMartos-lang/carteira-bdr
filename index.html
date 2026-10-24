@@ -118,6 +118,11 @@ button.exp { width:100%; margin-bottom:10px; }
 .tres > div { min-width:0; }
 #fTotal { background:var(--bg); font-weight:600; }
 .botoes { display:flex; gap:8px; margin-top:12px; }
+/* filtro de datas com o botão Todos na mesma linha */
+.datasTodos { display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:end; }
+.datasTodos > div { min-width:0; }
+.datasTodos input { padding:10px 6px; font-size:14px; }
+.datasTodos button { padding:10px 12px; }
 .botoes button { padding:10px 26px; }
 #ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
 #ops button.link { padding:2px 0 2px 4px; font-size:15px; }
@@ -227,11 +232,12 @@ label.check input { width:auto; margin:0; }
     </form>
     <h2>Lançamentos</h2>
     <div class="card">
-      <div class="two">
+      <div class="datasTodos">
         <div><label for="lIni">Data inicial</label><input id="lIni" type="date" min="2023-07-01"></div>
         <div><label for="lFim">Data final</label><input id="lFim" type="date" min="2023-07-01"></div>
+        <button type="button" class="sec" id="lTodos">Todos</button>
       </div>
-      <p class="mut" style="margin:6px 0 0">Datas em branco = todos os lançamentos (a partir de 01/07/2023).</p>
+      <p class="mut" style="margin:6px 0 0">"Todos" limpa as datas e mostra todos os lançamentos (a partir de 01/07/2023).</p>
     </div>
     <div class="card rolagem"><table id="ops" class="compacto"></table></div>
   </section>
@@ -987,6 +993,7 @@ function limparLancamento(tudo = true) {
 $('fLimpar').onclick = () => limparLancamento();
 // filtro de datas dos lançamentos: começa em 01/07/2023
 ['lIni', 'lFim'].forEach(id => $(id).onchange = e => { if (e.target.value && e.target.value < '2023-07-01') e.target.value = '2023-07-01'; render(); });
+$('lTodos').onclick = () => { $('lIni').value = $('lFim').value = ''; render(); };
 $('ops').onclick = e => {
   const id = Number(e.target.closest('[data-del]')?.dataset.del); if (!id) return;
   const o = db.ops.find(x => x.id === id);
