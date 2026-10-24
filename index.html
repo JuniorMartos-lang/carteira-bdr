@@ -151,6 +151,7 @@ button.info { width:24px; height:24px; padding:0; border-radius:50%; font:italic
 .ajuda a { color:var(--pri); font-weight:600; }
 .azul { color:#185fa5; } :root[data-theme=dark] .azul { color:#60a5fa; }
 /* tela de bloqueio cobre tudo, inclusive o menu */
+.modal { position:fixed; inset:0; z-index:90; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
 #trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
 .codigo { margin-top:12px; padding:12px; border:2px dashed var(--pri); border-radius:10px; }
 #sCodigo { font:700 22px/1.4 ui-monospace, monospace; letter-spacing:2px; text-align:center; margin:8px 0; }
@@ -332,7 +333,7 @@ label.check input { width:auto; margin:0; }
         <p class="mut">A senha é opcional. Sem senha, o app abre direto. Com senha, ninguém abre o app no seu celular sem ela.</p>
         <b>Criar a senha</b>
         <ol>
-          <li>Digite a senha em <b>Nova senha</b> e repita em <b>Repita a nova senha</b>. Mínimo de <b>4 caracteres</b> (letras, números ou símbolos; maiúsculas e minúsculas contam como diferentes).</li>
+          <li>Digite a senha em <b>Nova senha</b> e repita em <b>Repita a nova senha</b>. Mínimo de <b>8 caracteres</b> (combine letras e números; maiúsculas e minúsculas contam como diferentes). Senhas criadas antes com 4 a 7 caracteres continuam valendo até serem trocadas.</li>
           <li>Toque em <b>Criar senha</b>.</li>
           <li>Aparece o <b>código de recuperação</b> (ex.: 7K3P-9QXM-2B4T). <b>Anote ou tire foto e guarde fora do celular.</b> Ele aparece <b>só essa vez</b>. Depois toque em <b>Já anotei</b>.</li>
         </ol>
@@ -366,11 +367,12 @@ label.check input { width:auto; margin:0; }
         <ul>
           <li>A senha e a digital ficam só neste celular e <b>não vão no backup</b>. Ao restaurar o backup em outro celular, crie a senha lá.</li>
           <li>É uma trava para abrir o app; os dados guardados no celular não ficam criptografados.</li>
+          <li>Com senha cadastrada, os <b>backups</b> passam a ser protegidos por ela (veja o "i" do Backup). Ao criar ou trocar a senha, o app pede um backup novo na hora.</li>
         </ul>
       </div>
       <p class="mut" id="sStatus"></p>
       <div id="sAtualBox"><label for="sAtual">Senha atual</label><input id="sAtual" type="password" autocomplete="current-password"></div>
-      <label for="sNova">Nova senha (mínimo 4 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
+      <label for="sNova">Nova senha (mínimo 8 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
       <label for="sConf">Repita a nova senha</label><input id="sConf" type="password" autocomplete="new-password">
       <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
       <div class="two" style="margin-top:10px">
@@ -419,7 +421,42 @@ label.check input { width:auto; margin:0; }
       <button id="btnToken">Salvar token</button>
     </div>
     <div class="card">
-      <b>Backup</b>
+      <div class="row" style="align-items:center"><b>Backup</b>
+        <button type="button" class="info" aria-expanded="false" aria-controls="bkpInfo" aria-label="Como funciona o backup">i</button></div>
+      <div id="bkpInfo" class="ajuda" hidden>
+        <b>Sobre o backup</b>
+        <p>O backup é uma cópia de todos os dados do aplicativo (lançamentos, histórico diário, cotações e preferências de exibição), gravada em um arquivo de texto (.txt). Não são incluídos o token do brapi, a senha do aplicativo, a foto e a configuração de aparência.</p>
+        <b>Como salvar</b>
+        <ol>
+          <li>Toque em <b>Salvar backup</b>.</li>
+          <li>Na tela de compartilhamento, selecione o <b>OneDrive</b> (ou outro destino) e a pasta desejada.</li>
+          <li>Concluído o envio, a data e a hora do último backup ficam registradas nesta tela.</li>
+        </ol>
+        <b>Proteção por senha</b>
+        <ul>
+          <li>Se houver senha cadastrada no aplicativo, o arquivo é <b>criptografado</b> (AES de 256 bits) com essa senha e não pode ser lido fora do aplicativo.</li>
+          <li>Se não houver senha cadastrada, o arquivo é gravado <b>sem proteção</b> e pode ser lido por qualquer pessoa que tenha acesso a ele.</li>
+          <li>Cada backup permanece vinculado à senha vigente na data em que foi gerado.</li>
+          <li>Recomenda-se senha com no mínimo <b>8 caracteres</b>, combinando letras e números.</li>
+        </ul>
+        <b>Cadastro ou alteração de senha</b>
+        <p>Sempre que a senha for cadastrada ou alterada (inclusive pela opção "Esqueci a senha"), o aplicativo exige a geração imediata de um novo backup, já protegido com a nova senha.</p>
+        <b>Como restaurar</b>
+        <ol>
+          <li>Toque em <b>Restaurar</b> e selecione o arquivo de backup.</li>
+          <li>Backup gerado com a <b>senha atual</b>: a restauração é imediata.</li>
+          <li>Backup gerado com <b>outra senha</b>: é exibido o aviso "As senhas não coincidem" e solicitada a senha utilizada na data do backup. Em caso de senha incorreta, é possível tentar novamente.</li>
+          <li>Backup <b>sem proteção</b>: a restauração é feita normalmente.</li>
+        </ol>
+        <p class="mut">A restauração substitui todos os dados atuais deste aparelho.</p>
+        <b>Atenção</b>
+        <ul>
+          <li>Não é possível abrir um backup protegido sem a senha correspondente. O código de recuperação desbloqueia apenas o acesso ao aplicativo, não os backups.</li>
+          <li>Guarde as senhas antigas enquanto mantiver backups gerados com elas.</li>
+          <li>Senhas cadastradas antes da versão 1.6.0 passam a proteger os backups após a próxima entrada no aplicativo digitando a senha, ou após a troca de senha.</li>
+          <li>Mantenha a conta do OneDrive protegida, com senha forte e verificação em duas etapas.</li>
+        </ul>
+      </div>
       <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo no OneDrive.</p>
       <p id="ultBackup"></p>
       <div class="two">
@@ -435,6 +472,20 @@ label.check input { width:auto; margin:0; }
   </section>
 </main>
 
+<!-- janela de aviso (backup obrigatório, senha do backup ao restaurar) -->
+<div id="modal" class="modal" hidden>
+  <div class="card" style="width:100%; max-width:360px">
+    <b id="mdTitulo" style="font-size:17px"></b>
+    <p id="mdTexto"></p>
+    <div id="mdSenhaBox" hidden>
+      <input id="mdSenha" type="password" autocomplete="off" aria-label="Senha do backup">
+      <label class="check"><input type="checkbox" class="verSenha" id="mdVer"> Mostrar senha</label>
+    </div>
+    <div class="msg dn" id="mdMsg"></div>
+    <div class="botoes"><button id="mdOk"></button><button type="button" class="sec" id="mdCancelar"></button></div>
+  </div>
+</div>
+
 <!-- tela de bloqueio: aparece ao abrir o app quando há senha -->
 <div id="trava" hidden>
   <form class="card" id="tForm" style="width:100%; max-width:360px">
@@ -448,7 +499,7 @@ label.check input { width:auto; margin:0; }
     </div>
     <div id="tRecuperar" hidden>
       <label for="tCodigo">Código de recuperação</label><input id="tCodigo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
-      <label for="tNova">Nova senha (mínimo 4 caracteres)</label><input id="tNova" type="password" autocomplete="new-password">
+      <label for="tNova">Nova senha (mínimo 8 caracteres)</label><input id="tNova" type="password" autocomplete="new-password">
       <label for="tConf">Repita a nova senha</label><input id="tConf" type="password" autocomplete="new-password">
       <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
       <button style="width:100%; margin-top:12px">Criar nova senha e entrar</button>
@@ -1058,14 +1109,19 @@ document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
   const q = $(b.getAttribute('aria-controls')), abre = q.hidden; q.hidden = !abre; b.setAttribute('aria-expanded', abre);
 });
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
-$('btnExp').onclick = async () => {
+// Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
+async function fazerBackup() {
   const { token, ...dados } = db; // o token não vai no backup
+  let txt = JSON.stringify(dados, null, 1);
+  if (trava.backup) txt = JSON.stringify({ carteiraBdrProtegido: 1, sal: trava.backup.sal, ...await cifrar(txt, trava.backup.chave) });
   // .txt: o Chrome do Android recusa compartilhar .json ("Permission denied"); o conteúdo continua sendo JSON
-  const arq = new File([JSON.stringify(dados, null, 1)], `backup-carteira-bdr-${hoje()}.txt`, { type: 'text/plain' });
+  const arq = new File([txt], `backup-carteira-bdr-${hoje()}.txt`, { type: 'text/plain' });
   // um site não consegue gravar direto numa pasta: usa a tela de compartilhar
-  if (!await compartilhar(arq, 'Backup Carteira BDR')) return;
+  if (!await compartilhar(arq, 'Backup Carteira BDR')) return false;
   db.ultimoBackup = hoje(); db.ultimoBackupEm = new Date().toISOString(); salvar(); render();
-};
+  return true;
+}
+$('btnExp').onclick = fazerBackup;
 // Exportar Resumo / Diário / Mensal: o que está na tela, com os filtros. CSV abre no Excel e no Google Planilhas.
 document.querySelector('main').addEventListener('click', e => {
   const aba = e.target.closest('[data-exp]')?.dataset.exp; if (!aba) return;
@@ -1080,7 +1136,8 @@ $('btnImp').onclick = () => $('fileImp').click();
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
-    const d = JSON.parse(await f.text());
+    let d = JSON.parse(await f.text());
+    if (d.carteiraBdrProtegido) { d = await abrirBackupProtegido(d); if (!d) return; }
     const ok = Array.isArray(d.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && [undefined, 'A', 'F'].includes(o.classe) && o.qtd > 0 && o.preco > 0);
     if (!ok) throw new Error('arquivo não parece um backup deste app');
     if (db.ops.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
@@ -1097,7 +1154,43 @@ const KEY_SENHA = 'carteira-bdr-senha';
 let trava; try { trava = JSON.parse(localStorage.getItem(KEY_SENHA)) || {}; } catch { trava = {}; }
 const salvarTrava = () => localStorage.setItem(KEY_SENHA, JSON.stringify(trava));
 const temSenha = () => !!trava.senha;
-const novaRuim = (a, b) => a.length < 4 ? 'A senha precisa ter pelo menos 4 caracteres.' : a !== b ? 'As duas senhas não são iguais.' : '';
+const novaRuim = (a, b) => a.length < 8 ? 'A senha precisa ter pelo menos 8 caracteres.' : a !== b ? 'As duas senhas não são iguais.' : '';
+// chave do backup tirada da senha (sal próprio); fica só neste aparelho, junto com a senha, fora do backup
+async function definirChaveBackup(senha) { const sal = b64(aleatorio(16)); trava.backup = { sal, chave: await hashSenha(senha, sal) }; }
+
+// Janela de aviso. Devolve true (botão principal) ou false (Cancelar); fica aberta até fecharModal().
+function modal({ titulo, texto, senha = false, ok, cancelar = '', aviso = '' }) {
+  $('mdTitulo').textContent = titulo; $('mdTexto').textContent = texto; $('mdMsg').textContent = aviso;
+  $('mdSenhaBox').hidden = !senha; $('mdSenha').value = ''; $('mdSenha').type = 'password'; $('mdVer').checked = false;
+  $('mdOk').textContent = ok; $('mdCancelar').textContent = cancelar; $('mdCancelar').hidden = !cancelar;
+  $('modal').hidden = false; if (senha) $('mdSenha').focus();
+  return new Promise(res => { $('mdOk').onclick = () => res(true); $('mdCancelar').onclick = () => res(false); });
+}
+const fecharModal = () => { $('modal').hidden = true; };
+// depois de criar/trocar a senha: só fecha quando o backup (já com a senha nova) for feito
+async function backupObrigatorio() {
+  let aviso = '';
+  for (;;) {
+    await modal({ titulo: 'Backup obrigatório', ok: 'Fazer backup agora', aviso,
+      texto: 'A senha do aplicativo foi cadastrada ou alterada. Para que o backup mais recente fique protegido com a nova senha, é necessário gerar um novo backup agora.' });
+    if (await fazerBackup()) { fecharModal(); return; }
+    aviso = 'O backup não foi concluído. Toque em "Fazer backup agora" para tentar novamente.';
+  }
+}
+// Restaurar backup protegido: senha atual (mesmo sal) abre direto; senão pede a senha usada na data do backup
+async function abrirBackupProtegido(d) {
+  if (trava.backup?.sal === d.sal) { try { return JSON.parse(await decifrar(d, trava.backup.chave)); } catch {} }
+  let aviso = '';
+  for (;;) {
+    const ok = await modal({ titulo: temSenha() ? 'As senhas não coincidem' : 'Backup protegido por senha', senha: true,
+      ok: 'Restaurar', cancelar: 'Cancelar', aviso,
+      texto: temSenha() ? 'Este backup foi gerado com uma senha diferente da senha atual do aplicativo. Digite a senha utilizada na data do backup.'
+        : 'Este backup está protegido por senha. Digite a senha utilizada na data do backup.' });
+    if (!ok) { fecharModal(); return null; }
+    try { const r = JSON.parse(await decifrar(d, await hashSenha($('mdSenha').value, d.sal))); fecharModal(); return r; }
+    catch { aviso = 'Senha incorreta. Tente novamente.'; }
+  }
+}
 let bioDisponivel = false;
 
 // "Mostrar senha": vale para os campos de senha do mesmo bloco
@@ -1121,15 +1214,18 @@ $('sSalvar').onclick = async () => {
   if (temSenha() && !await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Senha atual errada.');
   const erro = novaRuim($('sNova').value, $('sConf').value); if (erro) return msgSenha(erro);
   const criando = !temSenha();
-  trava.senha = await protegerSenha($('sNova').value);
+  trava.senha = await protegerSenha($('sNova').value); await definirChaveBackup($('sNova').value);
+  let codigoNovo = false;
   if (!trava.codigo) { // código de recuperação: gerado uma vez e mostrado só agora
     const c = gerarCodigo(); trava.codigo = await protegerSenha(limpaCodigo(c));
-    $('sCodigo').textContent = c; $('sCodigoBox').hidden = false;
+    $('sCodigo').textContent = c; $('sCodigoBox').hidden = false; codigoNovo = true;
   }
   salvarTrava(); limpaCampos('sAtual', 'sNova', 'sConf'); renderSenha();
   msgSenha(criando ? 'Senha criada.' : 'Senha trocada.', true);
+  // backup obrigatório com a senha nova; se acabou de aparecer o código de recuperação, depois de "Já anotei"
+  if (!codigoNovo) backupObrigatorio();
 };
-$('sCodigoOk').onclick = () => { $('sCodigoBox').hidden = true; $('sCodigo').textContent = ''; };
+$('sCodigoOk').onclick = () => { $('sCodigoBox').hidden = true; $('sCodigo').textContent = ''; backupObrigatorio(); };
 $('sRemover').onclick = async () => {
   if (!await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Digite a senha atual para remover.');
   if (!confirm('Remover a senha? O app vai abrir sem pedir senha.')) return;
@@ -1171,10 +1267,16 @@ $('tEsqueci').onclick = () => modoRecuperar(true);
 $('tVoltar').onclick = () => modoRecuperar(false);
 $('tForm').onsubmit = async e => {
   e.preventDefault();
-  if ($('tRecuperar').hidden) return await confereSenha($('tSenha').value, trava.senha) ? liberar() : msgTrava('Senha errada.');
+  if ($('tRecuperar').hidden) {
+    if (!await confereSenha($('tSenha').value, trava.senha)) return msgTrava('Senha errada.');
+    // senha criada antes da proteção do backup: aproveita a senha digitada para criar a chave
+    if (!trava.backup) { await definirChaveBackup($('tSenha').value); salvarTrava(); }
+    return liberar();
+  }
   if (!await confereSenha(limpaCodigo($('tCodigo').value), trava.codigo)) return msgTrava('Código de recuperação errado.');
   const erro = novaRuim($('tNova').value, $('tConf').value); if (erro) return msgTrava(erro);
-  trava.senha = await protegerSenha($('tNova').value); salvarTrava(); liberar(); alert('Senha nova criada.');
+  trava.senha = await protegerSenha($('tNova').value); await definirChaveBackup($('tNova').value); salvarTrava(); liberar();
+  backupObrigatorio();
 };
 // voltou ao app depois de mais de 1 minuto em segundo plano: pede a senha de novo
 let saiu = 0;

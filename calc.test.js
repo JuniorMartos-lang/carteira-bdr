@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo } = require('./calc.js');
+const { posicoes, qtdEm, irDe, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -83,5 +83,12 @@ assert.deepStrictEqual(tendencia([null, null]), ['', '']);
   const c = gerarCodigo();
   assert.match(c, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
   assert.strictEqual(limpaCodigo(' 7k3p 9qxm-2b4t '), '7K3P9QXM2B4T');
+  // Backup cifrado: abre com a chave da mesma senha e sal; com senha errada dá erro; texto grande e com acentos volta igual
+  const sal = b64(aleatorio(16)), chave = await hashSenha('senha forte 123', sal);
+  const texto = JSON.stringify({ ops: Array.from({ length: 3000 }, (_, i) => ({ id: i, ticker: 'AÇÃO34' })) });
+  const cif = await cifrar(texto, chave);
+  assert.ok(!cif.dados.includes('AÇÃO34'));
+  assert.strictEqual(await decifrar(cif, await hashSenha('senha forte 123', sal)), texto);
+  await assert.rejects(decifrar(cif, await hashSenha('senha errada', sal)));
   console.log('ok');
 })();
