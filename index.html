@@ -456,6 +456,8 @@ const $ = id => document.getElementById(id);
 const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 // valor em reais sem o "R$" (para tabelas em que o título da coluna já diz R$)
 const reais = n => n == null ? '—' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// regra do olhinho do topo: valores investidos/totais escondidos até tocar no olho (lucros e % ficam sempre visíveis)
+const ocR = n => mostrarValores ? brl(n) : 'R$ ••••••', ocN = n => mostrarValores ? reais(n) : '••••••';
 const pct = n => n == null ? '—' : (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 const cor = n => n == null ? '' : n >= 0 ? 'up' : 'dn';
 // variação do dia (vem do brapi em %, ex.: 1.26): ▲ verde / ▼ vermelho
@@ -562,11 +564,11 @@ function render() {
       <div class="grid">
         <div><span class="mut">Lucro</span><span class="${cor(p.lucro)}"><b>${brl(p.lucro)}</b> ${pct(p.pct)}</span></div>
         <div><span class="mut">Qtd</span>${p.qtd.toLocaleString('pt-BR')}</div>
-        <div><span class="mut">Investido</span>${brl(p.investido)}</div>
+        <div><span class="mut">Investido</span>${ocR(p.investido)}</div>
         <div><span class="mut">Preço médio</span>${brl(p.pm)}</div>
         <div ${ehB3(p.ticker) ? '' : `data-manual="${esc(p.ticker)}" style="cursor:pointer;text-decoration:underline dotted"`}>
           <span class="mut">Cotação</span>${brl(p.preco)}</div>
-        <div><span class="mut">Valor atual</span>${brl(p.valor)}</div>
+        <div><span class="mut">Valor atual</span>${ocR(p.valor)}</div>
         <div><span class="mut">Hoje</span>${dia(db.variacao[p.ticker])}</div>
         <div><span class="mut">Dia % (posição)</span><b class="${cor(p.d.p)}">${pct(p.d.p)}</b></div>
         <div><span class="mut">Dia R$ (posição)</span><b class="${cor(p.d.r)}">${brl(p.d.r)}</b></div>
@@ -651,10 +653,10 @@ function renderResultados() {
       !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
       `<div class="card rolagem"><table class="compacto">
         <tr><th>Ativo</th><th>Compra</th><th>Venda</th><th>Total venda R$</th><th>Lucro R$</th><th>Lucro %</th><th>IR R$</th><th>Líquido R$</th></tr>` +
-      lista.map(p => `<tr><td><b>${esc(p.ticker)}</b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td><td>${reais(p.vendido)}</td>
+      lista.map(p => `<tr><td><b>${esc(p.ticker)}</b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td><td>${ocN(p.vendido)}</td>
         <td class="${cor(p.lucro)}">${reais(p.lucro)}</td><td class="${cor(p.pct)}">${pct(p.pct)}</td><td>${irTxt(p)}</td>
         <td class="${cor(liq(p))}"><b>${reais(liq(p))}</b></td></tr>`).join('') +
-      `<tr class="soma"><th>Total</th><td></td><td></td><th>${reais(t.venda)}</th><th class="${cor(t.lucro)}">${reais(t.lucro)}</th>
+      `<tr class="soma"><th>Total</th><td></td><td></td><th>${ocN(t.venda)}</th><th class="${cor(t.lucro)}">${reais(t.lucro)}</th>
         <th class="${cor(tP)}">${pct(tP)}</th><th>${reais(t.ir)}</th><th class="${cor(t.liq)}">${reais(t.liq)}</th></tr></table></div>`;
     return;
   }
@@ -675,9 +677,9 @@ function renderResultados() {
       <div class="grid">
         ${linha('Data da compra', dt(p.inicio))}
         ${linha('Encerrado em', dt(p.fim))}
-        ${linha('Total de compra', brl(p.custoVendido))}
+        ${linha('Total de compra', ocR(p.custoVendido))}
         ${linha('Preço médio de compra', brl(p.custoVendido / p.qtdVendida))}
-        ${linha('Total de venda', brl(p.vendido))}
+        ${linha('Total de venda', ocR(p.vendido))}
         ${linha('Preço médio de venda', brl(p.vendido / p.qtdVendida))}
         ${linha('Lucro / prejuízo', `<b>${brl(p.lucro)}</b>`, cor(p.lucro))}
         ${linha('Lucro / prejuízo %', pct(p.pct), cor(p.pct))}
@@ -686,8 +688,8 @@ function renderResultados() {
       </div></div>`).join('') +
     `<div class="card total"><b>Total (${lista.length} ${lista.length === 1 ? 'ativo' : 'ativos'})</b>
       <div class="grid">
-        ${linha('Total de compra', brl(t.compra))}
-        ${linha('Total de venda', brl(t.venda))}
+        ${linha('Total de compra', ocR(t.compra))}
+        ${linha('Total de venda', ocR(t.venda))}
         ${linha('Lucro / prejuízo', `<b>${brl(t.lucro)}</b>`, cor(t.lucro))}
         ${linha('Lucro / prejuízo %', pct(t.compra ? t.lucro / t.compra : null), cor(t.lucro))}
         ${linha('IR a pagar', brl(t.ir))}
@@ -812,9 +814,9 @@ function renderDiario() {
     `<tr><th>Data</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Dia %</th><th>Dia R$</th><th>Total R$</th><th>Lucro %</th><th>Lucro R$</th></tr>` +
     linhas.map(({ s, i, vs, valor, lucro, p, noDia, pDia }) =>
       `<tr><td>${resumido ? data(s.data).slice(0, 6) + s.data.slice(2, 4) : data(s.data)}</td>${vis.map(t => { const x = s.v[t]; if (!x) return '<td></td>';
-        return `<td>${brl(x[0])}<br><small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
+        return `<td>${ocR(x[0])}<br><small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
       `<th class="${cor(pDia)}">${pct(pDia)}</th><th class="${cor(noDia)}">${din(noDia)}</th>` +
-      `<th>${vs.length ? din(valor) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
+      `<th>${vs.length ? (resumido ? ocN : ocR)(valor) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
       `<th class="${cor(lucro)}">${vs.length ? din(lucro) : '—'}</th></tr>`).join('');
   $('tDiario').classList.toggle('compacto', resumido);
 }
