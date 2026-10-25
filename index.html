@@ -124,6 +124,10 @@ button.exp { width:100%; margin-bottom:10px; }
 .datasTodos input { padding:10px 6px; font-size:14px; }
 .datasTodos button { padding:10px 12px; }
 .botoes button { padding:10px 26px; }
+button.perigo { background:transparent; color:var(--dn); border:1px solid var(--dn); }
+#ops tr[data-id] { cursor:pointer; }
+#ops tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
+#mdTexto { white-space:pre-line; }
 #ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
 #ops button.link { padding:2px 0 2px 4px; font-size:15px; }
 /* Gráficos: cores das linhas em ordem fixa (paleta validada para daltonismo), versão própria no modo escuro */
@@ -229,7 +233,7 @@ label.check input { width:auto; margin:0; }
         <div><label for="fTotal">Valor total</label><input id="fTotal" readonly tabindex="-1" placeholder="R$ 0,00" aria-readonly="true"></div>
       </div>
       <div class="msg" id="fMsg"></div>
-      <div class="botoes"><button>Salvar</button><button type="button" class="sec" id="fLimpar">Limpar</button></div>
+      <div class="botoes"><button>Salvar</button><button type="button" class="sec" id="fLimpar">Limpar</button><button type="button" class="perigo" id="fExcluir" hidden>Excluir</button></div>
     </form>
     <h2>Lançamentos</h2>
     <div class="card">
@@ -656,12 +660,11 @@ function render() {
   const lIni = isoDe($('lIni')), lFim = isoDe($('lFim'));
   const lanc = [...db.ops].filter(o => (!lIni || o.data >= lIni) && (!lFim || o.data <= lFim)).sort((a, b) => b.data.localeCompare(a.data));
   $('ops').innerHTML = !lanc.length ? `<tr><td class="mut">${db.ops.length ? 'Nenhum lançamento nesse período.' : 'Nenhum lançamento ainda.'}</td></tr>` :
-    '<tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd</th><th>Unit. R$</th><th>Total R$</th><th></th></tr>' +
-    lanc.map(o => `<tr><td>${o.data.slice(8)}/${o.data.slice(5, 7)}/${o.data.slice(2, 4)}</td>
+    '<tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd</th><th>Unit. R$</th><th>Total R$</th></tr>' +
+    lanc.map(o => `<tr data-id="${o.id}"${o.id === editandoId ? ' class="sel"' : ''}><td>${o.data.slice(8)}/${o.data.slice(5, 7)}/${o.data.slice(2, 4)}</td>
       <td class="${o.tipo === 'C' ? 'up' : 'dn'}">${o.tipo === 'C' ? 'Compra' : 'Venda'}</td>
       <td><div class="tk2" title="${esc(o.ticker)}"><b>${esc(o.ticker)}</b></div></td><td>${o.qtd.toLocaleString('pt-BR')}</td>
-      <td>${reais(o.preco)}</td><td>${reais(o.qtd * o.preco)}</td>
-      <td><button class="link" data-del="${o.id}" aria-label="Excluir lançamento">✕</button></td></tr>`).join('');
+      <td>${reais(o.preco)}</td><td>${reais(o.qtd * o.preco)}</td></tr>`).join('');
 
   const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
   // último backup: data e hora em azul e negrito; sem backup, aviso em vermelho
@@ -931,6 +934,7 @@ function registrarDia() {
 }
 
 let mostrarValores = false; // olhinho do topo
+let editandoId = null; // Lançar: id do lançamento carregado da lista (Salvar corrige; Excluir apaga)
 let falhou = false; // última tentativa de atualizar não trouxe nenhuma cotação
 async function atualizar() {
   if (!db.token) { falhou = true; render(); $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
@@ -1015,23 +1019,35 @@ $('fTicker').onchange = () => {
   const p = ativoExistente($('fTicker').value);
   if (p) $('fClasse').value = p.classe;
 };
-$('form').onsubmit = e => {
+$('form').onsubmit = async e => {
   e.preventDefault();
-  const o = { id: Date.now(), data: $('fData').value,
+  const o = { id: editandoId || Date.now(), data: $('fData').value,
     ticker: ativoExistente($('fTicker').value)?.ticker ?? $('fTicker').value.trim().toUpperCase(),
     tipo: $('fTipo').value, classe: $('fClasse').value, qtd: qtdDigitada(), preco: precoDigitado() };
   const msg = $('fMsg');
   if (!o.data || !o.ticker || !o.classe || !(o.qtd > 0) || !(o.preco > 0)) { msg.className = 'msg dn'; msg.textContent = 'Preencha data, ativo, tipo de ativo, quantidade e preço maiores que zero.'; return; }
-  if (o.tipo === 'V' && o.qtd > qtdEm(db.ops, o.ticker, o.data)) {
-    msg.className = 'msg dn'; msg.textContent = `Você tinha ${qtdEm(db.ops, o.ticker, o.data)} de ${o.ticker} nessa data. Não dá para vender ${o.qtd}.`; return;
+  // com um lançamento carregado, Salvar corrige esse lançamento (não cria outro)
+  const resto = db.ops.filter(x => x.id !== editandoId);
+  if (o.tipo === 'V' && o.qtd > qtdEm(resto, o.ticker, o.data)) {
+    msg.className = 'msg dn'; msg.textContent = `Você tinha ${qtdEm(resto, o.ticker, o.data)} de ${o.ticker} nessa data. Não dá para vender ${o.qtd}.`; return;
   }
-  db.ops.push(o); salvar(); render();
-  limparLancamento(false);
-  alert('Dados salvos com sucesso!');
+  const novo = [...resto, o];
+  // a correção não pode deixar uma venda (desse ou de outro dia) sem saldo
+  if (novo.some(v => v.tipo === 'V' && qtdEm(novo, v.ticker, v.data) < 0)) {
+    msg.className = 'msg dn'; msg.textContent = 'Essa alteração deixaria uma venda sem saldo suficiente. Confira as quantidades.'; return;
+  }
+  const corrigiu = !!editandoId;
+  db.ops = novo; salvar();
+  limparLancamento(); render();
+  await modal({ titulo: 'Gravado com sucesso', ok: 'OK',
+    texto: `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} ${corrigiu ? 'corrigida' : 'gravada'}:\n${descreverLanc(o)}` });
+  fecharModal();
 };
 // Lançar: formata enquanto digita — ativo em maiúsculas, quantidade só números inteiros, preço em R$ com 2 casas
 const qtdDigitada = () => Number($('fQtd').value.replace(/\D/g, ''));
-const precoDigitado = () => Number($('fPreco').value.replace(/\D/g, '')) / 100;
+// preço carregado de um lançamento antigo (pode ter mais de 2 casas): se o campo não for mexido, vale o valor exato
+let precoCarregado = null;
+const precoDigitado = () => precoCarregado && $('fPreco').value === precoCarregado.txt ? precoCarregado.valor : Number($('fPreco').value.replace(/\D/g, '')) / 100;
 const atualizaTotal = () => { const q = qtdDigitada(), p = precoDigitado(); $('fTotal').value = q && p ? brl(q * p) : ''; };
 $('fTicker').oninput = e => { const i = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(i, i); };
 $('fQtd').oninput = e => { const d = e.target.value.replace(/\D/g, '').replace(/^0+/, ''); e.target.value = d ? Number(d).toLocaleString('pt-BR') : ''; atualizaTotal(); };
@@ -1041,8 +1057,38 @@ function limparLancamento(tudo = true) {
   $('fQtd').value = $('fPreco').value = $('fTotal').value = $('fTicker').value = $('fClasse').value = '';
   $('fMsg').textContent = '';
   if (tudo) { $('fTipo').value = 'C'; $('fData').value = hoje(); }
+  editandoId = null; precoCarregado = null; $('fExcluir').hidden = true;
 }
-$('fLimpar').onclick = () => limparLancamento();
+$('fLimpar').onclick = () => { limparLancamento(); render(); };
+// texto do lançamento para as janelas de confirmação
+const descreverLanc = o => `Data: ${o.data.split('-').reverse().join('/')}\nTipo: ${o.tipo === 'C' ? 'Compra' : 'Venda'}\nAtivo: ${o.ticker}\n` +
+  `Quantidade: ${o.qtd.toLocaleString('pt-BR')}\nPreço unitário: ${brl(o.preco)}\nValor total: ${brl(o.qtd * o.preco)}`;
+// tocar num lançamento da lista: carrega no formulário e mostra o botão Excluir
+function carregarLancamento(o) {
+  editandoId = o.id;
+  $('fTipo').value = o.tipo; $('fData').value = o.data; $('fTicker').value = o.ticker;
+  $('fClasse').value = o.classe || (ehB3(o.ticker) ? 'A' : 'F');
+  $('fQtd').value = o.qtd.toLocaleString('pt-BR'); $('fPreco').value = brl(Math.round(o.preco * 100) / 100);
+  precoCarregado = { txt: $('fPreco').value, valor: o.preco }; atualizaTotal();
+  $('fExcluir').hidden = false;
+  $('fMsg').className = 'msg'; $('fMsg').textContent = 'Lançamento carregado: altere e toque em Salvar para corrigir, ou toque em Excluir.';
+  render(); $('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$('fExcluir').onclick = async () => {
+  const o = db.ops.find(x => x.id === editandoId); if (!o) return;
+  const resto = db.ops.filter(x => x !== o);
+  // não deixa apagar uma compra que deixaria uma venda posterior sem saldo
+  if (o.tipo === 'C' && resto.some(v => v.tipo === 'V' && v.ticker === o.ticker && qtdEm(resto, o.ticker, v.data) < 0)) {
+    await modal({ titulo: 'Não é possível excluir', ok: 'OK', texto: 'Esta compra cobre uma venda posterior. Exclua a venda primeiro.' });
+    return fecharModal();
+  }
+  const sim = await modal({ titulo: 'Excluir lançamento?', ok: 'Sim, excluir', cancelar: 'Cancelar',
+    texto: `Deseja realmente excluir este lançamento?\n\n${descreverLanc(o)}` });
+  fecharModal(); if (!sim) return;
+  db.ops = resto; salvar(); limparLancamento(); render();
+  await modal({ titulo: 'Excluído com sucesso', ok: 'OK', texto: `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} excluída.` });
+  fecharModal();
+};
 // filtro de datas dos lançamentos: começa em 01/07/2023
 // Filtros de data (Lançamentos e Diário): campo de digitação dd/mm/aaaa. Ao tocar, seleciona tudo; aceita só números
 // e põe as barras sozinho; filtra quando a data fica completa ou é apagada. Mínimo 01/07/2023. "Todos" limpa as duas.
@@ -1070,14 +1116,8 @@ function campoData(el, aoMudar) {
   $(p + 'Todos').onclick = () => { $(p + 'Ini').value = $(p + 'Fim').value = ''; f(); };
 });
 $('ops').onclick = e => {
-  const id = Number(e.target.closest('[data-del]')?.dataset.del); if (!id) return;
-  const o = db.ops.find(x => x.id === id);
-  const resto = db.ops.filter(x => x !== o);
-  // não deixa apagar uma compra que deixaria uma venda posterior sem saldo
-  const furo = o.tipo === 'C' && resto.some(v => v.tipo === 'V' && v.ticker === o.ticker && qtdEm(resto, o.ticker, v.data) < 0);
-  if (furo) return alert('Essa compra cobre uma venda posterior. Exclua a venda primeiro.');
-  if (!confirm(`Excluir ${o.tipo === 'C' ? 'compra' : 'venda'} de ${o.ticker} em ${o.data.split('-').reverse().join('/')}?`)) return;
-  db.ops = resto; salvar(); render();
+  const id = Number(e.target.closest('tr[data-id]')?.dataset.id); if (!id) return;
+  const o = db.ops.find(x => x.id === id); if (o) carregarLancamento(o);
 };
 
 try { $('cTema').value = localStorage.getItem('carteira-bdr-tema') || 'auto'; } catch {}
