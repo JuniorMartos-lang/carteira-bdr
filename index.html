@@ -272,7 +272,50 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-aporte" hidden>
     <div class="card">
-      <div class="mut">Patrimônio não aplicado</div>
+      <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><span class="mut">Patrimônio não aplicado</span>
+        <button type="button" class="info" aria-expanded="false" aria-controls="aInfo" aria-label="Regras do patrimônio não aplicado">i</button></div>
+      <div id="aInfo" class="ajuda" hidden>
+        <b>O que é</b>
+        <ul>
+          <li>É o dinheiro que está fora dos ativos (parado na corretora, em conta ou reserva).</li>
+          <li>Conta: <b>Patrimônio inicial + Aportes − Saques + Vendas − Compras</b>.</li>
+          <li>O valor é recalculado do zero sempre que aparece na tela, a partir dos dados gravados.</li>
+        </ul>
+        <b>Patrimônio inicial</b>
+        <ul>
+          <li>Valor de partida. Digite e toque em <b>Salvar</b>; se já havia um valor, o app pergunta antes de alterar.</li>
+          <li>Ao alterar, o patrimônio não aplicado é refeito com o novo inicial e todos os aportes, saques, compras e vendas já lançados.</li>
+        </ul>
+        <b>Aportes e saques (esta aba)</b>
+        <ul>
+          <li><b>Aporte</b> soma o valor; <b>Saque</b> subtrai.</li>
+          <li>Tocar em um lançamento da lista permite <b>alterar</b> (o valor antigo sai e o novo entra) ou <b>excluir</b> (o valor deixa de contar). O app sempre pergunta antes.</li>
+          <li>Aportes e saques contam qualquer que seja a data informada.</li>
+        </ul>
+        <b>Compras e vendas (aba Lançar)</b>
+        <ul>
+          <li><b>Venda</b> soma o valor total (quantidade × preço); <b>Compra</b> subtrai o valor total.</li>
+          <li>Só contam operações com data <b>a partir de 27/10/2026</b>; as anteriores já estão na carteira e não mexem neste valor.</li>
+          <li>Alterar uma compra ou venda troca o valor antigo pelo novo; excluir tira o valor da conta. Mudar a data para antes de 27/10/2026 faz a operação deixar de contar.</li>
+        </ul>
+        <b>Onde o valor é usado</b>
+        <ul>
+          <li><b>Resumo → Patrimônio total</b>: patrimônio não aplicado + valor atual de cada ativo ou fundo em aberto (atualiza na hora).</li>
+          <li><b>Diário → Resumido → Total R$</b>: posições do dia + patrimônio não aplicado daquele dia.</li>
+        </ul>
+        <b>Nunca retroativo</b>
+        <ul>
+          <li>Cada dia do Diário guarda o patrimônio não aplicado daquele dia, gravado ao tocar em <b>Atualizar cotações</b>.</li>
+          <li>Mudanças feitas hoje valem para hoje em diante; os dias já gravados não mudam.</li>
+          <li>Até 26/10/2026 o Diário não tem este valor (o Total R$ continua como era).</li>
+        </ul>
+        <b>Outros</b>
+        <ul>
+          <li>Pode ficar negativo (em vermelho) se as compras e saques passarem do que entrou.</li>
+          <li>Os valores ficam escondidos pelo olhinho do topo, como os demais.</li>
+          <li>Patrimônio inicial, aportes e saques vão no backup e voltam ao restaurar.</li>
+        </ul>
+      </div>
       <div id="aTotal" style="font-size:26px; font-weight:700; margin:2px 0 8px"></div>
       <table id="aConta"></table>
     </div>
@@ -301,9 +344,7 @@ label.check input { width:auto; margin:0; }
       <select id="aFiltro"><option value="">Aportes e saques</option><option value="A">Só aportes</option><option value="S">Só saques</option></select>
     </div>
     <div class="card rolagem"><table id="aLista" class="compacto"></table></div>
-    <p class="mut">Patrimônio não aplicado = patrimônio inicial + aportes − saques + vendas − compras lançadas a partir de 27/10/2026 (aba Lançar).
-      Ele entra no Patrimônio total do Resumo e no Total R$ do Diário Resumido a partir de 27/10/2026; os dias anteriores não mudam.
-      Toque em um aporte ou saque da lista para alterar ou excluir.</p>
+    <p class="mut">Toque em um aporte ou saque da lista para alterar ou excluir. As regras estão no botão "i" ao lado de Patrimônio não aplicado.</p>
   </section>
 
   <section id="tab-diario" hidden>
