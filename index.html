@@ -622,7 +622,7 @@ label.check input { width:auto; margin:0; }
   <button data-tab="resumo" class="on"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Resumo</button>
   <button data-tab="carteira"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Carteira</button>
   <button data-tab="lancar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
-  <button data-tab="aporte"><svg viewBox="0 0 24 24"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>Aporte/<br>Saque</button>
+  <button data-tab="aporte"><svg viewBox="0 0 24 24"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>Mov.</button>
   <button data-tab="diario"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Diário</button>
   <button data-tab="mensal"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Mensal</button>
   <button data-tab="graf"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 6-7"/></svg>Gráficos</button>
@@ -1278,18 +1278,20 @@ function renderAporte() {
   const soma = t => db.movs.filter(m => m.tipo === t).reduce((x, m) => x + m.valor, 0);
   const novas = t => db.ops.filter(o => o.data >= INICIO_NA && o.tipo === t).reduce((x, o) => x + o.qtd * o.preco, 0);
   const na = naoAplicado();
-  $('aTotal').textContent = brl(na); $('aTotal').className = na < 0 ? 'dn' : '';
+  $('aTotal').textContent = ocR(na); $('aTotal').className = na < 0 ? 'dn' : '';
   $('aConta').innerHTML = [['Patrimônio inicial', db.patrimonioInicial, ''], ['+ Aportes', soma('A'), 'up'], ['− Saques', soma('S'), 'dn'],
     ['+ Vendas (desde 27/10/2026)', novas('V'), 'up'], ['− Compras (desde 27/10/2026)', novas('C'), 'dn']]
-    .map(([n, v, c]) => `<tr><td>${n}</td><td class="${c}">${brl(v)}</td></tr>`).join('');
-  if (document.activeElement !== $('aInicial')) $('aInicial').value = db.patrimonioInicial ? brl(db.patrimonioInicial) : '';
+    .map(([n, v, c]) => `<tr><td>${n}</td><td class="${c}">${ocR(v)}</td></tr>`).join('');
+  // olhinho fechado: o campo fica vazio com "R$ ••••••" (Salvar com ele vazio não muda nada)
+  $('aInicial').placeholder = mostrarValores ? 'R$ 0,00' : 'R$ ••••••';
+  if (document.activeElement !== $('aInicial')) $('aInicial').value = mostrarValores && db.patrimonioInicial ? brl(db.patrimonioInicial) : '';
   const ini = isoDe($('aIni')), fim = isoDe($('aFim')), tipo = $('aFiltro').value;
   const lista = db.movs.filter(m => (!ini || m.data >= ini) && (!fim || m.data <= fim) && (!tipo || m.tipo === tipo))
     .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
   $('aLista').innerHTML = !lista.length ? `<tr><td class="mut">${db.movs.length ? 'Nenhum lançamento nesse filtro.' : 'Nenhum aporte ou saque ainda.'}</td></tr>` :
     '<tr><th>Data lançamento</th><th>Tipo</th><th>Valor lançado R$</th></tr>' +
     lista.map(m => `<tr data-id="${m.id}"${m.id === movEditando ? ' class="sel"' : ''}><td>${dataBr(m.data)}</td>
-      <td class="${m.tipo === 'A' ? 'up' : 'dn'}">${m.tipo === 'A' ? 'Aporte' : 'Saque'}</td><td class="${m.tipo === 'A' ? 'up' : 'dn'}">${reais(m.valor)}</td></tr>`).join('');
+      <td class="${m.tipo === 'A' ? 'up' : 'dn'}">${m.tipo === 'A' ? 'Aporte' : 'Saque'}</td><td class="${m.tipo === 'A' ? 'up' : 'dn'}">${ocN(m.valor)}</td></tr>`).join('');
 }
 const descreverMov = m => `Data: ${dataBr(m.data)}\nTipo: ${m.tipo === 'A' ? 'Aporte' : 'Saque'}\nValor: ${brl(m.valor)}`;
 function limparMov() {
@@ -1303,11 +1305,11 @@ $('aFiltro').onchange = renderAporte;
 $('aLimpar').onclick = () => { limparMov(); renderAporte(); };
 $('aInicialSalvar').onclick = async () => {
   const v = reaisDe($('aInicial').value), antes = db.patrimonioInicial;
-  if (v === antes) return;
+  if (v === antes || (!mostrarValores && !$('aInicial').value)) return;
   if (antes) {
     const sim = await modal({ titulo: 'Alterar patrimônio inicial?', ok: 'Sim, alterar', cancelar: 'Cancelar',
       texto: `Deseja alterar o patrimônio inicial?\n\nDe: ${brl(antes)}\nPara: ${brl(v)}` });
-    fecharModal(); if (!sim) { $('aInicial').value = brl(antes); return; }
+    fecharModal(); if (!sim) { $('aInicial').value = ''; return renderAporte(); }
   }
   db.patrimonioInicial = v; salvar(); render();
   await modal({ titulo: 'Gravado com sucesso', ok: 'OK', texto: `Patrimônio inicial: ${brl(v)}` + textoNa() });
