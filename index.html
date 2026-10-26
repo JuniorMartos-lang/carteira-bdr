@@ -815,18 +815,18 @@ function renderResultados() {
     const curta = d => dt(d).slice(0, 6) + d.slice(2, 4); // dd/mm/aa
     // linha Total sem somar compra e venda (só confundia); soma lucro, IR e líquido
     tabelas.resultados = !lista.length ? null : [
-      ['Ativo', 'Data da compra', 'Data da venda', 'Preço unitário de compra', 'Total de compra', 'Total de venda', 'Preço unitário de venda',
+      ['Ativo', 'Data da compra', 'Data da venda', 'Preço unitário de compra', 'Total de compra', 'Preço unitário de venda', 'Total de venda',
         'Lucro / prejuízo R$', 'Lucro / prejuízo %', 'IR a pagar', 'Lucro líquido'],
-      ...lista.map(p => [p.ticker, dt(p.inicio), dt(p.fim), xR(p.custoVendido / p.qtdVendida), xR(p.custoVendido), xR(p.vendido), xR(p.vendido / p.qtdVendida),
+      ...lista.map(p => [p.ticker, dt(p.inicio), dt(p.fim), xR(p.custoVendido / p.qtdVendida), xR(p.custoVendido), xR(p.vendido / p.qtdVendida), xR(p.vendido),
         xR(p.lucro), xP(p.pct), p.ir == null ? 'retido na fonte' : xR(p.ir), xR(liq(p))]),
       ['Total', '', '', '', '', '', '', xR(t.lucro), xP(tP), xR(t.ir), xR(t.liq)]];
     $('rLista').innerHTML = !enc.length ? '<p class="mut">Nenhum ativo encerrado ainda.</p>' :
       !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
       `<div class="card rolagem"><table class="compacto espacado">
-        <tr><th>Ativo</th><th>Compra</th><th>Venda</th><th>Unit. compra R$</th><th>Total compra R$</th><th>Total venda R$</th><th>Unit. venda R$</th>
+        <tr><th>Ativo</th><th>Compra</th><th>Venda</th><th>Unit. compra R$</th><th>Total compra R$</th><th>Unit. venda R$</th><th>Total venda R$</th>
           <th>Lucro R$</th><th>Lucro %</th><th>IR R$</th><th>Líquido R$</th></tr>` +
       lista.map(p => `<tr><td><b>${esc(p.ticker)}</b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td>
-        <td>${reais(p.custoVendido / p.qtdVendida)}</td><td>${ocN(p.custoVendido)}</td><td>${ocN(p.vendido)}</td><td>${reais(p.vendido / p.qtdVendida)}</td>
+        <td>${reais(p.custoVendido / p.qtdVendida)}</td><td>${ocN(p.custoVendido)}</td><td>${reais(p.vendido / p.qtdVendida)}</td><td>${ocN(p.vendido)}</td>
         <td class="${cor(p.lucro)}">${reais(p.lucro)}</td><td class="${cor(p.pct)}">${pct(p.pct)}</td><td>${irTxt(p)}</td>
         <td class="${cor(liq(p))}"><b>${reais(liq(p))}</b></td></tr>`).join('') +
       `<tr class="soma"><th>Total</th><td></td><td></td><td></td><td></td><td></td><td></td><th class="${cor(t.lucro)}">${reais(t.lucro)}</th>
