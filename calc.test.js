@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -85,6 +85,15 @@ assert.deepStrictEqual(tendencia([0.01, 0.03, 0.02, 0.05, 0.04, -0.01, null, 0.0
   ['desce', 'sobe', 'desce', 'rec', 'desce', 'neg', '', 'desce']);
 assert.deepStrictEqual(tendencia([0.05, 0.05]), ['sobe', 'rec']); // recorde repetido: verde só na última vez
 assert.deepStrictEqual(tendencia([null, null]), ['', '']);
+
+// Dash.: semana = sobre o fechamento da sexta anterior; mês = sobre o último fechamento do mês anterior
+const cd = (dia, close) => ({ date: Date.UTC(+dia.slice(0, 4), +dia.slice(5, 7) - 1, +dia.slice(8), 3) / 1000, close }); // meia-noite em Brasília
+const hv = [cd('2026-09-29', 90), cd('2026-09-30', 100), cd('2026-10-01', 105), cd('2026-10-23', 110), cd('2026-10-26', 115)];
+let vv = variacoes(121, hv, '2026-10-28'); // quarta
+perto(vv.semana, 121 / 110 - 1); perto(vv.mes, 121 / 100 - 1);
+vv = variacoes(121, hv, '2026-10-25'); // domingo: semana de 19 a 23/10 → base = último fechamento antes de 19/10 (01/10)
+perto(vv.mes, 0.21); perto(vv.semana, 121 / 105 - 1);
+assert.deepStrictEqual(variacoes(10, [], '2026-10-28'), { semana: null, mes: null });
 
 // Senha: confere a certa, recusa a errada; código de recuperação no formato XXXX-XXXX-XXXX
 (async () => {

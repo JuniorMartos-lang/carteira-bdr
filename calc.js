@@ -108,6 +108,20 @@ function tendencia(vals) {
     : (vals[i - 1] != null && v > vals[i - 1]) || v === max ? 'sobe' : 'desce');
 }
 
+// Dia (AAAA-MM-DD, horário de Brasília) de um candle do brapi (date em segundos unix)
+const diaBR = seg => new Date(seg * 1000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+// Aba Dash.: variação da semana e do mês correntes = preço atual sobre o último fechamento antes da segunda-feira
+// desta semana (semana de segunda a sexta; no sábado/domingo, a semana que acabou) e antes do dia 1º deste mês.
+// hist: historicalDataPrice do brapi [{date, close}]; hoje: 'AAAA-MM-DD'. Sem fechamento anterior: null.
+function variacoes(preco, hist, hoje) {
+  const d = new Date(hoje + 'T12:00Z'), dow = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() - (dow === 0 ? 6 : dow - 1));
+  const segunda = d.toISOString().slice(0, 10), dia1 = hoje.slice(0, 8) + '01';
+  const dias = hist.filter(h => h.close != null).map(h => [diaBR(h.date), h.close]).sort((x, y) => x[0].localeCompare(y[0]));
+  const desde = lim => { const x = dias.filter(([dd]) => dd < lim).pop(); return x ? preco / x[1] - 1 : null; };
+  return { semana: desde(segunda), mes: desde(dia1) };
+}
+
 // --- Senha do app: guarda só o hash (PBKDF2), nunca a senha ---
 const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s); }; // em pedaços: o backup cifrado pode ser grande
 const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -139,5 +153,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

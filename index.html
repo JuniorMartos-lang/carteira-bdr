@@ -126,7 +126,7 @@ button.exp { width:100%; margin-bottom:10px; }
 .botoes button { padding:10px 26px; }
 button.perigo { background:transparent; color:var(--dn); border:1px solid var(--dn); }
 #ops tr[data-id] { cursor:pointer; }
-#ops tr.sel td, #aLista tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
+#ops tr.sel td, #aLista tr.sel td, #wTabela tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
 #mdTexto { white-space:pre-line; }
 #ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
 #ops button.link { padding:2px 0 2px 4px; font-size:15px; }
@@ -460,6 +460,19 @@ label.check input { width:auto; margin:0; }
     <p class="mut">Só ativos encerrados (vendidos por completo). O filtro de meses usa a data da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
   </section>
 
+  <section id="tab-dash" hidden>
+    <form class="card" id="wForm">
+      <label for="wTicker" style="margin-top:0">Ativo (ex.: PETR4, AAPL34)</label>
+      <input id="wTicker" autocapitalize="characters" autocomplete="off" maxlength="12">
+      <div class="msg" id="wMsg"></div>
+      <div class="botoes"><button id="wSalvar">Adicionar</button><button type="button" class="sec" id="wLimpar">Limpar</button><button type="button" class="perigo" id="wExcluir" hidden>Excluir</button></div>
+    </form>
+    <div class="row" style="align-items:center; gap:8px"><button type="button" id="wAtualizar">Atualizar cotações</button><span class="mut" id="wQuando"></span></div>
+    <div class="msg dn" id="wErro"></div>
+    <div class="card rolagem"><table id="wTabela" class="compacto"></table></div>
+    <p class="mut">Até 20 ativos. Dia % = variação sobre o fechamento do pregão anterior. Semana % = sobre o fechamento antes da segunda-feira desta semana (semana de segunda a sexta). Mês % = sobre o último fechamento do mês anterior. Toque no "i" para ver o nome do ativo; toque na linha para alterar ou excluir.</p>
+  </section>
+
   <section id="tab-config" hidden>
     <div class="card">
       <label for="cTema" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Aparência</b></label>
@@ -668,6 +681,7 @@ label.check input { width:auto; margin:0; }
   <button data-tab="mensal"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Mensal</button>
   <button data-tab="graf"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 6-7"/></svg>Gráficos</button>
   <button data-tab="result"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Resultados</button>
+  <button data-tab="dash"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dash.</button>
   <button data-tab="config"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Ajustes</button>
 </nav>
 
@@ -676,7 +690,8 @@ label.check input { width:auto; margin:0; }
 <script>
 const KEY = 'carteira-bdr';
 const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, indices: {}, token: '', atualizado: null,
-  patrimonioInicial: 0, movs: [] }; // movs: aportes/saques [{id, data, tipo:'A'|'S', valor}]
+  patrimonioInicial: 0, movs: [], // movs: aportes/saques [{id, data, tipo:'A'|'S', valor}]
+  dash: [], dashEm: null }; // aba Dash.: [{ticker, nome, preco, dia, semana, mes}] e hora da última atualização
 // Patrimônio não aplicado (dinheiro fora dos ativos) vale a partir deste dia; o Diário de antes não muda
 const INICIO_NA = '2026-10-27';
 let db;
@@ -845,6 +860,7 @@ function render() {
 
   renderMensal();
   renderAporte();
+  renderDash();
   renderDiario();
   renderResultados();
   if (!$('tab-graf').hidden) renderGraficos();
@@ -1385,6 +1401,81 @@ $('aExcluir').onclick = async () => {
   fecharModal(); if (!sim) return;
   db.movs = db.movs.filter(x => x !== m); salvar(); limparMov(); render();
   await modal({ titulo: 'Excluído com sucesso', ok: 'OK', texto: `${m.tipo === 'A' ? 'Aporte' : 'Saque'} excluído:\n${descreverMov(m)}` + textoNa() });
+  fecharModal();
+};
+// --- Dash.: lista de acompanhamento (não é carteira; cotações do brapi, um ativo por vez como no resto do app) ---
+const DASH_MAX = 20;
+let dashEditando = null; // ticker carregado da lista
+const nomesAbertos = new Set(); // linhas com o nome do ativo à mostra (botão i)
+function renderDash() {
+  $('wQuando').textContent = db.dashEm ? 'Atualizado em ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
+  $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código acima e toque em Adicionar.</td></tr>' :
+    '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th></tr>' +
+    db.dash.map((a, i) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
+      <td><span style="display:inline-flex; align-items:center; gap:4px"><b>${esc(a.ticker)}</b><button type="button" class="info" data-nome="${i}" aria-expanded="${nomesAbertos.has(a.ticker)}" aria-label="Nome de ${esc(a.ticker)}">i</button></span></td>
+      <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes].map(v => `<td class="${cor(v)}">${pct(v)}</td>`).join('')}</tr>
+      <tr${nomesAbertos.has(a.ticker) ? '' : ' hidden'}><td colspan="5" class="mut" style="white-space:normal; text-align:left">${esc(a.nome || 'Nome ainda não carregado: toque em Atualizar cotações.')}</td></tr>`).join('');
+}
+function limparDash() {
+  dashEditando = null; $('wTicker').value = ''; $('wMsg').textContent = '';
+  $('wSalvar').textContent = 'Adicionar'; $('wExcluir').hidden = true;
+}
+async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
+  if (!db.token) { $('wErro').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
+  if (!tks.length) return;
+  $('wAtualizar').disabled = true; $('wErro').textContent = '';
+  const erros = [];
+  for (const [n, t] of tks.entries()) {
+    $('wQuando').textContent = `Atualizando ${n + 1} de ${tks.length}…`;
+    try { // range=3mo: fechamentos diários para achar a base da semana e do mês
+      const r = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?range=3mo&interval=1d&token=${encodeURIComponent(db.token)}`);
+      const j = await r.json(), q = j.results?.[0];
+      if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
+      const a = db.dash.find(x => x.ticker === t); if (!a) continue; // excluído enquanto atualizava
+      Object.assign(a, { nome: q.longName || q.shortName || a.nome, preco: q.regularMarketPrice,
+        dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100 },
+        variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
+    } catch (err) { erros.push(`${t} (${err.message})`); }
+  }
+  if (erros.length < tks.length) db.dashEm = new Date().toISOString();
+  salvar(); $('wAtualizar').disabled = false; renderDash();
+  $('wErro').textContent = erros.length ? 'Não foi possível atualizar: ' + erros.join(', ') + '.' : '';
+}
+$('wAtualizar').onclick = () => atualizarDash();
+$('wTicker').oninput = e => { const i = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(i, i); };
+$('wLimpar').onclick = () => { limparDash(); renderDash(); };
+$('wForm').onsubmit = async e => {
+  e.preventDefault();
+  const t = $('wTicker').value.trim().toUpperCase(), antes = dashEditando;
+  const erro = x => { $('wMsg').className = 'msg dn'; $('wMsg').textContent = x; };
+  if (!/^[A-Z0-9]{4,12}$/.test(t)) return erro('Digite um código válido (ex.: PETR4, AAPL34).');
+  if (db.dash.some(a => a.ticker === t && a.ticker !== antes)) return erro(`${t} já está no Dash.`);
+  if (!antes && db.dash.length >= DASH_MAX) return erro(`Limite de ${DASH_MAX} ativos. Exclua um para adicionar outro.`);
+  if (antes) {
+    if (t === antes) { limparDash(); return renderDash(); }
+    const sim = await modal({ titulo: 'Alterar ativo?', ok: 'Sim, alterar', cancelar: 'Cancelar', texto: `Deseja alterar este ativo do Dash?\n\nDe: ${antes}\nPara: ${t}` });
+    fecharModal(); if (!sim) return;
+    db.dash[db.dash.findIndex(a => a.ticker === antes)] = { ticker: t };
+  } else db.dash.push({ ticker: t });
+  salvar(); limparDash(); renderDash();
+  const busca = atualizarDash([t]); // já busca a cotação do novo ativo
+  await modal({ titulo: 'Gravado com sucesso', ok: 'OK', texto: antes ? `Ativo alterado:\nDe: ${antes}\nPara: ${t}` : `${t} adicionado ao Dash (${db.dash.length} de ${DASH_MAX}).` });
+  fecharModal(); await busca;
+};
+$('wTabela').onclick = e => {
+  const b = e.target.closest('button[data-nome]');
+  if (b) { const t = db.dash[b.dataset.nome].ticker; nomesAbertos.has(t) ? nomesAbertos.delete(t) : nomesAbertos.add(t); return renderDash(); }
+  const a = db.dash[e.target.closest('tr[data-i]')?.dataset.i]; if (!a) return;
+  dashEditando = a.ticker; $('wTicker').value = a.ticker; $('wSalvar').textContent = 'Alterar'; $('wExcluir').hidden = false;
+  $('wMsg').className = 'msg'; $('wMsg').textContent = 'Ativo carregado: altere o código e toque em Alterar, ou toque em Excluir.';
+  renderDash(); $('wForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+$('wExcluir').onclick = async () => {
+  const t = dashEditando; if (!t) return;
+  const sim = await modal({ titulo: 'Excluir ativo?', ok: 'Sim, excluir', cancelar: 'Cancelar', texto: `Deseja realmente excluir ${t} do Dash?` });
+  fecharModal(); if (!sim) return;
+  db.dash = db.dash.filter(a => a.ticker !== t); salvar(); limparDash(); renderDash();
+  await modal({ titulo: 'Excluído com sucesso', ok: 'OK', texto: `${t} excluído do Dash.` });
   fecharModal();
 };
 [['l', render], ['d', renderDiario], ['a', renderAporte]].forEach(([p, f]) => {
