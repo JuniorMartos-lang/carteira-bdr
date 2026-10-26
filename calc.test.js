@@ -66,6 +66,13 @@ perto(m2[1].linhas.A.lucro, -50);
 perto(m2[1].linhas.B.lucro, 100);
 perto(m2[1].linhas.A.inv, 1000);
 
+// Venda parcial no Mensal: 10 a R$ 10; vende 4 a R$ 15 no mês seguinte com o preço parado em 15.
+// O lucro realizado (20) continua contando: o mês da venda dá 0, não -20.
+const opsP = [{ data: '2026-08-01', ticker: 'X', tipo: 'C', qtd: 10, preco: 10 }, { data: '2026-09-10', ticker: 'X', tipo: 'V', qtd: 4, preco: 15 }];
+const hp = [{ data: '2026-08-31', v: { X: [150, 100] } }, { data: '2026-09-30', v: { X: [90, 60] } }];
+perto(mensal(hp, opsP)[1].linhas.X.lucro, 0);
+perto(mensal(hp)[1].linhas.X.lucro, -20); // sem as operações, o comportamento antigo
+
 // Data do pregão a partir do horário do brapi
 assert.strictEqual(pregaoDe('2026-10-21T04:37:21.000Z'), '2026-10-20'); // qua 01h37 → fechamento de ter
 assert.strictEqual(pregaoDe('2026-10-21T15:00:00.000Z'), '2026-10-21'); // qua 12h, pregão aberto

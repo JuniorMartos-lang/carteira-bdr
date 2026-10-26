@@ -745,7 +745,7 @@ function render() {
 }
 
 function renderMensal() {
-  const ms = mensal(db.historico);
+  const ms = mensal(db.historico, db.ops);
   const tks = [...new Set(ms.flatMap(m => Object.keys(m.linhas)))].sort();
   const cols = comboAtivos('m', tks);
   const ini = $('mIni').value, fim = $('mFim').value;

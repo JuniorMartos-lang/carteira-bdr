@@ -61,17 +61,22 @@ function qtdEm(ops, ticker, data) {
 // historico: [{data, v:{TICKER:[valor, investido]}}] -> lucro de cada mês por ticker
 // Lucro do mês = lucro acumulado no último registro do ativo no mês - lucro acumulado no fim do mês anterior.
 // (por ativo: um ativo vendido no meio do mês some dos registros seguintes)
-function mensal(historico) {
+// ops (opcional): com vendas parciais, o lucro acumulado de um ativo ainda em carteira soma o que já foi realizado
+// nessas vendas (o registro do dia só guarda a parte que sobrou); sem isso a venda parcial pareceria prejuízo.
+// Ativo zerado não precisa: o registro dele já guarda o resultado total das vendas.
+function mensal(historico, ops = []) {
   const h = [...historico].sort((a, b) => a.data.localeCompare(b.data));
-  const fimDoMes = {}; // mês -> {ticker: [valor, investido]}
-  h.forEach(s => Object.assign(fimDoMes[s.data.slice(0, 7)] ||= {}, s.v));
+  const fimDoMes = {}; // mês -> {ticker: [valor, investido, data do registro]}
+  h.forEach(s => { const m = fimDoMes[s.data.slice(0, 7)] ||= {}; for (const [t, x] of Object.entries(s.v)) m[t] = [x[0], x[1], s.data]; });
+  const vendas = realizados(ops);
+  const realizadoAte = (t, d) => qtdEm(ops, t, d) > 0 ? vendas.filter(e => e.ticker === t && e.data <= d).reduce((a, e) => a + e.realizado, 0) : 0;
   const meses = Object.keys(fimDoMes).sort();
   const acum = {}; // último lucro acumulado conhecido por ticker
   return meses.map(m => {
     const linhas = {};
     let lucro = 0, investido = 0;
-    Object.entries(fimDoMes[m]).forEach(([t, [valor, inv]]) => {
-      const l = valor - inv;
+    Object.entries(fimDoMes[m]).forEach(([t, [valor, inv, d]]) => {
+      const l = valor - inv + realizadoAte(t, d);
       linhas[t] = { lucro: l - (acum[t] || 0), pct: (l - (acum[t] || 0)) / inv, inv };
       acum[t] = l;
       lucro += linhas[t].lucro;
