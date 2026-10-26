@@ -126,7 +126,7 @@ button.exp { width:100%; margin-bottom:10px; }
 .botoes button { padding:10px 26px; }
 button.perigo { background:transparent; color:var(--dn); border:1px solid var(--dn); }
 #ops tr[data-id] { cursor:pointer; }
-#ops tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
+#ops tr.sel td, #aLista tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
 #mdTexto { white-space:pre-line; }
 #ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
 #ops button.link { padding:2px 0 2px 4px; font-size:15px; }
@@ -215,7 +215,7 @@ label.check input { width:auto; margin:0; }
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
     <h2>Patrimônio total</h2>
     <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
-    <p class="mut">Patrimônio não alocado (informado em Ajustes) + valor atual de cada ativo ou fundo em aberto.</p>
+    <p class="mut">Patrimônio não aplicado (aba Aporte/Saque) + valor atual de cada ativo ou fundo em aberto.</p>
   </section>
 
   <section id="tab-lancar" hidden>
@@ -268,6 +268,42 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="ops" class="compacto"></table></div>
+  </section>
+
+  <section id="tab-aporte" hidden>
+    <div class="card">
+      <div class="mut">Patrimônio não aplicado</div>
+      <div id="aTotal" style="font-size:26px; font-weight:700; margin:2px 0 8px"></div>
+      <table id="aConta"></table>
+    </div>
+    <div class="card">
+      <label for="aInicial" style="margin-top:0">Patrimônio inicial</label>
+      <div class="datasTodos" style="grid-template-columns:1fr auto"><input id="aInicial" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off">
+        <button type="button" id="aInicialSalvar">Salvar</button></div>
+    </div>
+    <form class="card" id="aForm">
+      <div class="two">
+        <div><label for="aTipo">Operação</label><select id="aTipo"><option value="A">Aporte</option><option value="S">Saque</option></select></div>
+        <div><label for="aData">Data</label><input id="aData" type="date" required></div>
+      </div>
+      <label for="aValor">Valor</label><input id="aValor" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" required>
+      <div class="msg" id="aMsg"></div>
+      <div class="botoes"><button>Salvar</button><button type="button" class="sec" id="aLimpar">Limpar</button><button type="button" class="perigo" id="aExcluir" hidden>Excluir</button></div>
+    </form>
+    <h2>Aportes e saques</h2>
+    <div class="card">
+      <div class="datasTodos">
+        <div><label for="aIni">Data inicial</label><input id="aIni" class="dataCampo" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>
+        <div><label for="aFim">Data final</label><input id="aFim" class="dataCampo" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>
+        <button type="button" class="sec" id="aTodos">Todos</button>
+      </div>
+      <label for="aFiltro">Mostrar</label>
+      <select id="aFiltro"><option value="">Aportes e saques</option><option value="A">Só aportes</option><option value="S">Só saques</option></select>
+    </div>
+    <div class="card rolagem"><table id="aLista" class="compacto"></table></div>
+    <p class="mut">Patrimônio não aplicado = patrimônio inicial + aportes − saques + vendas − compras lançadas a partir de 27/10/2026 (aba Lançar).
+      Ele entra no Patrimônio total do Resumo e no Total R$ do Diário Resumido a partir de 27/10/2026; os dias anteriores não mudam.
+      Toque em um aporte ou saque da lista para alterar ou excluir.</p>
   </section>
 
   <section id="tab-diario" hidden>
@@ -384,11 +420,6 @@ label.check input { width:auto; margin:0; }
   </section>
 
   <section id="tab-config" hidden>
-    <div class="card">
-      <label for="cNaoAloc" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Patrimônio não alocado</b></label>
-      <input id="cNaoAloc" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off">
-      <p class="mut" style="margin:6px 0 0">Dinheiro que não está aplicado nos ativos (ex.: saldo em conta, reserva). É somado às posições em aberto para formar o Patrimônio total no Resumo e o Total R$ do Diário Resumido. Fica salvo ao sair do campo.</p>
-    </div>
     <div class="card">
       <label for="cTema" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Aparência</b></label>
       <select id="cTema">
@@ -591,6 +622,7 @@ label.check input { width:auto; margin:0; }
   <button data-tab="resumo" class="on"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Resumo</button>
   <button data-tab="carteira"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Carteira</button>
   <button data-tab="lancar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
+  <button data-tab="aporte"><svg viewBox="0 0 24 24"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>Aporte/<br>Saque</button>
   <button data-tab="diario"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Diário</button>
   <button data-tab="mensal"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Mensal</button>
   <button data-tab="graf"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 6-7"/></svg>Gráficos</button>
@@ -602,17 +634,30 @@ label.check input { width:auto; margin:0; }
 <script src="calc.js?v=1.8.0"></script>
 <script>
 const KEY = 'carteira-bdr';
-const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, indices: {}, token: '', atualizado: null };
+const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, indices: {}, token: '', atualizado: null,
+  patrimonioInicial: 0, movs: [] }; // movs: aportes/saques [{id, data, tipo:'A'|'S', valor}]
+// Patrimônio não aplicado (dinheiro fora dos ativos) vale a partir deste dia; o Diário de antes não muda
+const INICIO_NA = '2026-10-27';
 let db;
 try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
-const salvar = () => localStorage.setItem(KEY, JSON.stringify(db));
+// o registro de hoje no histórico acompanha o patrimônio não aplicado (de hoje em diante, nunca para trás)
+const salvar = () => {
+  const r = db.historico.find(x => x.data === hoje()); if (r && r.data >= INICIO_NA) r.na = naoAplicado();
+  localStorage.setItem(KEY, JSON.stringify(db));
+};
+// = patrimônio inicial + aportes − saques + vendas − compras lançadas a partir de INICIO_NA
+function naoAplicado() {
+  const movs = db.movs.reduce((t, m) => t + (m.tipo === 'A' ? m.valor : -m.valor), 0);
+  const ops = db.ops.filter(o => o.data >= INICIO_NA).reduce((t, o) => t + (o.tipo === 'V' ? 1 : -1) * o.qtd * o.preco, 0);
+  return db.patrimonioInicial + movs + ops;
+}
 
 const $ = id => document.getElementById(id);
 const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 // valor em reais sem o "R$" (para tabelas em que o título da coluna já diz R$)
 const reais = n => n == null ? '—' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-// não alocado de um dia do histórico; registros de antes deste campo não têm o valor: usa o atual
-const naoAlocadoDe = s => s.na ?? db.naoAlocado ?? 0;
+// patrimônio não aplicado gravado no dia (dias antes de INICIO_NA não têm: 0, Diário igual ao de antes)
+const naDe = s => s.na ?? 0;
 // regra do olhinho do topo: valores investidos/totais escondidos até tocar no olho (lucros e % ficam sempre visíveis)
 const ocR = n => mostrarValores ? brl(n) : 'R$ ••••••', ocN = n => mostrarValores ? reais(n) : '••••••';
 const pct = n => n == null ? '—' : (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
@@ -714,9 +759,9 @@ function render() {
     `<tr class="soma"><th>Total</th><th class="${cor(hojeP)}">${pct(hojeP)}</th><th class="${cor(hojeR)}">${reais(hojeR)}</th>
       <th class="${cor(lucro)}">${reais(lucro)} <small>${pct(lucroP)}</small></th></tr>`;
   // Resumo → Patrimônio total: não alocado + valor atual de cada posição aberta (mesma ordem do ranking)
-  const naoAloc = db.naoAlocado || 0, patri = naoAloc + comDia.reduce((s, p) => s + (p.valor || 0), 0);
+  const naoAloc = naoAplicado(), patri = naoAloc + comDia.reduce((s, p) => s + (p.valor || 0), 0);
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
-    `<tr><td>Não alocado</td><td>${ocN(naoAloc)}</td></tr>` +
+    `<tr><td>Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
     comDia.map(p => `<tr><td>${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
     `<tr class="soma"><th>Patrimônio total</th><th>${ocN(patri)}</th></tr>`;
   $('lista').innerHTML = comDia.map((p, i) => `
@@ -758,6 +803,7 @@ function render() {
     ? `Faça um backup em Ajustes (${dias == null ? 'nenhum feito ainda' : 'último há ' + dias + ' dias'}).` : '';
 
   renderMensal();
+  renderAporte();
   renderDiario();
   renderResultados();
   if (!$('tab-graf').hidden) renderGraficos();
@@ -1004,7 +1050,7 @@ function renderDiario() {
     ['Data', ...vis.flatMap(t => [t + ' R$', t + ' %']), 'Dia %', 'Dia R$', 'Total R$', 'Lucro %', 'Lucro R$'],
     ...linhas.map(({ s, vs, valor, lucro, p, noDia, pDia }) => [data(s.data),
       ...vis.flatMap(t => s.v[t] ? [xR(s.v[t][0]), xP(pctDe(s.v[t]))] : ['', '']),
-      xP(pDia), xR(noDia), vs.length ? xR(resumido ? valor + naoAlocadoDe(s) : valor) : '', xP(p), vs.length ? xR(lucro) : ''])];
+      xP(pDia), xR(noDia), vs.length ? xR(resumido ? valor + naDe(s) : valor) : '', xP(p), vs.length ? xR(lucro) : ''])];
   $('tDiario').innerHTML = !h.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
     !linhas.length ? '<tr><td class="mut">Nenhum dia nesse período (a data inicial está depois da final?).</td></tr>' :
     `<tr><th>Data</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Dia %</th><th>Dia R$</th><th>Total R$</th><th>Lucro %</th><th>Lucro R$</th></tr>` +
@@ -1012,7 +1058,7 @@ function renderDiario() {
       `<tr><td>${resumido ? data(s.data).slice(0, 6) + s.data.slice(2, 4) : data(s.data)}</td>${vis.map(t => { const x = s.v[t]; if (!x) return '<td></td>';
         return `<td>${ocR(x[0])}<br><small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
       `<th class="${cor(pDia)}">${pct(pDia)}</th><th class="${cor(noDia)}">${din(noDia)}</th>` +
-      `<th>${vs.length ? (resumido ? ocN(valor + naoAlocadoDe(s)) : ocR(valor)) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
+      `<th>${vs.length ? (resumido ? ocN(valor + naDe(s)) : ocR(valor)) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
       `<th class="${cor(lucro)}">${vs.length ? din(lucro) : '—'}</th></tr>`).join('');
   $('tDiario').classList.toggle('compacto', resumido);
 }
@@ -1041,7 +1087,7 @@ function registrarDia() {
     const ultima = db.ops.filter(o => o.ticker === p.ticker).map(o => o.data).sort().pop();
     if (p.encerrado && ultima.slice(0, 7) === mes) v[p.ticker] = [p.custoVendido + p.realizado, p.custoVendido];
   });
-  db.historico = db.historico.filter(s => s.data !== d).concat({ data: d, v, na: db.naoAlocado || 0 }); // na = patrimônio não alocado no dia
+  db.historico = db.historico.filter(s => s.data !== d).concat({ data: d, v, ...(d >= INICIO_NA && { na: naoAplicado() }) }); // na = patrimônio não aplicado no dia
 }
 
 let mostrarValores = false; // olhinho do topo
@@ -1151,7 +1197,7 @@ $('form').onsubmit = async e => {
   db.ops = novo; salvar();
   limparLancamento(); render();
   await modal({ titulo: 'Gravado com sucesso', ok: 'OK',
-    texto: `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} ${corrigiu ? 'corrigida' : 'gravada'}:\n${descreverLanc(o)}` });
+    texto: `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} ${corrigiu ? 'corrigida' : 'gravada'}:\n${descreverLanc(o)}` + textoNa() });
   fecharModal();
 };
 // Lançar: formata enquanto digita — ativo em maiúsculas, quantidade só números inteiros, preço em R$ com 2 casas
@@ -1197,7 +1243,7 @@ $('fExcluir').onclick = async () => {
     texto: `Deseja realmente excluir este lançamento?\n\n${descreverLanc(o)}` });
   fecharModal(); if (!sim) return;
   db.ops = resto; salvar(); limparLancamento(); render();
-  await modal({ titulo: 'Excluído com sucesso', ok: 'OK', texto: `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} excluída.` });
+  await modal({ titulo: 'Excluído com sucesso', ok: 'OK', texto: `${o.tipo === 'C' ? 'Compra' : 'Venda'} de ${o.ticker} excluída.` + textoNa() });
   fecharModal();
 };
 // filtro de datas dos lançamentos: começa em 01/07/2023
@@ -1222,7 +1268,83 @@ function campoData(el, aoMudar) {
   };
   el.onchange = () => { if (el.value.replace(/\D/g, '').length !== 8) { el.value = ''; aoMudar(); } }; // saiu com data pela metade
 }
-[['l', render], ['d', renderDiario]].forEach(([p, f]) => {
+// --- Aporte/Saque ---
+const dataBr = d => d.split('-').reverse().join('/');
+const textoNa = () => `\n\nPatrimônio não aplicado: ${brl(naoAplicado())}`;
+const reaisDe = v => Number(v.replace(/\D/g, '')) / 100;
+const mascaraBrl = e => { const d = e.target.value.replace(/\D/g, '').replace(/^0+/, ''); e.target.value = d ? brl(Number(d) / 100) : ''; };
+let movEditando = null; // id do aporte/saque carregado da lista
+function renderAporte() {
+  const soma = t => db.movs.filter(m => m.tipo === t).reduce((x, m) => x + m.valor, 0);
+  const novas = t => db.ops.filter(o => o.data >= INICIO_NA && o.tipo === t).reduce((x, o) => x + o.qtd * o.preco, 0);
+  const na = naoAplicado();
+  $('aTotal').textContent = brl(na); $('aTotal').className = na < 0 ? 'dn' : '';
+  $('aConta').innerHTML = [['Patrimônio inicial', db.patrimonioInicial, ''], ['+ Aportes', soma('A'), 'up'], ['− Saques', soma('S'), 'dn'],
+    ['+ Vendas (desde 27/10/2026)', novas('V'), 'up'], ['− Compras (desde 27/10/2026)', novas('C'), 'dn']]
+    .map(([n, v, c]) => `<tr><td>${n}</td><td class="${c}">${brl(v)}</td></tr>`).join('');
+  if (document.activeElement !== $('aInicial')) $('aInicial').value = db.patrimonioInicial ? brl(db.patrimonioInicial) : '';
+  const ini = isoDe($('aIni')), fim = isoDe($('aFim')), tipo = $('aFiltro').value;
+  const lista = db.movs.filter(m => (!ini || m.data >= ini) && (!fim || m.data <= fim) && (!tipo || m.tipo === tipo))
+    .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
+  $('aLista').innerHTML = !lista.length ? `<tr><td class="mut">${db.movs.length ? 'Nenhum lançamento nesse filtro.' : 'Nenhum aporte ou saque ainda.'}</td></tr>` :
+    '<tr><th>Data lançamento</th><th>Tipo</th><th>Valor lançado R$</th></tr>' +
+    lista.map(m => `<tr data-id="${m.id}"${m.id === movEditando ? ' class="sel"' : ''}><td>${dataBr(m.data)}</td>
+      <td class="${m.tipo === 'A' ? 'up' : 'dn'}">${m.tipo === 'A' ? 'Aporte' : 'Saque'}</td><td class="${m.tipo === 'A' ? 'up' : 'dn'}">${reais(m.valor)}</td></tr>`).join('');
+}
+const descreverMov = m => `Data: ${dataBr(m.data)}\nTipo: ${m.tipo === 'A' ? 'Aporte' : 'Saque'}\nValor: ${brl(m.valor)}`;
+function limparMov() {
+  $('aValor').value = ''; $('aTipo').value = 'A'; $('aData').value = hoje(); $('aMsg').textContent = '';
+  movEditando = null; $('aExcluir').hidden = true;
+}
+limparMov();
+$('aValor').oninput = $('aInicial').oninput = mascaraBrl;
+$('aInicial').onfocus = e => e.target.select();
+$('aFiltro').onchange = renderAporte;
+$('aLimpar').onclick = () => { limparMov(); renderAporte(); };
+$('aInicialSalvar').onclick = async () => {
+  const v = reaisDe($('aInicial').value), antes = db.patrimonioInicial;
+  if (v === antes) return;
+  if (antes) {
+    const sim = await modal({ titulo: 'Alterar patrimônio inicial?', ok: 'Sim, alterar', cancelar: 'Cancelar',
+      texto: `Deseja alterar o patrimônio inicial?\n\nDe: ${brl(antes)}\nPara: ${brl(v)}` });
+    fecharModal(); if (!sim) { $('aInicial').value = brl(antes); return; }
+  }
+  db.patrimonioInicial = v; salvar(); render();
+  await modal({ titulo: 'Gravado com sucesso', ok: 'OK', texto: `Patrimônio inicial: ${brl(v)}` + textoNa() });
+  fecharModal();
+};
+$('aForm').onsubmit = async e => {
+  e.preventDefault();
+  const m = { id: movEditando || Date.now(), data: $('aData').value, tipo: $('aTipo').value, valor: reaisDe($('aValor').value) };
+  if (!m.data || !(m.valor > 0)) { $('aMsg').className = 'msg dn'; $('aMsg').textContent = 'Preencha a data e um valor maior que zero.'; return; }
+  const antes = db.movs.find(x => x.id === movEditando);
+  if (antes) {
+    const sim = await modal({ titulo: 'Alterar lançamento?', ok: 'Sim, alterar', cancelar: 'Cancelar',
+      texto: `Deseja alterar este lançamento?\n\nAntes:\n${descreverMov(antes)}\n\nDepois:\n${descreverMov(m)}` });
+    fecharModal(); if (!sim) return;
+  }
+  db.movs = [...db.movs.filter(x => x.id !== m.id), m]; salvar(); limparMov(); render();
+  await modal({ titulo: 'Gravado com sucesso', ok: 'OK',
+    texto: `${m.tipo === 'A' ? 'Aporte' : 'Saque'} ${antes ? 'alterado' : 'gravado'}:\n${descreverMov(m)}` + textoNa() });
+  fecharModal();
+};
+$('aLista').onclick = e => {
+  const m = db.movs.find(x => x.id === Number(e.target.closest('tr[data-id]')?.dataset.id)); if (!m) return;
+  movEditando = m.id; $('aTipo').value = m.tipo; $('aData').value = m.data; $('aValor').value = brl(m.valor);
+  $('aExcluir').hidden = false;
+  $('aMsg').className = 'msg'; $('aMsg').textContent = 'Lançamento carregado: altere e toque em Salvar, ou toque em Excluir.';
+  renderAporte(); $('aForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+$('aExcluir').onclick = async () => {
+  const m = db.movs.find(x => x.id === movEditando); if (!m) return;
+  const sim = await modal({ titulo: 'Excluir lançamento?', ok: 'Sim, excluir', cancelar: 'Cancelar',
+    texto: `Deseja realmente excluir este lançamento?\n\n${descreverMov(m)}` });
+  fecharModal(); if (!sim) return;
+  db.movs = db.movs.filter(x => x !== m); salvar(); limparMov(); render();
+  await modal({ titulo: 'Excluído com sucesso', ok: 'OK', texto: `${m.tipo === 'A' ? 'Aporte' : 'Saque'} excluído:\n${descreverMov(m)}` + textoNa() });
+  fecharModal();
+};
+[['l', render], ['d', renderDiario], ['a', renderAporte]].forEach(([p, f]) => {
   campoData($(p + 'Ini'), f); campoData($(p + 'Fim'), f);
   $(p + 'Todos').onclick = () => { $(p + 'Ini').value = $(p + 'Fim').value = ''; f(); };
 });
@@ -1254,11 +1376,6 @@ $('cFotoArq').onchange = async e => {
 };
 $('cFotoRem').onclick = () => { localStorage.removeItem(KEY_FOTO); mostrarFoto(); };
 mostrarFoto();
-// Patrimônio não alocado: máscara R$ (digita os centavos); grava e recalcula ao sair do campo
-$('cNaoAloc').value = db.naoAlocado ? brl(db.naoAlocado) : '';
-$('cNaoAloc').onfocus = e => e.target.select();
-$('cNaoAloc').oninput = e => { const d = e.target.value.replace(/\D/g, '').replace(/^0+/, ''); e.target.value = d ? brl(Number(d) / 100) : ''; };
-$('cNaoAloc').onchange = e => { db.naoAlocado = Number(e.target.value.replace(/\D/g, '')) / 100; salvar(); render(); };
 $('cToken').value = db.token;
 // botões "i": abrem/fecham o quadro de ajuda indicado em aria-controls
 document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
@@ -1300,7 +1417,7 @@ $('fileImp').onchange = async e => {
     if (!ok) throw new Error('arquivo não parece um backup deste app');
     if (db.ops.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
     db = { ...vazio, ...d, token: db.token };
-    salvar(); render(); $('cNaoAloc').value = db.naoAlocado ? brl(db.naoAlocado) : '';
+    salvar(); render();
     $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.ops.length} lançamentos.`;
     await modal({ titulo: 'Backup restaurado com sucesso', ok: 'OK',
       texto: `Arquivo: ${f.name}\n${d.ops.length} lançamentos e ${(d.historico || []).length} dias de histórico restaurados.` });
