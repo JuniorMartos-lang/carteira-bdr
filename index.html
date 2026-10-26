@@ -1176,7 +1176,7 @@ document.querySelector('main').addEventListener('click', e => {
 });
 $('btnImp').onclick = () => $('fileImp').click();
 $('fileImp').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return; // limpa já: escolher o mesmo arquivo de novo funciona mesmo após cancelar
   try {
     let d = JSON.parse(await f.text());
     if (d.carteiraBdrProtegido) { d = await abrirBackupProtegido(d); if (!d) return; }
@@ -1186,8 +1186,10 @@ $('fileImp').onchange = async e => {
     db = { ...vazio, ...d, token: db.token };
     salvar(); render();
     $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.ops.length} lançamentos.`;
+    await modal({ titulo: 'Backup restaurado com sucesso', ok: 'OK',
+      texto: `Arquivo: ${f.name}\n${d.ops.length} lançamentos e ${(d.historico || []).length} dias de histórico restaurados.` });
+    fecharModal();
   } catch (err) { $('cMsg').className = 'msg dn'; $('cMsg').textContent = 'Erro ao importar: ' + err.message; }
-  e.target.value = '';
 };
 
 // --- Senha do app (guardada à parte: não entra no backup) ---
