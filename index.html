@@ -133,17 +133,17 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 /* Gráficos: cores das linhas em ordem fixa (paleta validada para daltonismo), versão própria no modo escuro */
 .viz { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; }
 :root[data-theme=dark] .viz { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; }
-#gArea { position:relative; margin-top:6px; touch-action:pan-y; }
-#gSvg { display:block; width:100%; height:240px; }
-#gSvg text { fill:var(--mut); font-size:11px; }
-#gSvg .grade { stroke:var(--bd); stroke-width:1; }
-#gSvg .zero { stroke:var(--mut); stroke-width:1; }
-#gSvg .linha { fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
-#gSvg .mira { stroke:var(--mut); stroke-width:1; stroke-dasharray:3 3; }
-#gSvg .ponto { stroke:var(--card); stroke-width:2; }
-#gLegenda { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:6px; }
+#gArea, #eArea { position:relative; margin-top:6px; touch-action:pan-y; }
+#gSvg, #eSvg { display:block; width:100%; height:240px; }
+#gSvg text, #eSvg text { fill:var(--mut); font-size:11px; }
+#gSvg .grade, #eSvg .grade { stroke:var(--bd); stroke-width:1; }
+#gSvg .zero, #eSvg .zero { stroke:var(--mut); stroke-width:1; }
+#gSvg .linha, #eSvg .linha { fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+#gSvg .mira, #eSvg .mira { stroke:var(--mut); stroke-width:1; stroke-dasharray:3 3; }
+#gSvg .ponto, #eSvg .ponto { stroke:var(--card); stroke-width:2; }
+#gLegenda, #eLegenda { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:6px; }
 .marca { display:inline-block; width:12px; height:3px; border-radius:2px; vertical-align:middle; margin-right:4px; }
-#gDica { position:absolute; top:0; pointer-events:none; background:var(--card); border:1px solid var(--bd); border-radius:8px;
+#gDica, #eDica { position:absolute; top:0; pointer-events:none; background:var(--card); border:1px solid var(--bd); border-radius:8px;
   padding:6px 8px; font-size:12px; line-height:1.5; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; }
 .card.total { border:2px solid var(--pri); }
 /* botão "i" de ajuda e o quadro que ele abre */
@@ -343,6 +343,23 @@ label.check input { width:auto; margin:0; }
       <p class="mut" id="gAviso" style="margin:6px 0 0"></p>
     </div>
     <p class="mut">Toque no gráfico para ver a data e os valores. Com "Todos", aparece a linha da carteira inteira; escolha ativos (até 8) para comparar um com o outro. A % é o lucro acumulado sobre o valor investido, como na aba Diário.</p>
+
+    <h2>Ativos encerrados</h2>
+    <div class="card">
+      <label>Ativos</label>
+      <details class="combo"><summary id="eResumo">Todos</summary><div id="eAtivos" class="lista"></div></details>
+      <div class="two">
+        <div><label for="eIni">Mês inicial</label><select id="eIni"></select></div>
+        <div><label for="eFim">Mês final</label><select id="eFim"></select></div>
+      </div>
+    </div>
+    <div class="card viz">
+      <b id="eTitulo">Rentabilidade dos ativos encerrados (%)</b>
+      <div id="eLegenda"></div>
+      <div id="eArea"><svg id="eSvg"></svg><div id="eDica" hidden></div></div>
+      <p class="mut" id="eAviso" style="margin:6px 0 0"></p>
+    </div>
+    <p class="mut">Só os ativos já vendidos por completo, no período em que estiveram na carteira, até a venda. Com "Todos", aparece uma linha somando os encerrados; escolha ativos (até 8) para comparar. O detalhe de cada venda está na aba Resultados.</p>
   </section>
 
   <section id="tab-result" hidden>
@@ -830,40 +847,50 @@ function renderResultados() {
 }
 
 // Aba Gráficos: rentabilidade acumulada (%) por dia. "Todos" = uma linha da carteira; ativos escolhidos = uma linha cada (até 8).
-function renderGraficos() {
+// Aba Gráficos: dois gráficos com o mesmo desenho e os mesmos filtros. 'g' = carteira (todos os ativos);
+// 'e' = só ativos encerrados (vendidos por completo), no período em que estiveram na carteira.
+function renderGraficos() { grafico('g', false); grafico('e', true); }
+function grafico(p, encerrados) {
   const h = [...db.historico].sort((a, b) => a.data.localeCompare(b.data));
-  const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].sort();
-  const cols = comboAtivos('g', tks), todos = cols === tks || cols.length === tks.length;
-  const meses = [...new Set(h.map(s => s.data.slice(0, 7)))];
-  const ini = $('gIni').value, fim = $('gFim').value;
-  $('gIni').innerHTML = opcao('', 'Todos os meses', !ini) + meses.map(m => opcao(m, nomeMes(m), m === ini)).join('');
-  $('gFim').innerHTML = opcao('', 'Todos os meses', !fim) + meses.map(m => opcao(m, nomeMes(m), m === fim)).join('');
-  const dias = h.filter(s => (!ini || s.data.slice(0, 7) >= ini) && (!fim || s.data.slice(0, 7) <= fim));
+  // encerrados: data da venda final de cada um; os registros depois dela (que repetem o resultado até o fim do mês) ficam de fora
+  const fimDe = Object.fromEntries(posicoes(db.ops, {}).filter(x => x.encerrado).map(x => [x.ticker, x.fim]));
+  const tem = (s, t) => !!s.v[t] && (!encerrados || s.data <= fimDe[t]);
+  const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].filter(t => !encerrados || fimDe[t]).sort();
+  const cols = comboAtivos(p, tks), todos = cols === tks || cols.length === tks.length;
+  // encerrados: só os dias em que algum dos ativos escolhidos ainda estava na carteira
+  const base = encerrados ? h.filter(s => cols.some(t => tem(s, t))) : h;
+  const meses = [...new Set(base.map(s => s.data.slice(0, 7)))];
+  const ini = $(p + 'Ini').value, fim = $(p + 'Fim').value;
+  $(p + 'Ini').innerHTML = opcao('', 'Todos os meses', !ini) + meses.map(m => opcao(m, nomeMes(m), m === ini)).join('');
+  $(p + 'Fim').innerHTML = opcao('', 'Todos os meses', !fim) + meses.map(m => opcao(m, nomeMes(m), m === fim)).join('');
+  const dias = base.filter(s => (!ini || s.data.slice(0, 7) >= ini) && (!fim || s.data.slice(0, 7) <= fim));
   const pctDe = x => x ? (x[0] - x[1]) / x[1] : null;
-  const total = s => { const vs = Object.values(s.v); const inv = vs.reduce((a, x) => a + x[1], 0);
+  const total = s => { const vs = Object.entries(s.v).filter(([t]) => !encerrados || (cols.includes(t) && tem(s, t))).map(([, x]) => x);
+    const inv = vs.reduce((a, x) => a + x[1], 0);
     return inv ? (vs.reduce((a, x) => a + x[0], 0) - inv) / inv : null; };
   // shortcut: a cor segue a posição entre os escolhidos (não o ativo); com até 8 escolhidos não repete cor
   // "Incluir realizados": soma ao dia o lucro das vendas já feitas (e o custo delas na base); tira do dia o registro
   // de ativos já zerados naquela data, que guardava o resultado da venda (senão contaria duas vezes)
-  const comReal = $('gRealizados').checked, vendas = realizados(db.ops);
+  const comReal = !encerrados && $('gRealizados').checked, vendas = realizados(db.ops);
   const totalReal = s => {
     let luc = 0, base = 0;
     for (const [t, [v, i]] of Object.entries(s.v)) if (qtdEm(db.ops, t, s.data) > 0) { luc += v - i; base += i; }
     for (const e of vendas) if (e.data <= s.data) { luc += e.realizado; base += e.custo; }
     return base ? luc / base : null;
   };
-  const series = todos ? [{ nome: comReal ? 'Carteira com realizados' : 'Carteira', cor: 'var(--s1)', vals: dias.map(comReal ? totalReal : total) }]
-    : cols.slice(0, 8).map((t, i) => ({ nome: t, cor: `var(--s${i + 1})`, vals: dias.map(s => pctDe(s.v[t])) }));
-  $('gAviso').textContent = !todos && cols.length > 8 ? `Mostrando os 8 primeiros de ${cols.length} ativos escolhidos.` : '';
-  $('gLegenda').innerHTML = series.length < 2 ? '' :
+  const series = todos ? [{ nome: encerrados ? 'Encerrados' : comReal ? 'Carteira com realizados' : 'Carteira', cor: 'var(--s1)', vals: dias.map(comReal ? totalReal : total) }]
+    : cols.slice(0, 8).map((t, i) => ({ nome: t, cor: `var(--s${i + 1})`, vals: dias.map(s => tem(s, t) ? pctDe(s.v[t]) : null) }));
+  $(p + 'Aviso').textContent = !todos && cols.length > 8 ? `Mostrando os 8 primeiros de ${cols.length} ativos escolhidos.` : '';
+  $(p + 'Legenda').innerHTML = series.length < 2 ? '' :
     series.map(s => `<span><i class="marca" style="background:${s.cor}"></i>${esc(s.nome)}</span>`).join('');
-  $('gTitulo').textContent = todos ? `Rentabilidade acumulada da carteira${comReal ? ', com realizados' : ''} (%)` : 'Rentabilidade acumulada (%)';
+  $(p + 'Titulo').textContent = encerrados ? (todos ? 'Rentabilidade dos ativos encerrados, juntos (%)' : 'Rentabilidade dos ativos encerrados (%)')
+    : todos ? `Rentabilidade acumulada da carteira${comReal ? ', com realizados' : ''} (%)` : 'Rentabilidade acumulada (%)';
 
-  const svg = $('gSvg'), W = svg.clientWidth, H = 240, L = 44, R = 10, T = 10, B = 24;
-  $('gDica').hidden = true;
+  const svg = $(p + 'Svg'), W = svg.clientWidth, H = 240, L = 44, R = 10, T = 10, B = 24;
+  $(p + 'Dica').hidden = true;
   if (!W) return; // aba escondida: desenha quando abrir
   const todosVals = series.flatMap(s => s.vals).filter(v => v != null);
-  if (!dias.length || !todosVals.length) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Sem dados nesse período.</text>`; return; }
+  if (!dias.length || !todosVals.length) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">${encerrados && !tks.length ? 'Nenhum ativo encerrado ainda.' : 'Sem dados nesse período.'}</text>`; return; }
   let min = Math.min(0, ...todosVals), max = Math.max(0, ...todosVals);
   const passo = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1].find(p => (max - min) / p <= 5) || 1; // linhas de grade "redondas"
   min = Math.floor(min / passo) * passo; max = Math.ceil(max / passo) * passo || passo;
@@ -884,32 +911,32 @@ function renderGraficos() {
   if (series.length === 1) {
     // uma linha só: azul acima de 0% e vermelha abaixo; o corte no 0% troca a cor exatamente onde a linha cruza
     const z = y(0), d = caminho(series[0]);
-    g += `<clipPath id="gAcima"><rect x="0" y="0" width="${W}" height="${z}"/></clipPath>` +
-      `<clipPath id="gAbaixo"><rect x="0" y="${z}" width="${W}" height="${H - z}"/></clipPath>` +
-      `<path class="linha" stroke="var(--s1)" clip-path="url(#gAcima)" d="${d}"/>` +
-      `<path class="linha" stroke="var(--s8)" clip-path="url(#gAbaixo)" d="${d}"/>`;
+    g += `<clipPath id="${p}Acima"><rect x="0" y="0" width="${W}" height="${z}"/></clipPath>` +
+      `<clipPath id="${p}Abaixo"><rect x="0" y="${z}" width="${W}" height="${H - z}"/></clipPath>` +
+      `<path class="linha" stroke="var(--s1)" clip-path="url(#${p}Acima)" d="${d}"/>` +
+      `<path class="linha" stroke="var(--s8)" clip-path="url(#${p}Abaixo)" d="${d}"/>`;
   } else g += series.map(s => `<path class="linha" stroke="${s.cor}" d="${caminho(s)}"/>`).join('');
-  svg.innerHTML = g + `<line class="mira" id="gMira" y1="${T}" y2="${H - B}" visibility="hidden"/><g id="gPontos"></g>`;
+  svg.innerHTML = g + `<line class="mira" id="${p}Mira" y1="${T}" y2="${H - B}" visibility="hidden"/><g id="${p}Pontos"></g>`;
 
   // toque/mouse: linha vertical no dia mais próximo + caixa com a data e os valores
   const mostrar = e => {
     const r = svg.getBoundingClientRect(), px = e.clientX - r.left;
     const i = Math.max(0, Math.min(n - 1, Math.round(n === 1 ? 0 : (px - L) / ((W - L - R) / (n - 1)))));
-    $('gMira').setAttribute('x1', x(i)); $('gMira').setAttribute('x2', x(i)); $('gMira').setAttribute('visibility', 'visible');
+    $(p + 'Mira').setAttribute('x1', x(i)); $(p + 'Mira').setAttribute('x2', x(i)); $(p + 'Mira').setAttribute('visibility', 'visible');
     const corPonto = (s, v) => series.length === 1 ? (v < 0 ? 'var(--s8)' : 'var(--s1)') : s.cor;
-    $('gPontos').innerHTML = series.map(s => s.vals[i] == null ? '' : `<circle class="ponto" r="4" cx="${x(i)}" cy="${y(s.vals[i])}" fill="${corPonto(s, s.vals[i])}"/>`).join('');
-    const d = $('gDica'); d.hidden = false;
+    $(p + 'Pontos').innerHTML = series.map(s => s.vals[i] == null ? '' : `<circle class="ponto" r="4" cx="${x(i)}" cy="${y(s.vals[i])}" fill="${corPonto(s, s.vals[i])}"/>`).join('');
+    const d = $(p + 'Dica'); d.hidden = false;
     d.innerHTML = `<b>${dias[i].data.split('-').reverse().join('/')}</b><br>` + series.map(s =>
       `<i class="marca" style="background:${corPonto(s, s.vals[i])}"></i>${esc(s.nome)}: <b class="${cor(s.vals[i])}">${pct(s.vals[i])}</b>`).join('<br>');
     d.style.left = Math.max(0, Math.min(W - d.offsetWidth, x(i) + (x(i) > W / 2 ? -d.offsetWidth - 10 : 10))) + 'px';
   };
   svg.onpointerdown = svg.onpointermove = mostrar;
   svg.onpointerleave = e => { if (e.pointerType !== 'mouse') return; // no celular a caixa fica até o próximo toque
-    $('gDica').hidden = true; $('gMira').setAttribute('visibility', 'hidden'); $('gPontos').innerHTML = ''; };
+    $(p + 'Dica').hidden = true; $(p + 'Mira').setAttribute('visibility', 'hidden'); $(p + 'Pontos').innerHTML = ''; };
 }
 addEventListener('resize', () => { if (!$('tab-graf').hidden) renderGraficos(); });
 
-// Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário, 'r' = Resultados, 'g' = Gráficos): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
+// Caixa de ativos (prefixo 'm' = Mensal, 'd' = Diário, 'r' = Resultados, 'g' = Gráficos, 'e' = Gráficos dos encerrados): remonta a lista mantendo o que estava marcado e devolve os ativos escolhidos
 function comboAtivos(p, tks) {
   const escolhidos = [...$(p + 'Ativos').querySelectorAll('input:checked')].map(o => o.value);
   const todos = !escolhidos.length || escolhidos.includes('*');
@@ -963,9 +990,9 @@ function renderDiario() {
 }
 
 [['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['dResumido', renderDiario],
- ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
+ ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', renderGraficos], ['eIni', renderGraficos], ['eFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
-[['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
+[['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos], ['e', renderGraficos]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
   $(p + 'Ativos').querySelectorAll('input').forEach(i => { if (e.target.checked && (i.value === '*') !== tudo) i.checked = false; });
   f();
