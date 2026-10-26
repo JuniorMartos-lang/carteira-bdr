@@ -169,6 +169,8 @@ label.check input { width:auto; margin:0; }
 .rolagem table.compacto { font-size:12px; }
 .rolagem table.compacto th, .rolagem table.compacto td { padding:6px 3px; }
 .rolagem table.compacto .cf { padding:1px 3px; }
+/* Resultados Resumido: mais espaço entre as colunas (a tabela rola para o lado) */
+.rolagem table.espacado th, .rolagem table.espacado td { padding:6px 10px; }
 .tag { font-size:11px; font-weight:600; padding:1px 7px; border-radius:99px; border:1px solid var(--bd); color:var(--mut); vertical-align:middle; margin-left:4px; }
 </style>
 </head>
@@ -211,6 +213,9 @@ label.check input { width:auto; margin:0; }
     <div class="card" style="padding:6px 8px; overflow-x:auto"><table id="tResumo"></table></div>
     <button class="sec exp" data-exp="resumo">Exportar para Excel</button>
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
+    <h2>Patrimônio total</h2>
+    <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
+    <p class="mut">Patrimônio não alocado (informado em Ajustes) + valor atual de cada ativo ou fundo em aberto.</p>
   </section>
 
   <section id="tab-lancar" hidden>
@@ -379,6 +384,11 @@ label.check input { width:auto; margin:0; }
   </section>
 
   <section id="tab-config" hidden>
+    <div class="card">
+      <label for="cNaoAloc" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Patrimônio não alocado</b></label>
+      <input id="cNaoAloc" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off">
+      <p class="mut" style="margin:6px 0 0">Dinheiro que não está aplicado nos ativos (ex.: saldo em conta, reserva). É somado às posições em aberto para formar o Patrimônio total no Resumo e o Total R$ do Diário Resumido. Fica salvo ao sair do campo.</p>
+    </div>
     <div class="card">
       <label for="cTema" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Aparência</b></label>
       <select id="cTema">
@@ -601,6 +611,8 @@ const $ = id => document.getElementById(id);
 const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 // valor em reais sem o "R$" (para tabelas em que o título da coluna já diz R$)
 const reais = n => n == null ? '—' : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// não alocado de um dia do histórico; registros de antes deste campo não têm o valor: usa o atual
+const naoAlocadoDe = s => s.na ?? db.naoAlocado ?? 0;
 // regra do olhinho do topo: valores investidos/totais escondidos até tocar no olho (lucros e % ficam sempre visíveis)
 const ocR = n => mostrarValores ? brl(n) : 'R$ ••••••', ocN = n => mostrarValores ? reais(n) : '••••••';
 const pct = n => n == null ? '—' : (n * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
@@ -701,6 +713,12 @@ function render() {
       <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('') +
     `<tr class="soma"><th>Total</th><th class="${cor(hojeP)}">${pct(hojeP)}</th><th class="${cor(hojeR)}">${reais(hojeR)}</th>
       <th class="${cor(lucro)}">${reais(lucro)} <small>${pct(lucroP)}</small></th></tr>`;
+  // Resumo → Patrimônio total: não alocado + valor atual de cada posição aberta (mesma ordem do ranking)
+  const naoAloc = db.naoAlocado || 0, patri = naoAloc + comDia.reduce((s, p) => s + (p.valor || 0), 0);
+  $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
+    `<tr><td>Não alocado</td><td>${ocN(naoAloc)}</td></tr>` +
+    comDia.map(p => `<tr><td>${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
+    `<tr class="soma"><th>Patrimônio total</th><th>${ocN(patri)}</th></tr>`;
   $('lista').innerHTML = comDia.map((p, i) => `
     <div class="card">
       <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
@@ -795,18 +813,23 @@ function renderResultados() {
   if ($('rResumido').checked) {
     // Resumido: uma linha por ativo (lista compacta, como no Diário), com Total no fim; a exportação segue as mesmas colunas
     const curta = d => dt(d).slice(0, 6) + d.slice(2, 4); // dd/mm/aa
+    // linha Total sem somar compra e venda (só confundia); soma lucro, IR e líquido
     tabelas.resultados = !lista.length ? null : [
-      ['Ativo', 'Data da compra', 'Data da venda', 'Total da venda', 'Lucro / prejuízo R$', 'Lucro / prejuízo %', 'IR a pagar', 'Lucro líquido'],
-      ...lista.map(p => [p.ticker, dt(p.inicio), dt(p.fim), xR(p.vendido), xR(p.lucro), xP(p.pct), p.ir == null ? 'retido na fonte' : xR(p.ir), xR(liq(p))]),
-      ['Total', '', '', xR(t.venda), xR(t.lucro), xP(tP), xR(t.ir), xR(t.liq)]];
+      ['Ativo', 'Data da compra', 'Data da venda', 'Preço unitário de compra', 'Total de compra', 'Total de venda', 'Preço unitário de venda',
+        'Lucro / prejuízo R$', 'Lucro / prejuízo %', 'IR a pagar', 'Lucro líquido'],
+      ...lista.map(p => [p.ticker, dt(p.inicio), dt(p.fim), xR(p.custoVendido / p.qtdVendida), xR(p.custoVendido), xR(p.vendido), xR(p.vendido / p.qtdVendida),
+        xR(p.lucro), xP(p.pct), p.ir == null ? 'retido na fonte' : xR(p.ir), xR(liq(p))]),
+      ['Total', '', '', '', '', '', '', xR(t.lucro), xP(tP), xR(t.ir), xR(t.liq)]];
     $('rLista').innerHTML = !enc.length ? '<p class="mut">Nenhum ativo encerrado ainda.</p>' :
       !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
-      `<div class="card rolagem"><table class="compacto">
-        <tr><th>Ativo</th><th>Compra</th><th>Venda</th><th>Total venda R$</th><th>Lucro R$</th><th>Lucro %</th><th>IR R$</th><th>Líquido R$</th></tr>` +
-      lista.map(p => `<tr><td><b>${esc(p.ticker)}</b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td><td>${ocN(p.vendido)}</td>
+      `<div class="card rolagem"><table class="compacto espacado">
+        <tr><th>Ativo</th><th>Compra</th><th>Venda</th><th>Unit. compra R$</th><th>Total compra R$</th><th>Total venda R$</th><th>Unit. venda R$</th>
+          <th>Lucro R$</th><th>Lucro %</th><th>IR R$</th><th>Líquido R$</th></tr>` +
+      lista.map(p => `<tr><td><b>${esc(p.ticker)}</b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td>
+        <td>${reais(p.custoVendido / p.qtdVendida)}</td><td>${ocN(p.custoVendido)}</td><td>${ocN(p.vendido)}</td><td>${reais(p.vendido / p.qtdVendida)}</td>
         <td class="${cor(p.lucro)}">${reais(p.lucro)}</td><td class="${cor(p.pct)}">${pct(p.pct)}</td><td>${irTxt(p)}</td>
         <td class="${cor(liq(p))}"><b>${reais(liq(p))}</b></td></tr>`).join('') +
-      `<tr class="soma"><th>Total</th><td></td><td></td><th>${ocN(t.venda)}</th><th class="${cor(t.lucro)}">${reais(t.lucro)}</th>
+      `<tr class="soma"><th>Total</th><td></td><td></td><td></td><td></td><td></td><td></td><th class="${cor(t.lucro)}">${reais(t.lucro)}</th>
         <th class="${cor(tP)}">${pct(tP)}</th><th>${reais(t.ir)}</th><th class="${cor(t.liq)}">${reais(t.liq)}</th></tr></table></div>`;
     return;
   }
@@ -949,7 +972,11 @@ function comboAtivos(p, tks) {
 
 // Aba Diário (como a aba "Agora Investimentos" da planilha): por dia, valor da posição e % de lucro de cada ativo
 function renderDiario() {
-  const h = [...db.historico].sort((a, b) => a.data.localeCompare(b.data));
+  // depois da venda que zerou a posição, o registro do dia ainda guarda o resultado da venda (para o Mensal);
+  // no Diário o ativo fica em branco e fora das somas a partir do dia seguinte à venda
+  const vivo = (t, d) => qtdEm(db.ops, t, d) > 0 || db.ops.some(o => o.ticker === t && o.data === d) || !db.ops.some(o => o.ticker === t);
+  const h = [...db.historico].sort((a, b) => a.data.localeCompare(b.data))
+    .map(s => ({ ...s, v: Object.fromEntries(Object.entries(s.v).filter(([t]) => vivo(t, s.data))) }));
   const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].sort();
   const cols = comboAtivos('d', tks);
   const ini = isoDe($('dIni')), fim = isoDe($('dFim'));
@@ -977,7 +1004,7 @@ function renderDiario() {
     ['Data', ...vis.flatMap(t => [t + ' R$', t + ' %']), 'Dia %', 'Dia R$', 'Total R$', 'Lucro %', 'Lucro R$'],
     ...linhas.map(({ s, vs, valor, lucro, p, noDia, pDia }) => [data(s.data),
       ...vis.flatMap(t => s.v[t] ? [xR(s.v[t][0]), xP(pctDe(s.v[t]))] : ['', '']),
-      xP(pDia), xR(noDia), vs.length ? xR(valor) : '', xP(p), vs.length ? xR(lucro) : ''])];
+      xP(pDia), xR(noDia), vs.length ? xR(resumido ? valor + naoAlocadoDe(s) : valor) : '', xP(p), vs.length ? xR(lucro) : ''])];
   $('tDiario').innerHTML = !h.length ? '<tr><td class="mut">Sem histórico ainda.</td></tr>' :
     !linhas.length ? '<tr><td class="mut">Nenhum dia nesse período (a data inicial está depois da final?).</td></tr>' :
     `<tr><th>Data</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Dia %</th><th>Dia R$</th><th>Total R$</th><th>Lucro %</th><th>Lucro R$</th></tr>` +
@@ -985,7 +1012,7 @@ function renderDiario() {
       `<tr><td>${resumido ? data(s.data).slice(0, 6) + s.data.slice(2, 4) : data(s.data)}</td>${vis.map(t => { const x = s.v[t]; if (!x) return '<td></td>';
         return `<td>${ocR(x[0])}<br><small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
       `<th class="${cor(pDia)}">${pct(pDia)}</th><th class="${cor(noDia)}">${din(noDia)}</th>` +
-      `<th>${vs.length ? (resumido ? ocN : ocR)(valor) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
+      `<th>${vs.length ? (resumido ? ocN(valor + naoAlocadoDe(s)) : ocR(valor)) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
       `<th class="${cor(lucro)}">${vs.length ? din(lucro) : '—'}</th></tr>`).join('');
   $('tDiario').classList.toggle('compacto', resumido);
 }
@@ -1014,7 +1041,7 @@ function registrarDia() {
     const ultima = db.ops.filter(o => o.ticker === p.ticker).map(o => o.data).sort().pop();
     if (p.encerrado && ultima.slice(0, 7) === mes) v[p.ticker] = [p.custoVendido + p.realizado, p.custoVendido];
   });
-  db.historico = db.historico.filter(s => s.data !== d).concat({ data: d, v });
+  db.historico = db.historico.filter(s => s.data !== d).concat({ data: d, v, na: db.naoAlocado || 0 }); // na = patrimônio não alocado no dia
 }
 
 let mostrarValores = false; // olhinho do topo
@@ -1227,6 +1254,11 @@ $('cFotoArq').onchange = async e => {
 };
 $('cFotoRem').onclick = () => { localStorage.removeItem(KEY_FOTO); mostrarFoto(); };
 mostrarFoto();
+// Patrimônio não alocado: máscara R$ (digita os centavos); grava e recalcula ao sair do campo
+$('cNaoAloc').value = db.naoAlocado ? brl(db.naoAlocado) : '';
+$('cNaoAloc').onfocus = e => e.target.select();
+$('cNaoAloc').oninput = e => { const d = e.target.value.replace(/\D/g, '').replace(/^0+/, ''); e.target.value = d ? brl(Number(d) / 100) : ''; };
+$('cNaoAloc').onchange = e => { db.naoAlocado = Number(e.target.value.replace(/\D/g, '')) / 100; salvar(); render(); };
 $('cToken').value = db.token;
 // botões "i": abrem/fecham o quadro de ajuda indicado em aria-controls
 document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
@@ -1268,7 +1300,7 @@ $('fileImp').onchange = async e => {
     if (!ok) throw new Error('arquivo não parece um backup deste app');
     if (db.ops.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
     db = { ...vazio, ...d, token: db.token };
-    salvar(); render();
+    salvar(); render(); $('cNaoAloc').value = db.naoAlocado ? brl(db.naoAlocado) : '';
     $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.ops.length} lançamentos.`;
     await modal({ titulo: 'Backup restaurado com sucesso', ok: 'OK',
       texto: `Arquivo: ${f.name}\n${d.ops.length} lançamentos e ${(d.historico || []).length} dias de histórico restaurados.` });
