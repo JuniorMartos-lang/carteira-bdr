@@ -325,6 +325,16 @@ label.check input { width:auto; margin:0; }
         <div><label for="gIni">Mês inicial</label><select id="gIni"></select></div>
         <div><label for="gFim">Mês final</label><select id="gFim"></select></div>
       </div>
+      <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="gRealizados"> Incluir realizados</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="gRealInfo" aria-label="O que é Incluir realizados">i</button></div>
+      <div id="gRealInfo" class="ajuda" hidden>
+        <b>Incluir realizados</b>
+        <ul>
+          <li><b>Desmarcado:</b> a linha da carteira mostra a rentabilidade apenas das posições abertas em cada dia. Quando um ativo é vendido, o resultado dele deixa a conta e a linha pode dar um salto, sem que isso represente ganho ou perda.</li>
+          <li><b>Marcado:</b> a linha soma o lucro das posições abertas com o lucro (ou prejuízo) já realizado nas vendas até aquele dia, sobre o total investido, incluindo o custo das ações vendidas. A linha não salta nas vendas e mostra a evolução do resultado desde o início.</li>
+          <li>Vale para a linha da carteira ("Todos"). Com ativos escolhidos no filtro, cada linha continua mostrando a rentabilidade da posição daquele ativo.</li>
+          <li>O detalhe de cada venda (lucro, IR e lucro líquido) está na aba <b>Resultados</b>.</li>
+        </ul>
+      </div>
     </div>
     <div class="card viz">
       <b id="gTitulo">Rentabilidade acumulada (%)</b>
@@ -833,12 +843,21 @@ function renderGraficos() {
   const total = s => { const vs = Object.values(s.v); const inv = vs.reduce((a, x) => a + x[1], 0);
     return inv ? (vs.reduce((a, x) => a + x[0], 0) - inv) / inv : null; };
   // shortcut: a cor segue a posição entre os escolhidos (não o ativo); com até 8 escolhidos não repete cor
-  const series = todos ? [{ nome: 'Carteira', cor: 'var(--s1)', vals: dias.map(total) }]
+  // "Incluir realizados": soma ao dia o lucro das vendas já feitas (e o custo delas na base); tira do dia o registro
+  // de ativos já zerados naquela data, que guardava o resultado da venda (senão contaria duas vezes)
+  const comReal = $('gRealizados').checked, vendas = realizados(db.ops);
+  const totalReal = s => {
+    let luc = 0, base = 0;
+    for (const [t, [v, i]] of Object.entries(s.v)) if (qtdEm(db.ops, t, s.data) > 0) { luc += v - i; base += i; }
+    for (const e of vendas) if (e.data <= s.data) { luc += e.realizado; base += e.custo; }
+    return base ? luc / base : null;
+  };
+  const series = todos ? [{ nome: comReal ? 'Carteira com realizados' : 'Carteira', cor: 'var(--s1)', vals: dias.map(comReal ? totalReal : total) }]
     : cols.slice(0, 8).map((t, i) => ({ nome: t, cor: `var(--s${i + 1})`, vals: dias.map(s => pctDe(s.v[t])) }));
   $('gAviso').textContent = !todos && cols.length > 8 ? `Mostrando os 8 primeiros de ${cols.length} ativos escolhidos.` : '';
   $('gLegenda').innerHTML = series.length < 2 ? '' :
     series.map(s => `<span><i class="marca" style="background:${s.cor}"></i>${esc(s.nome)}</span>`).join('');
-  $('gTitulo').textContent = todos ? 'Rentabilidade acumulada da carteira (%)' : 'Rentabilidade acumulada (%)';
+  $('gTitulo').textContent = todos ? `Rentabilidade acumulada da carteira${comReal ? ', com realizados' : ''} (%)` : 'Rentabilidade acumulada (%)';
 
   const svg = $('gSvg'), W = svg.clientWidth, H = 240, L = 44, R = 10, T = 10, B = 24;
   $('gDica').hidden = true;
@@ -944,7 +963,7 @@ function renderDiario() {
 }
 
 [['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['dResumido', renderDiario],
- ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
+ ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
 [['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';

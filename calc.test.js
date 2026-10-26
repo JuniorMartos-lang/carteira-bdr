@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -39,6 +39,12 @@ assert.strictEqual(disb.inicio, '2026-08-06'); assert.strictEqual(disb.fim, '202
 perto(irDe(disb), 0); // prejuízo não paga
 perto(irDe({ classe: 'A', lucro: 1000 }), 150);
 assert.strictEqual(irDe({ classe: 'F', lucro: 1000 }), null);
+
+// Lucro realizado por venda (inclusive venda parcial): DISB34 vendido com prejuízo de 166 sobre custo de 8769
+const rz = realizados(ops);
+assert.strictEqual(rz.length, 1); assert.strictEqual(rz[0].data, '2026-10-06'); perto(rz[0].realizado, -166); perto(rz[0].custo, 8769);
+const rzp = realizados([{ data: '2026-01-01', ticker: 'X', tipo: 'C', qtd: 10, preco: 10 }, { data: '2026-01-05', ticker: 'X', tipo: 'V', qtd: 4, preco: 15 }]);
+perto(rzp[0].realizado, 20); perto(rzp[0].custo, 40);
 
 // Lucro mensal = diferença do lucro acumulado entre fins de mês
 const m = mensal([

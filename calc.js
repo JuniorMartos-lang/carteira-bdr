@@ -39,6 +39,19 @@ function posicoes(ops, precos) {
 // shortcut: não compensa prejuízos de outros meses nem day trade (20%); para isso, apurar por mês num ledger de IR.
 const irDe = p => p.classe === 'F' ? null : Math.max(0, p.lucro) * 0.15;
 
+// Vendas com o lucro realizado e o custo das ações vendidas, em ordem de data (Gráficos → "Incluir realizados")
+function realizados(ops) {
+  const pos = {}, eventos = [];
+  [...ops].sort((a, b) => a.data.localeCompare(b.data)).forEach(o => {
+    const p = pos[o.ticker] ||= { qtd: 0, inv: 0 };
+    if (o.tipo === 'C') { p.qtd += o.qtd; p.inv += o.qtd * o.preco; return; }
+    const pm = p.inv / p.qtd;
+    eventos.push({ data: o.data, ticker: o.ticker, realizado: (o.preco - pm) * o.qtd, custo: pm * o.qtd });
+    p.inv -= pm * o.qtd; p.qtd -= o.qtd; if (p.qtd === 0) p.inv = 0;
+  });
+  return eventos;
+}
+
 // Quantidade em carteira de um ticker numa data (para validar vendas)
 function qtdEm(ops, ticker, data) {
   return ops.filter(o => o.ticker === ticker && o.data <= data)
@@ -121,5 +134,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, mensal, pregaoDe, tendencia,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };
