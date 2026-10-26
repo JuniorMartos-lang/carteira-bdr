@@ -235,28 +235,65 @@ label.check input { width:auto; margin:0; }
       <div class="msg" id="fMsg"></div>
       <div class="botoes"><button>Salvar</button><button type="button" class="sec" id="fLimpar">Limpar</button><button type="button" class="perigo" id="fExcluir" hidden>Excluir</button></div>
     </form>
-    <h2>Lançamentos</h2>
+    <div class="row" style="align-items:center"><h2>Lançamentos</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="lancInfo" aria-label="Como usar os lançamentos">i</button></div>
+    <div id="lancInfo" class="ajuda" hidden>
+        <b>Filtro de datas</b>
+        <ul>
+          <li>Ao tocar em <b>Data inicial</b> ou <b>Data final</b>, o conteúdo do campo fica todo selecionado; basta digitar a nova data por cima.</li>
+          <li>Digite <b>só os números</b>: as barras são incluídas automaticamente (ex.: 01092026 vira 01/09/2026).</li>
+          <li>O filtro é aplicado assim que a data fica completa.</li>
+          <li>A data mínima é <b>01/07/2023</b>: uma data anterior é ajustada para 01/07/2023.</li>
+          <li>Uma data inexistente (ex.: 31/02/2026), ou incompleta ao sair do campo, é apagada.</li>
+          <li>Com as datas em branco, são exibidos todos os registros.</li>
+          <li>O botão <b>Todos</b> limpa as duas datas de uma vez.</li>
+        </ul>
+        <b>Lista de lançamentos</b>
+        <ul>
+          <li>Cada linha mostra a data, o tipo (Compra em verde, Venda em vermelho), o ativo, a quantidade, o preço unitário e o valor total, do mais recente para o mais antigo.</li>
+          <li>Toque em um lançamento para carregá-lo no formulário acima: para <b>corrigir</b>, altere os campos e toque em <b>Salvar</b>; para <b>excluir</b>, toque em <b>Excluir</b> e confirme.</li>
+          <li>O botão <b>Limpar</b> encerra a correção sem alterar o lançamento.</li>
+        </ul>
+    </div>
     <div class="card">
       <div class="datasTodos">
         <div><label for="lIni">Data inicial</label><input id="lIni" class="dataCampo" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>
         <div><label for="lFim">Data final</label><input id="lFim" class="dataCampo" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>
         <button type="button" class="sec" id="lTodos">Todos</button>
       </div>
-      <p class="mut" style="margin:6px 0 0">Digite só os números da data. "Todos" limpa as datas e mostra todos os lançamentos (a partir de 01/07/2023).</p>
     </div>
     <div class="card rolagem"><table id="ops" class="compacto"></table></div>
   </section>
 
   <section id="tab-diario" hidden>
     <div class="card">
-      <label>Ativos</label>
+      <div class="row" style="align-items:center"><label>Ativos</label>
+        <button type="button" class="info" aria-expanded="false" aria-controls="dFiltroInfo" aria-label="Como usar os filtros">i</button></div>
+      <div id="dFiltroInfo" class="ajuda" hidden>
+        <b>Filtro de ativos</b>
+        <ul>
+          <li>Toque na caixa <b>Ativos</b> para abrir a lista e marque um, vários ou <b>Todos</b>.</li>
+          <li>Ao marcar um ativo, a opção "Todos" é desmarcada; ao marcar "Todos", os demais são desmarcados. Se nenhum ficar marcado, volta para "Todos".</li>
+          <li>Os totais da tabela (Dia, Total, Lucro) consideram apenas os ativos escolhidos.</li>
+          <li>Toque fora da caixa para fechar a lista.</li>
+        </ul>
+        <b>Filtro de datas</b>
+        <ul>
+          <li>Ao tocar em <b>Data inicial</b> ou <b>Data final</b>, o conteúdo do campo fica todo selecionado; basta digitar a nova data por cima.</li>
+          <li>Digite <b>só os números</b>: as barras são incluídas automaticamente (ex.: 01092026 vira 01/09/2026).</li>
+          <li>O filtro é aplicado assim que a data fica completa.</li>
+          <li>A data mínima é <b>01/07/2023</b>: uma data anterior é ajustada para 01/07/2023.</li>
+          <li>Uma data inexistente (ex.: 31/02/2026), ou incompleta ao sair do campo, é apagada.</li>
+          <li>Com as datas em branco, são exibidos todos os dias.</li>
+          <li>O botão <b>Todos</b> limpa as duas datas de uma vez.</li>
+        </ul>
+      </div>
       <details class="combo"><summary id="dResumo">Todos</summary><div id="dAtivos" class="lista"></div></details>
       <div class="datasTodos">
         <div><label for="dIni">Data inicial</label><input id="dIni" class="dataCampo" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>
         <div><label for="dFim">Data final</label><input id="dFim" class="dataCampo" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>
         <button type="button" class="sec" id="dTodos">Todos</button>
       </div>
-      <p class="mut" style="margin:6px 0 0">Digite só os números da data. "Todos" limpa as datas e mostra todos os dias (a partir de 01/07/2023).</p>
       <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="dResumido"> Resumido</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="dResInfo" aria-label="O que é o Resumido">i</button></div>
       <div id="dResInfo" class="ajuda" hidden>Marcado, a tabela mostra só <b>Data, Dia %, Dia R$, Total R$, Lucro % e Lucro R$</b>, sem as colunas de cada ativo, e cabe na tela do celular. Os totais continuam somando só os ativos escolhidos no filtro. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
