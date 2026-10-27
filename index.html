@@ -485,7 +485,7 @@ label.check input { width:auto; margin:0; }
           <li>Toque no <b>i</b> ao lado do código para abrir uma janela com o nome do ativo e o fechamento de cada dia do mês corrente, do dia mais recente para o dia 1º (carregado ao tocar em Atualizar cotações).</li>
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
           <li>O botão <b>Atualizar cotações</b> desta aba busca só os ativos do Dashboard.</li>
-          <li><b>Atualização automática</b>: ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou nesta aba, se a última atualização tiver mais de 15 minutos, as cotações são buscadas sozinhas (primeiro as da carteira, depois as do Dashboard). Com o app fechado nada é atualizado.</li>
+          <li><b>Atualização automática</b>: de segunda a sexta, das 10h00 às 17h30 (horário de Brasília), ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou nesta aba, se a última atualização tiver mais de 15 minutos, as cotações são buscadas sozinhas (primeiro as da carteira, depois as do Dashboard). Fora desse horário (e com o app fechado) nada é atualizado sozinho: use o botão. Feriados não são reconhecidos: num feriado em dia útil a atualização automática roda normalmente.</li>
           <li>Os ativos cadastrados vão no backup.</li>
         </ul>
         <b>Ordem dos ativos</b>
@@ -1245,12 +1245,12 @@ async function atualizar() {
 }
 
 // Atualização automática: ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou no Dash.,
-// busca de novo o que tiver mais de 15 min. Carteira e Dash. um depois do outro (o brapi grátis recusa consultas
+// só de segunda a sexta das 10h00 às 17h30 (horarioAuto), busca de novo o que tiver mais de 15 min. Carteira e Dash. um depois do outro (o brapi grátis recusa consultas
 // simultâneas); os dois botões ficam travados enquanto isso. Sem servidor, nada atualiza com o app fechado.
 const AUTO_MIN = 15;
 const velho = iso => !iso || Date.now() - new Date(iso) > AUTO_MIN * 60e3;
 async function autoAtualizar() {
-  if (!db.token || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // sem token ou já atualizando
+  if (!horarioAuto() || !db.token || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // fora do horário, sem token ou já atualizando
   const carteira = db.ops.length && velho(db.atualizado), dash = db.dash.length && velho(db.dashEm);
   if (carteira) { $('wAtualizar').disabled = true; await atualizar(); $('wAtualizar').disabled = false; }
   if (dash) { $('btnAtualizar').disabled = true; await atualizarDash(); $('btnAtualizar').disabled = false; }

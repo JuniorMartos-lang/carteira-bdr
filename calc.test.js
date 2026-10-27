@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -94,6 +94,14 @@ perto(vv.semana, 121 / 110 - 1); perto(vv.mes, 121 / 100 - 1);
 vv = variacoes(121, hv, '2026-10-25'); // domingo: semana de 19 a 23/10 → base = último fechamento antes de 19/10 (01/10)
 perto(vv.mes, 0.21); perto(vv.semana, 121 / 105 - 1);
 assert.deepStrictEqual(variacoes(10, [], '2026-10-28'), { semana: null, mes: null });
+
+// Atualização automática: dias úteis, 10h00–17h30 de Brasília (UTC-3)
+assert.ok(horarioAuto(new Date('2026-10-26T13:00:00Z')));   // seg 10h00
+assert.ok(horarioAuto(new Date('2026-10-30T20:30:00Z')));   // sex 17h30
+assert.ok(!horarioAuto(new Date('2026-10-26T12:59:00Z')));  // seg 09h59
+assert.ok(!horarioAuto(new Date('2026-10-26T20:31:00Z')));  // seg 17h31
+assert.ok(!horarioAuto(new Date('2026-10-31T15:00:00Z')));  // sábado 12h
+assert.ok(!horarioAuto(new Date('2026-11-01T15:00:00Z')));  // domingo 12h
 
 // Senha: confere a certa, recusa a errada; código de recuperação no formato XXXX-XXXX-XXXX
 (async () => {
