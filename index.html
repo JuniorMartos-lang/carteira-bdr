@@ -468,6 +468,16 @@ label.check input { width:auto; margin:0; }
           <li>Para resolver: vá na aba Dash., digite o código do ativo no cadastro (abaixo da tabela), toque em <b>Adicionar</b> e volte aqui.</li>
           <li>Exceção: um ativo encerrado e depois recomprado (de novo na carteira) usa a cotação da carteira, mesmo fora do Dash.</li>
         </ul>
+        <b>Como ler a tabela</b>
+        <ul>
+          <li>Aparecem os ativos vendidos por completo, do encerramento mais antigo para o mais recente.</li>
+          <li><b>Encerr.</b>: dia em que a posição foi zerada.</li>
+          <li><b>Unit. enc.</b>: preço unitário da venda nesse dia (média, se houve mais de uma venda no dia).</li>
+          <li><b>Atual</b>: cotação de agora.</li>
+          <li><b>Dif. R$</b> e <b>Dif. %</b>: quanto o preço mudou depois que você vendeu (verde ▲: subiu; vermelho ▼: caiu).</li>
+          <li>Ativo encerrado mais de uma vez aparece só com o último encerramento.</li>
+          <li>O botão <b>Exportar para Excel</b> (abaixo da tabela) leva o que está na tela, com os filtros.</li>
+        </ul>
         <b>Filtros</b>
         <ul>
           <li><b>Ativos</b>: marque um, vários ou <b>Todos</b>.</li>
@@ -482,7 +492,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="tCompar" class="compacto"></table></div>
-    <p class="mut">Ativos vendidos por completo, do encerramento mais antigo para o mais recente. Unit. enc. = preço médio das vendas do dia do encerramento; Atual = cotação de agora; Dif. = quanto o preço mudou depois que você vendeu (verde ▲: subiu; vermelho ▼: caiu). Ativo encerrado mais de uma vez aparece só com o último encerramento. As datas filtram pelo dia do encerramento (a partir de 01/07/2023). Atual = cotação do Dash. (atualizada sozinha no horário do pregão e pelo botão desta aba ou do Dash.); ativo encerrado que não está no Dash. aparece com "—" (cadastre-o no Dash.).</p>
+    <button class="sec exp" data-exp="compar">Exportar para Excel</button>
   </section>
 
   <section id="tab-result" hidden>
@@ -1650,11 +1660,14 @@ function renderCompar() {
   const atual = t => db.dash.find(a => a.ticker === t)?.preco ?? (posicoes(db.ops, {}).some(x => x.ticker === t && !x.encerrado) ? db.precos[t] : null);
   $('kQuando').textContent = db.dashEm ? 'Cotações do Dash. de ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   const seta = v => v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : '';
+  const dif = e => { const a = atual(e.ticker), d = a == null ? null : a - e.preco; return [a, d, d == null ? null : d / e.preco]; };
+  tabelas.compar = !vis.length ? null : [['Encerramento', 'Ativo', 'Unitário no encerramento R$', 'Atual R$', 'Dif. R$', 'Dif. %'],
+    ...vis.map(e => { const [a, d, p] = dif(e); return [e.data.split('-').reverse().join('/'), e.ticker, xR(e.preco), xR(a), xR(d), xP(p)]; })];
   $('tCompar').innerHTML = !lista.length ? '<tr><td class="mut">Nenhum ativo encerrado ainda.</td></tr>' :
     !vis.length ? '<tr><td class="mut">Nenhum encerramento nesse filtro.</td></tr>' :
     '<tr><th>Encerr.</th><th>Ativo</th><th>Unit. enc. R$</th><th>Atual R$</th><th>Dif. R$</th><th>Dif. %</th></tr>' +
     vis.map(e => {
-      const a = atual(e.ticker), d = a == null ? null : a - e.preco, p = d == null ? null : d / e.preco;
+      const [a, d, p] = dif(e);
       return `<tr><td>${e.data.slice(8)}/${e.data.slice(5, 7)}/${e.data.slice(2, 4)}</td><td><b>${esc(e.ticker)}</b></td>
         <td>${reais(e.preco)}</td><td>${reais(a)}</td><td class="${cor(d)}">${reais(d)}${seta(d)}</td><td class="${cor(p)}">${pct(p)}${seta(p)}</td></tr>`;
     }).join('');
