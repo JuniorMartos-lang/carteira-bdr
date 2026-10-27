@@ -108,6 +108,22 @@ function tendencia(vals) {
     : (vals[i - 1] != null && v > vals[i - 1]) || v === max ? 'sobe' : 'desce');
 }
 
+// Resultado do dia de um conjunto de ativos (Resumo, Carteira e Diário): para cada ativo, lucro agora − lucro do
+// registro anterior, mas só se ele estava em carteira nesse registro (vivoAntes); ativo comprado depois (ou recomprado
+// depois de zerado) conta o lucro desde a compra. Ativo sem registro agora (vendido antes) não entra.
+// atual/anterior: {TICKER: [valor, investido]}. base = valor anterior + dinheiro novo aplicado (% = r / base).
+// shortcut: na venda parcial no dia, o lucro realizado dessa venda não entra no resultado do dia.
+function resultadoDia(atual, anterior, vivoAntes) {
+  let r = 0, base = 0;
+  const ts = Object.keys(atual);
+  for (const t of ts) {
+    const [v, inv] = atual[t], a = anterior[t] && vivoAntes(t) ? anterior[t] : null;
+    r += v - inv - (a ? a[0] - a[1] : 0);
+    base += a ? a[0] + Math.max(0, inv - a[1]) : inv;
+  }
+  return ts.length ? { r, base, p: base ? r / base : null } : null;
+}
+
 // Atualização automática só em dia útil, das 10h00 às 17h30 de Brasília (fora disso, só pelo botão).
 // shortcut: não conhece os feriados da B3; num feriado em dia útil ela roda à toa (só gasta cota).
 function horarioAuto(data = new Date()) {
@@ -162,5 +178,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

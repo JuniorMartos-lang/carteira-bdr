@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -102,6 +102,16 @@ assert.ok(!horarioAuto(new Date('2026-10-26T12:59:00Z')));  // seg 09h59
 assert.ok(!horarioAuto(new Date('2026-10-26T20:31:00Z')));  // seg 17h31
 assert.ok(!horarioAuto(new Date('2026-10-31T15:00:00Z')));  // sábado 12h
 assert.ok(!horarioAuto(new Date('2026-11-01T15:00:00Z')));  // domingo 12h
+
+// Resultado do dia: A segue em carteira (sobe 10); B comprado hoje (lucro 5 desde a compra);
+// D recomprado hoje — o registro anterior guardava o resultado da venda antiga (zerado), que não pode servir de base;
+// C vendido ontem (só no registro anterior) não entra
+const rd = resultadoDia({ A: [110, 100], B: [105, 100], D: [52, 50] },
+  { A: [100, 100], C: [500, 400], D: [8603, 8769] }, t => t !== 'D');
+perto(rd.r, 10 + 5 + 2); perto(rd.base, 100 + 100 + 50); perto(rd.p, 17 / 250);
+perto(resultadoDia({ A: [230, 200] }, { A: [100, 100] }, () => true).r, 30); // comprou mais 100 hoje: lucro 30 − 0
+perto(resultadoDia({ A: [230, 200] }, { A: [100, 100] }, () => true).base, 200); // valor de ontem + 100 novos
+assert.strictEqual(resultadoDia({}, { A: [1, 1] }, () => true), null);
 
 // Senha: confere a certa, recusa a errada; código de recuperação no formato XXXX-XXXX-XXXX
 (async () => {

@@ -625,7 +625,7 @@ label.check input { width:auto; margin:0; }
           <li>Aparece "Cotações de [data e hora]" ao lado do botão, e o IBOV e o dólar no topo.</li>
           <li>Se aparecer "Não foi possível atualizar", leia o motivo: token incompleto (copie de novo, sem espaços no começo ou no fim) ou celular sem internet.</li>
         </ul>
-        <p class="mut">Trocar de token: copie o novo no painel do brapi, apague o antigo deste campo, cole o novo e toque em Salvar token. O token fica só neste celular e não vai no backup. O plano grátis tem um limite de consultas por mês (veja no painel do brapi); cada atualização usa uma consulta por ativo.</p>
+        <p class="mut">Trocar de token: copie o novo no painel do brapi, apague o antigo deste campo, cole o novo e toque em Salvar token. O token vai junto no backup e volta ao restaurar. O plano grátis tem um limite de consultas por mês (veja no painel do brapi); cada atualização usa uma consulta por ativo.</p>
       </div>
       <input id="cToken" autocomplete="off" spellcheck="false">
       <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado só neste celular.</p>
@@ -636,7 +636,7 @@ label.check input { width:auto; margin:0; }
         <button type="button" class="info" aria-expanded="false" aria-controls="bkpInfo" aria-label="Como funciona o backup">i</button></div>
       <div id="bkpInfo" class="ajuda" hidden>
         <b>Sobre o backup</b>
-        <p>O backup é uma cópia de todos os dados do aplicativo (lançamentos, histórico diário, cotações e preferências de exibição), gravada em um arquivo de texto (.txt). Não são incluídos o token do brapi, a senha do aplicativo, a foto e a configuração de aparência.</p>
+        <p>O backup é uma cópia de todos os dados do aplicativo (lançamentos, histórico diário, cotações, aportes e saques, Dashboard e o token do brapi, quando cadastrado), gravada em um arquivo de texto (.txt). Ao restaurar, o token volta junto; um backup antigo, sem token, mantém o token já cadastrado neste aparelho. Não são incluídos a senha do aplicativo, a foto e a configuração de aparência. Como o token vai no arquivo, recomenda-se manter a senha do aplicativo cadastrada, para que o backup fique protegido.</p>
         <b>Como salvar</b>
         <ol>
           <li>Toque em <b>Salvar backup</b>.</li>
@@ -848,11 +848,14 @@ function render() {
     ? `<b class="dn">Não foi possível atualizar</b><br>${quando ? 'Última: ' + quando : 'Nenhuma cotação ainda'}`
     : quando ? 'Cotações de ' + quando : 'Sem cotações ainda';
 
-  // último registro de cada ativo antes do pregão atual, para o resultado do dia da sua posição
+  // último registro de cada ativo antes do pregão atual (e a data dele), para o resultado do dia da sua posição;
+  // se o ativo não estava em carteira nesse registro (comprado hoje, ou recomprado depois de zerado), conta desde a compra
   const ant = {};
-  [...db.historico].sort((a, b) => a.data.localeCompare(b.data)).forEach(s => { if (s.data < dataPregao()) Object.assign(ant, s.v); });
-  const doDia = p => { const a = ant[p.ticker]; if (!a || p.valor == null) return {};
-    const r = p.lucro - (a[0] - a[1]); return { r, p: r / a[0], base: a[0] }; };
+  [...db.historico].sort((a, b) => a.data.localeCompare(b.data))
+    .forEach(s => { if (s.data < dataPregao()) for (const [t, x] of Object.entries(s.v)) ant[t] = [x, s.data]; });
+  const doDia = p => { if (p.valor == null) return {};
+    const [a, d] = ant[p.ticker] || [];
+    return resultadoDia({ [p.ticker]: [p.valor, p.investido] }, a ? { [p.ticker]: a } : {}, t => qtdEm(db.ops, t, d) > 0); };
   const comDia = abertos.map(p => ({ ...p, d: doDia(p) }));
   // linha Total do Resumo: R$ somados; % da carteira inteira (não a soma dos %), igual ao topo do app
   const comHoje = comDia.filter(p => p.d.r != null);
@@ -867,7 +870,7 @@ function render() {
   // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
   $('tResumo').innerHTML = !comDia.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
     '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro R$ e %</th></tr>' +
-    comDia.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td>
+    comDia.map((p, i) => `<tr><td><b title="${esc(p.ticker)}">${i + 1}º ${esc(p.ticker.slice(0, 10).trimEnd())}</b></td>
       <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${reais(p.d.r)}</td>
       <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('') +
     `<tr class="soma"><th>Total</th><th class="${cor(hojeP)}">${pct(hojeP)}</th><th class="${cor(hojeR)}">${reais(hojeR)}</th>
@@ -1141,16 +1144,18 @@ function renderDiario() {
   const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].sort();
   const cols = comboAtivos('d', tks);
   const ini = isoDe($('dIni')), fim = isoDe($('dFim'));
-  let antes = null; // lucro e valor do dia anterior registrado, para o "no dia"
+  let antes = null; // registro do dia anterior (com ativos escolhidos), para o "no dia"
   const pctDe = x => x ? (x[0] - x[1]) / x[1] : null;
   // cor de cada % (regra da planilha), calculada sobre todos os dias, antes do filtro de datas
   const tend = Object.fromEntries(tks.map(t => [t, tendencia(h.map(s => pctDe(s.v[t])))]));
   const todas = h.map((s, i) => {
     const vs = cols.map(t => s.v[t]).filter(Boolean);
-    const valor = vs.reduce((x, [v]) => x + v, 0), inv = vs.reduce((x, [, i]) => x + i, 0);
-    const lucro = valor - inv, noDia = vs.length && antes ? lucro - antes.lucro : null;
-    const pDia = noDia != null && antes.valor ? noDia / antes.valor : null; // % do dia sobre o valor do dia anterior
-    if (vs.length) antes = { lucro, valor };
+    const valor = vs.reduce((x, [v]) => x + v, 0), inv = vs.reduce((x, [, i]) => x + i, 0), lucro = valor - inv;
+    // Dia R$ e Dia % só do que está aplicado (sem o não aplicado): por ativo, sobre o dia anterior registrado
+    const dia = vs.length && antes ? resultadoDia(Object.fromEntries(cols.filter(t => s.v[t]).map(t => [t, s.v[t]])),
+      antes.v, t => qtdEm(db.ops, t, antes.data) > 0) : null;
+    const noDia = dia ? dia.r : null, pDia = dia ? dia.p : null;
+    if (vs.length) antes = s;
     return { s, i, vs, valor, lucro, p: inv ? lucro / inv : null, noDia, pDia };
   });
   const tendTot = tendencia(todas.map(l => l.vs.length ? l.p : null));
@@ -1631,7 +1636,7 @@ document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
 $('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
 // Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
 async function fazerBackup() {
-  const { token, ...dados } = db; // o token não vai no backup
+  const dados = db; // vai tudo, inclusive o token do brapi (a pedido): restaurar num celular novo já traz as cotações
   let txt = JSON.stringify(dados, null, 1);
   if (trava.backup) txt = JSON.stringify({ carteiraBdrProtegido: 1, sal: trava.backup.sal, ...await cifrar(txt, trava.backup.chave) });
   // .txt: o Chrome do Android recusa compartilhar .json ("Permission denied"); o conteúdo continua sendo JSON
@@ -1663,7 +1668,9 @@ $('fileImp').onchange = async e => {
     const ok = Array.isArray(d.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && [undefined, 'A', 'F'].includes(o.classe) && o.qtd > 0 && o.preco > 0);
     if (!ok) throw new Error('arquivo não parece um backup deste app');
     if (db.ops.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
-    db = { ...vazio, ...d, token: db.token, ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
+    db = { ...vazio, ...d, token: d.token || db.token, // backup sem token (antigo) mantém o token deste celular
+      ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
+    $('cToken').value = db.token;
     salvar(); render();
     $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.ops.length} lançamentos.`;
     await modal({ titulo: 'Backup restaurado com sucesso', ok: 'OK',
