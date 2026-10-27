@@ -456,6 +456,7 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-compar" hidden>
     <h2 style="margin-top:4px">Comparar encerrados</h2>
+    <div class="row" style="align-items:center; gap:8px"><button type="button" id="kAtualizar" style="flex:none">Atualizar cotações</button><span class="mut" id="kQuando"></span></div>
     <div class="card">
       <label>Ativos</label>
       <details class="combo"><summary id="kResumo">Todos</summary><div id="kAtivos" class="lista"></div></details>
@@ -466,7 +467,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="tCompar" class="compacto"></table></div>
-    <p class="mut">Ativos vendidos por completo, do encerramento mais antigo para o mais recente. Unit. enc. = preço médio das vendas do dia do encerramento; Atual = cotação de agora; Dif. = quanto o preço mudou depois que você vendeu (verde ▲: subiu; vermelho ▼: caiu). Ativo encerrado mais de uma vez aparece só com o último encerramento. As datas filtram pelo dia do encerramento (a partir de 01/07/2023). As cotações são atualizadas junto com as da carteira.</p>
+    <p class="mut">Ativos vendidos por completo, do encerramento mais antigo para o mais recente. Unit. enc. = preço médio das vendas do dia do encerramento; Atual = cotação de agora; Dif. = quanto o preço mudou depois que você vendeu (verde ▲: subiu; vermelho ▼: caiu). Ativo encerrado mais de uma vez aparece só com o último encerramento. As datas filtram pelo dia do encerramento (a partir de 01/07/2023). Atual = cotação do Dash. (atualizada sozinha no horário do pregão e pelo botão desta aba ou do Dash.); ativo encerrado que não está no Dash. aparece com "—" (cadastre-o no Dash.).</p>
   </section>
 
   <section id="tab-result" hidden>
@@ -1267,9 +1268,6 @@ async function atualizar() {
     await brapi('^BVSP').then(q => db.indices.ibov = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent })
       .catch(e => erros.push('IBOV: ' + e.message));
     // índices dos EUA no topo; falha aqui não conta como erro de cotação (fica o último valor)
-    // aba Compar.: cotação de agora dos ativos já encerrados (os recomprados já vieram acima); falha aqui não conta como erro
-    for (const t of encerramentos(db.ops).map(e => e.ticker).filter(t => !tks.includes(t) && ehB3(t)))
-      await brapi(t).then(q => db.precos[t] = q.regularMarketPrice).catch(() => {});
     for (const [k, t] of [['dow', '^DJI'], ['sp', '^GSPC'], ['nasdaq', '^IXIC']])
       await brapi(t).then(q => db.indices[k] = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent }).catch(() => {});
   };
@@ -1309,7 +1307,7 @@ document.querySelector('nav').onclick = e => {
   const b = e.target.closest('button'); const t = b?.dataset.tab; if (!t) return; // toque pode cair no ícone
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
-  $('barra').hidden = !['resumo', 'carteira', 'compar'].includes(t);
+  $('barra').hidden = !['resumo', 'carteira'].includes(t);
   if (t === 'graf') renderGraficos(); // o gráfico precisa da largura da tela, que só existe com a aba visível
   if (['resumo', 'carteira', 'dash', 'compar'].includes(t)) autoAtualizar();
   b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados: mantém a aba visível
@@ -1582,6 +1580,9 @@ async function janelaAtivo(a) {
 }
 $('wAtualizar').onclick = () => atualizarDash();
 $('rsAcoes').onchange = render;
+$('kAtualizar').onclick = async () => { // não roda junto com outra atualização (o brapi grátis recusa consultas simultâneas)
+  if ($('btnAtualizar').disabled || $('wAtualizar').disabled) return;
+  $('kAtualizar').disabled = true; await atualizarDash(); $('kAtualizar').disabled = false; };
 $('wBuscaTxt').oninput = filtraBusca;
 $('wBusca').ontoggle = () => { if ($('wBusca').open) $('wBuscaTxt').focus(); else { $('wBuscaTxt').value = ''; filtraBusca(); } };
 $('wBuscaLista').onchange = e => { // marcar "Todos" limpa a procura; marcar um ativo desmarca "Todos"
@@ -1630,7 +1631,9 @@ function renderCompar() {
   const cols = comboAtivos('k', [...new Set(lista.map(e => e.ticker))].sort());
   const ini = isoDe($('kIni')), fim = isoDe($('kFim'));
   const vis = lista.filter(e => cols.includes(e.ticker) && (!ini || e.data >= ini) && (!fim || e.data <= fim));
-  const atual = t => db.precos[t] ?? db.dash.find(a => a.ticker === t)?.preco ?? null; // sem cotação ainda: "—"
+  // cotação do Dash. (atualizada sozinha e pelo botão); fora do Dash., a da carteira (ativo recomprado); sem nenhuma: "—"
+  const atual = t => db.dash.find(a => a.ticker === t)?.preco ?? (posicoes(db.ops, {}).some(x => x.ticker === t && !x.encerrado) ? db.precos[t] : null);
+  $('kQuando').textContent = db.dashEm ? 'Cotações do Dash. de ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   const seta = v => v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : '';
   $('tCompar').innerHTML = !lista.length ? '<tr><td class="mut">Nenhum ativo encerrado ainda.</td></tr>' :
     !vis.length ? '<tr><td class="mut">Nenhum encerramento nesse filtro.</td></tr>' :
