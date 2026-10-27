@@ -485,6 +485,7 @@ label.check input { width:auto; margin:0; }
           <li>Toque no <b>i</b> ao lado do código para abrir uma janela com o nome do ativo e o fechamento de cada dia do mês corrente, do dia mais recente para o dia 1º (carregado ao tocar em Atualizar cotações).</li>
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
           <li>O botão <b>Atualizar cotações</b> desta aba busca só os ativos do Dashboard.</li>
+          <li><b>Atualização automática</b>: ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou nesta aba, se a última atualização tiver mais de 15 minutos, as cotações são buscadas sozinhas (primeiro as da carteira, depois as do Dashboard). Com o app fechado nada é atualizado.</li>
           <li>Os ativos cadastrados vão no backup.</li>
         </ul>
         <b>Ordem dos ativos</b>
@@ -1243,6 +1244,18 @@ async function atualizar() {
   $('btnAtualizar').disabled = false;
 }
 
+// Atualização automática: ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou no Dash.,
+// busca de novo o que tiver mais de 15 min. Carteira e Dash. um depois do outro (o brapi grátis recusa consultas
+// simultâneas); os dois botões ficam travados enquanto isso. Sem servidor, nada atualiza com o app fechado.
+const AUTO_MIN = 15;
+const velho = iso => !iso || Date.now() - new Date(iso) > AUTO_MIN * 60e3;
+async function autoAtualizar() {
+  if (!db.token || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // sem token ou já atualizando
+  const carteira = db.ops.length && velho(db.atualizado), dash = db.dash.length && velho(db.dashEm);
+  if (carteira) { $('wAtualizar').disabled = true; await atualizar(); $('wAtualizar').disabled = false; }
+  if (dash) { $('btnAtualizar').disabled = true; await atualizarDash(); $('btnAtualizar').disabled = false; }
+}
+
 // --- eventos ---
 document.querySelector('nav').onclick = e => {
   const b = e.target.closest('button'); const t = b?.dataset.tab; if (!t) return; // toque pode cair no ícone
@@ -1250,6 +1263,7 @@ document.querySelector('nav').onclick = e => {
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   $('barra').hidden = !['resumo', 'carteira'].includes(t);
   if (t === 'graf') renderGraficos(); // o gráfico precisa da largura da tela, que só existe com a aba visível
+  if (['resumo', 'carteira', 'dash'].includes(t)) autoAtualizar();
   b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados: mantém a aba visível
   scrollTo(0, 0);
 };
@@ -1776,7 +1790,7 @@ $('tForm').onsubmit = async e => {
 let saiu = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) saiu = Date.now();
-  else if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear();
+  else { if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear(); autoAtualizar(); }
 });
 if (temSenha()) bloquear();
 renderSenha();
@@ -1784,6 +1798,7 @@ window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
   .then(ok => { bioDisponivel = ok; renderSenha(); }).catch(() => {});
 
 render();
+autoAtualizar();
 </script>
 </body>
 </html>
