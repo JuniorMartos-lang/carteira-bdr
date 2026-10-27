@@ -461,16 +461,40 @@ label.check input { width:auto; margin:0; }
   </section>
 
   <section id="tab-dash" hidden>
+    <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><h2 style="margin:4px 0 8px">Dashboard de Ativos</h2>
+      <button type="button" class="info" aria-expanded="false" aria-controls="wInfo" aria-label="Como funciona o Dashboard de Ativos">i</button></div>
+    <div id="wInfo" class="ajuda" hidden>
+        <b>Limite de 20 ativos</b>
+        <ul>
+          <li>O plano grátis do brapi aceita só um ativo por consulta, então cada atualização faz uma consulta por ativo, uma depois da outra.</li>
+          <li>Com 20 ativos, a atualização leva alguns segundos e usa a cota mensal do seu token (a mesma usada pela Carteira).</li>
+          <li>Mais de 20 deixaria a atualização lenta e gastaria a cota mais rápido.</li>
+        </ul>
+        <b>Colunas</b>
+        <ul>
+          <li><b>Atual R$</b>: preço de agora.</li>
+          <li><b>Dia %</b>: variação sobre o fechamento do pregão anterior.</li>
+          <li><b>Semana %</b>: sobre o último fechamento antes da segunda-feira desta semana (semana de segunda a sexta; no sábado e no domingo, vale a semana que acabou). Na segunda-feira fica igual ao Dia %.</li>
+          <li><b>Mês %</b>: sobre o último fechamento do mês anterior.</li>
+          <li>Em feriados, vale o último pregão que existiu. Ativo com menos de 3 meses de cotação pode ficar sem Mês % (—).</li>
+        </ul>
+        <b>Uso</b>
+        <ul>
+          <li>Toque no <b>i</b> ao lado do código para ver o nome do ativo.</li>
+          <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
+          <li>O botão <b>Atualizar cotações</b> desta aba busca só os ativos do Dashboard.</li>
+          <li>Os ativos cadastrados vão no backup.</li>
+        </ul>
+    </div>
+    <div class="row" style="align-items:center; gap:8px"><button type="button" id="wAtualizar">Atualizar cotações</button><span class="mut" id="wQuando"></span></div>
+    <div class="msg dn" id="wErro"></div>
+    <div class="card rolagem"><table id="wTabela" class="compacto"></table></div>
     <form class="card" id="wForm">
       <label for="wTicker" style="margin-top:0">Ativo (ex.: PETR4, AAPL34)</label>
       <input id="wTicker" autocapitalize="characters" autocomplete="off" maxlength="12">
       <div class="msg" id="wMsg"></div>
       <div class="botoes"><button id="wSalvar">Adicionar</button><button type="button" class="sec" id="wLimpar">Limpar</button><button type="button" class="perigo" id="wExcluir" hidden>Excluir</button></div>
     </form>
-    <div class="row" style="align-items:center; gap:8px"><button type="button" id="wAtualizar">Atualizar cotações</button><span class="mut" id="wQuando"></span></div>
-    <div class="msg dn" id="wErro"></div>
-    <div class="card rolagem"><table id="wTabela" class="compacto"></table></div>
-    <p class="mut">Até 20 ativos. Dia % = variação sobre o fechamento do pregão anterior. Semana % = sobre o fechamento antes da segunda-feira desta semana (semana de segunda a sexta). Mês % = sobre o último fechamento do mês anterior. Toque no "i" para ver o nome do ativo; toque na linha para alterar ou excluir.</p>
   </section>
 
   <section id="tab-config" hidden>
@@ -1409,7 +1433,7 @@ let dashEditando = null; // ticker carregado da lista
 const nomesAbertos = new Set(); // linhas com o nome do ativo à mostra (botão i)
 function renderDash() {
   $('wQuando').textContent = db.dashEm ? 'Atualizado em ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
-  $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código acima e toque em Adicionar.</td></tr>' :
+  $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
     '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th></tr>' +
     db.dash.map((a, i) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
       <td><span style="display:inline-flex; align-items:center; gap:4px"><b>${esc(a.ticker)}</b><button type="button" class="info" data-nome="${i}" aria-expanded="${nomesAbertos.has(a.ticker)}" aria-label="Nome de ${esc(a.ticker)}">i</button></span></td>
