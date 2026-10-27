@@ -1448,12 +1448,15 @@ const filtraBusca = () => { const q = semAcento($('wBuscaTxt').value.trim());
   $('wBuscaLista').querySelectorAll('label[data-t]').forEach(l => l.hidden = !!q && !semAcento(l.textContent).includes(q)); };
 function renderDash() {
   [...dashFiltro].forEach(t => { if (!db.dash.some(a => a.ticker === t)) dashFiltro.delete(t); }); // excluído do Dash.
+  // ordem: primeiro os ativos em carteira (posição aberta, os do Resumo), depois os outros; cada grupo em ordem alfabética
+  const naCarteira = new Set(posicoes(db.ops, {}).filter(p => !p.encerrado).map(p => p.ticker));
+  const ordem = db.dash.map((a, i) => [a, i]).sort(([x], [y]) => naCarteira.has(y.ticker) - naCarteira.has(x.ticker) || x.ticker.localeCompare(y.ticker));
   const marca = (v, txt, sel) => `<label${v === '*' ? '' : ' data-t'}><input type="checkbox" value="${esc(v)}"${sel ? ' checked' : ''}>${esc(txt)}</label>`;
   $('wBuscaLista').innerHTML = marca('*', 'Todos', !dashFiltro.size) +
-    db.dash.map(a => marca(a.ticker, a.nome ? `${a.ticker} · ${nomeCurto(a.nome)}` : a.ticker, dashFiltro.has(a.ticker))).join('');
+    ordem.map(([a]) => marca(a.ticker, a.nome ? `${a.ticker} · ${nomeCurto(a.nome)}` : a.ticker, dashFiltro.has(a.ticker))).join('');
   filtraBusca();
   $('wBuscaResumo').textContent = 'Procurar: ' + (dashFiltro.size ? [...dashFiltro].join(', ') : 'Todos');
-  const mostrar = db.dash.map((a, i) => [a, i]).filter(([a]) => !dashFiltro.size || dashFiltro.has(a.ticker));
+  const mostrar = ordem.filter(([a]) => !dashFiltro.size || dashFiltro.has(a.ticker));
   $('wQuando').textContent = db.dashEm ? 'Atualizado em ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
     '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th></tr>' +
