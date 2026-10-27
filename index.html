@@ -1480,8 +1480,7 @@ async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
       const a = db.dash.find(x => x.ticker === t); if (!a) continue; // excluído enquanto atualizava
       Object.assign(a, { nome: q.longName || q.shortName || a.nome, preco: q.regularMarketPrice,
         dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100,
-        // fechamento de cada pregão do mês corrente (janela do botão i)
-        dias: (q.historicalDataPrice || []).filter(h => h.close != null).map(h => [diaBR(h.date), h.close]).filter(([d]) => d >= hoje().slice(0, 8) + '01') },
+        dias: diasDoMes(q.historicalDataPrice || []) },
         variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
     } catch (err) { erros.push(`${t} (${err.message})`); }
   }
@@ -1489,13 +1488,22 @@ async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
   salvar(); $('wAtualizar').disabled = false; renderDash();
   $('wErro').textContent = erros.length ? 'Não foi possível atualizar: ' + erros.join(', ') + '.' : '';
 }
+// fechamentos [dia, valor] do mês corrente + o último do mês anterior (base do dia 1º), para a janela do botão i
+function diasDoMes(hist) {
+  const h = hist.filter(x => x.close != null).map(x => [diaBR(x.date), x.close]);
+  const i = h.findIndex(([d]) => d >= hoje().slice(0, 8) + '01');
+  return i < 0 ? [] : h.slice(Math.max(0, i - 1));
+}
 // botão i: nome do ativo + fechamento de cada dia do mês corrente, do mais recente para o mais antigo
 async function janelaAtivo(a) {
-  const dias = (a.dias || []).filter(([d]) => d >= hoje().slice(0, 8) + '01').reverse(); // de um mês anterior não vale
+  const todos = a.dias || [], dia1 = hoje().slice(0, 8) + '01';
+  // cada dia comparado com o pregão anterior (o do dia 1º, com o último do mês anterior)
+  const dias = todos.map(([d, v], i) => [d, v, i ? v - todos[i - 1][1] : null]).filter(([d]) => d >= dia1).reverse();
   await modal({ titulo: a.ticker, ok: 'Fechar', texto: a.nome ? nomeCurto(a.nome) : 'Nome ainda não carregado.',
     html: !dias.length ? '<p class="mut">Sem cotações deste mês ainda: toque em Atualizar cotações.</p>' :
       '<table class="compacto" style="width:100%"><tr><th style="text-align:left">Dia</th><th>Atual R$</th></tr>' +
-      dias.map(([d, v]) => `<tr><td style="text-align:left">${d.slice(8)}/${d.slice(5, 7)}/${d.slice(0, 4)}</td><td>${reais(v)}</td></tr>`).join('') + '</table>' });
+      dias.map(([d, v, dif]) => `<tr><td style="text-align:left">${d.slice(8)}/${d.slice(5, 7)}/${d.slice(0, 4)}</td>
+        <td class="${dif > 0 ? 'up' : dif < 0 ? 'dn' : ''}">${reais(v)}${dif > 0 ? '<small> ▲</small>' : dif < 0 ? '<small> ▼</small>' : ''}</td></tr>`).join('') + '</table>' });
   fecharModal();
 }
 $('wAtualizar').onclick = () => atualizarDash();
