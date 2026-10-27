@@ -127,8 +127,7 @@ button.exp { width:100%; margin-bottom:10px; }
 button.perigo { background:transparent; color:var(--dn); border:1px solid var(--dn); }
 #ops tr[data-id] { cursor:pointer; }
 #tab-dash .rolagem { max-height:none; } /* Dash.: a página rola, não a tabela (a barra vertical cortava o Mês %) */
-#wTabela { width:auto; } /* colunas do tamanho do conteúdo + o mesmo espaço fixo antes de cada valor */
-#wTabela tr > :not(:first-child) { padding-left:6px; }
+#wTabela tr:first-child th:first-child { width:1%; white-space:nowrap; } /* coluna Ativo só do tamanho do conteúdo: a sobra vai para as colunas de valor */
 #ops tr.sel td, #aLista tr.sel td, #wTabela tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
 #mdTexto { white-space:pre-line; }
 #ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
