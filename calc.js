@@ -108,6 +108,21 @@ function tendencia(vals) {
     : (vals[i - 1] != null && v > vals[i - 1]) || v === max ? 'sobe' : 'desce');
 }
 
+// Aba Compar.: último encerramento de cada ativo (a venda que zerou a posição) e o preço médio das vendas desse dia.
+// Ativo zerado mais de uma vez aparece uma vez só, com o último encerramento (mesmo que hoje esteja recomprado).
+// Devolve [{ticker, data, preco}] do encerramento mais antigo para o mais recente.
+function encerramentos(ops) {
+  const qtd = {}, ult = {};
+  [...ops].sort((a, b) => a.data.localeCompare(b.data)).forEach(o => {
+    qtd[o.ticker] = (qtd[o.ticker] || 0) + (o.tipo === 'C' ? o.qtd : -o.qtd);
+    if (o.tipo !== 'V' || qtd[o.ticker] !== 0) return;
+    const vendas = ops.filter(v => v.ticker === o.ticker && v.tipo === 'V' && v.data === o.data);
+    const q = vendas.reduce((s, v) => s + v.qtd, 0);
+    ult[o.ticker] = { ticker: o.ticker, data: o.data, preco: vendas.reduce((s, v) => s + v.qtd * v.preco, 0) / q };
+  });
+  return Object.values(ult).sort((a, b) => a.data.localeCompare(b.data) || a.ticker.localeCompare(b.ticker));
+}
+
 // Resultado do dia de um conjunto de ativos (Resumo, Carteira e Diário): para cada ativo, lucro agora − lucro do
 // registro anterior, mas só se ele estava em carteira nesse registro (vivoAntes); ativo comprado depois (ou recomprado
 // depois de zerado) conta o lucro desde a compra. Ativo sem registro agora (vendido antes) não entra.
@@ -187,5 +202,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

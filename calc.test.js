@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -116,6 +116,16 @@ perto(rd.r, 10 + 5 + 2); perto(rd.base, 100 + 100 + 50); perto(rd.p, 17 / 250);
 perto(resultadoDia({ A: [230, 200] }, { A: [100, 100] }, () => true).r, 30); // comprou mais 100 hoje: lucro 30 − 0
 perto(resultadoDia({ A: [230, 200] }, { A: [100, 100] }, () => true).base, 200); // valor de ontem + 100 novos
 assert.strictEqual(resultadoDia({}, { A: [1, 1] }, () => true), null);
+
+// Encerramentos: DISB34 zerado em 06/10 e recomprado depois continua listado (06/10); X zerado duas vezes → só a última,
+// com o preço médio das duas vendas do dia; Y com venda parcial (não zerou) fica de fora
+const enc = encerramentos([...ops, { data: '2026-10-27', ticker: 'DISB34', tipo: 'C', qtd: 10, preco: 39 },
+  { data: '2026-01-01', ticker: 'X', tipo: 'C', qtd: 10, preco: 5 }, { data: '2026-02-01', ticker: 'X', tipo: 'V', qtd: 10, preco: 6 },
+  { data: '2026-03-01', ticker: 'X', tipo: 'C', qtd: 10, preco: 7 }, { data: '2026-04-01', ticker: 'X', tipo: 'V', qtd: 4, preco: 8 },
+  { data: '2026-04-01', ticker: 'X', tipo: 'V', qtd: 6, preco: 10 },
+  { data: '2026-01-01', ticker: 'Y', tipo: 'C', qtd: 10, preco: 5 }, { data: '2026-02-01', ticker: 'Y', tipo: 'V', qtd: 4, preco: 6 }]);
+assert.deepStrictEqual(enc.map(e => [e.ticker, e.data]), [['X', '2026-04-01'], ['DISB34', '2026-10-06']]);
+perto(enc[0].preco, (4 * 8 + 6 * 10) / 10); perto(enc[1].preco, 34.412);
 
 // Senha: confere a certa, recusa a errada; código de recuperação no formato XXXX-XXXX-XXXX
 (async () => {
