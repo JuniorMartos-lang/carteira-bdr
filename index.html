@@ -78,7 +78,7 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
 #hFoto { width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.7); flex:none; }
-#hIndices { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-left:auto; }
+#hIndices { display:grid; grid-template-columns:auto auto; justify-content:end; justify-items:end; gap:2px 12px; font-size:12px; margin-left:auto; } /* 2 colunas: IBOV|Dólar, Dow Jones|S&P 500, Nasdaq */
 #hIndices .iup { color:#bbf7d0; } #hIndices .idn { color:#fecaca; }
 :where(:root[data-theme=dark]) #hIndices .iup { color:#14532d; } :where(:root[data-theme=dark]) #hIndices .idn { color:#7f1d1d; }
 /* um cartão por tipo (Ações / Fundos); se só houver um tipo, ocupa a largura toda */
@@ -817,7 +817,8 @@ function render() {
   const ind = (nome, x, fmt) => !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
     <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`;
   $('hIndices').innerHTML = ind('IBOV', db.indices.ibov, v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })) +
-    ind('Dólar', db.indices.usd, v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 }));
+    ind('Dólar', db.indices.usd, v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 })) +
+    [['Dow Jones', 'dow'], ['S&P 500', 'sp'], ['Nasdaq', 'nasdaq']].map(([n, k]) => ind(n, db.indices[k], v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }))).join('');
   // lucro por tipo; só aparece o tipo que tem posição em aberto
   $('hClasses').innerHTML = [['A', 'Ações'], ['F', 'Fundos']].map(([c, nome]) => {
     const ab = abertos.filter(p => p.classe === c);
@@ -1224,6 +1225,9 @@ async function atualizar() {
     }
     await brapi('^BVSP').then(q => db.indices.ibov = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent })
       .catch(e => erros.push('IBOV: ' + e.message));
+    // índices dos EUA no topo; falha aqui não conta como erro de cotação (fica o último valor)
+    for (const [k, t] of [['dow', '^DJI'], ['sp', '^GSPC'], ['nasdaq', '^IXIC']])
+      await brapi(t).then(q => db.indices[k] = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent }).catch(() => {});
   };
   await Promise.all([ativos(),
   // dólar comercial pela AwesomeAPI (grátis, sem token)
