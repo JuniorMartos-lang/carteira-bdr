@@ -488,7 +488,11 @@ label.check input { width:auto; margin:0; }
           <li>Os ativos cadastrados vão no backup.</li>
         </ul>
     </div>
-    <div class="row" style="align-items:center; gap:8px"><button type="button" id="wAtualizar">Atualizar cotações</button><span class="mut" id="wQuando"></span></div>
+    <div class="row" style="align-items:flex-start; gap:8px"><button type="button" id="wAtualizar" style="flex:none">Atualizar cotações</button>
+      <details class="combo" id="wBusca" style="flex:1; min-width:0"><summary id="wBuscaResumo">Procurar: Todos</summary>
+        <input id="wBuscaTxt" type="search" placeholder="Nome ou código do ativo" autocomplete="off" aria-label="Procurar ativo" style="margin-top:4px">
+        <div class="lista" id="wBuscaLista"></div></details></div>
+    <div class="mut" id="wQuando" style="margin-top:4px"></div>
     <div class="msg dn" id="wErro"></div>
     <div class="card rolagem"><table id="wTabela" class="compacto"></table></div>
     <form class="card" id="wForm">
@@ -1436,12 +1440,24 @@ $('aExcluir').onclick = async () => {
 // --- Dash.: lista de acompanhamento (não é carteira; cotações do brapi, um ativo por vez como no resto do app) ---
 const DASH_MAX = 50;
 let dashEditando = null; // ticker carregado da lista
+const dashFiltro = new Set(); // procura: ativos marcados (vazio = todos)
+const semAcento = x => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// esconde da lista de marcar o que não tem o texto digitado (no código ou no nome)
+const filtraBusca = () => { const q = semAcento($('wBuscaTxt').value.trim());
+  $('wBuscaLista').querySelectorAll('label[data-t]').forEach(l => l.hidden = !!q && !semAcento(l.textContent).includes(q)); };
 const nomesAbertos = new Set(); // linhas com o nome do ativo à mostra (botão i)
 function renderDash() {
+  [...dashFiltro].forEach(t => { if (!db.dash.some(a => a.ticker === t)) dashFiltro.delete(t); }); // excluído do Dash.
+  const marca = (v, txt, sel) => `<label${v === '*' ? '' : ' data-t'}><input type="checkbox" value="${esc(v)}"${sel ? ' checked' : ''}>${esc(txt)}</label>`;
+  $('wBuscaLista').innerHTML = marca('*', 'Todos', !dashFiltro.size) +
+    db.dash.map(a => marca(a.ticker, a.nome ? `${a.ticker} · ${nomeCurto(a.nome)}` : a.ticker, dashFiltro.has(a.ticker))).join('');
+  filtraBusca();
+  $('wBuscaResumo').textContent = 'Procurar: ' + (dashFiltro.size ? [...dashFiltro].join(', ') : 'Todos');
+  const mostrar = db.dash.map((a, i) => [a, i]).filter(([a]) => !dashFiltro.size || dashFiltro.has(a.ticker));
   $('wQuando').textContent = db.dashEm ? 'Atualizado em ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
     '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th></tr>' +
-    db.dash.map((a, i) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
+    mostrar.map(([a, i]) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
       <td><span style="display:inline-flex; align-items:center; gap:4px"><button type="button" class="info" data-nome="${i}" aria-expanded="${nomesAbertos.has(a.ticker)}" aria-label="Nome de ${esc(a.ticker)}">i</button><b>${esc(a.ticker)}</b></span></td>
       <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes].map(v => `<td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td>`).join('')}</tr>
       <tr${nomesAbertos.has(a.ticker) ? '' : ' hidden'}><td colspan="5" class="mut" style="white-space:normal; text-align:left">${esc(a.nome ? nomeCurto(a.nome) : 'Nome ainda não carregado: toque em Atualizar cotações.')}</td></tr>`).join('');
@@ -1472,6 +1488,12 @@ async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
   $('wErro').textContent = erros.length ? 'Não foi possível atualizar: ' + erros.join(', ') + '.' : '';
 }
 $('wAtualizar').onclick = () => atualizarDash();
+$('wBuscaTxt').oninput = filtraBusca;
+$('wBusca').ontoggle = () => { if ($('wBusca').open) $('wBuscaTxt').focus(); else { $('wBuscaTxt').value = ''; filtraBusca(); } };
+$('wBuscaLista').onchange = e => { // marcar "Todos" limpa a procura; marcar um ativo desmarca "Todos"
+  const v = e.target.value; if (v === '*') dashFiltro.clear(); else if (e.target.checked) dashFiltro.add(v); else dashFiltro.delete(v);
+  renderDash();
+};
 $('wTicker').oninput = e => { const i = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(i, i); };
 $('wLimpar').onclick = () => { limparDash(); renderDash(); };
 $('wForm').onsubmit = async e => {
