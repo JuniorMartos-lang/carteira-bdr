@@ -1685,10 +1685,16 @@ function conteudoBackup(d) {
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return; // limpa já: escolher o mesmo arquivo de novo funciona mesmo após cancelar
   try {
-    let d = JSON.parse(await f.text());
-    if (d.carteiraBdrProtegido) { d = await abrirBackupProtegido(d); if (!d) return; }
-    const ok = Array.isArray(d.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && [undefined, 'A', 'F'].includes(o.classe) && o.qtd > 0 && o.preco > 0);
-    if (!ok) throw new Error('arquivo não parece um backup deste app');
+    // arquivo que não é backup deste app (não é JSON, ou não tem lançamentos válidos): avisa e cancela
+    const invalido = async () => {
+      await modal({ titulo: 'Arquivo inválido', ok: 'OK',
+        texto: `Este Arquivo não é um Arquivo de Backup Válido, escolha um correto!\nO processo será cancelado.\n\nArquivo: ${f.name}` });
+      fecharModal();
+    };
+    let d; try { d = JSON.parse(await f.text()); } catch { return invalido(); }
+    if (d?.carteiraBdrProtegido) { d = await abrirBackupProtegido(d); if (!d) return; }
+    const ok = Array.isArray(d?.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && [undefined, 'A', 'F'].includes(o.classe) && o.qtd > 0 && o.preco > 0);
+    if (!ok) return invalido();
     const sim = await modal({ titulo: 'Substituir os dados?', ok: 'Sim, restaurar', cancelar: 'Cancelar',
       texto: `Todos os dados atuais deste celular serão substituídos pelos do backup.\n\nArquivo: ${f.name}\n\n${conteudoBackup(d)}` });
     fecharModal(); if (!sim) return;
