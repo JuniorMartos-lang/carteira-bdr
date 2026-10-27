@@ -78,7 +78,15 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 [hidden] { display:none !important; }
 #hFoto { width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.7); flex:none; }
-#hIndices { display:grid; grid-template-columns:auto auto; justify-content:end; justify-items:end; gap:2px 12px; font-size:12px; margin-left:auto; } /* 2 colunas: IBOV|Dólar, Dow Jones|S&P 500, Nasdaq */
+/* letreiro: as cotações correm numa linha só (conteúdo repetido 2x; anda metade e recomeça sem emenda); tocar pausa */
+#hIndices { flex:1; min-width:0; overflow:hidden; white-space:nowrap; font-size:12px; margin-left:auto;
+  mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); -webkit-mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+#hIndices .faixa { display:inline-block; animation:letreiro 30s linear infinite; }
+#hIndices .faixa > span > span { margin-right:18px; }
+#hIndices:active .faixa { animation-play-state:paused; }
+@keyframes letreiro { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+/* quem pediu menos movimento no celular: sem animação, uma vez só, rolando com o dedo */
+@media (prefers-reduced-motion: reduce) { #hIndices { overflow-x:auto; } #hIndices .faixa { animation:none; } #hIndices .copia { display:none; } }
 #hIndices .iup { color:#bbf7d0; } #hIndices .idn { color:#fecaca; }
 :where(:root[data-theme=dark]) #hIndices .iup { color:#14532d; } :where(:root[data-theme=dark]) #hIndices .idn { color:#7f1d1d; }
 /* um cartão por tipo (Ações / Fundos); se só houver um tipo, ocupa a largura toda */
@@ -816,9 +824,13 @@ function render() {
   $('hInv').textContent = mostrarValores ? brl(inv) : 'R$ ••••••'; $('hAtual').textContent = mostrarValores ? brl(valor) : 'R$ ••••••';
   const ind = (nome, x, fmt) => !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
     <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`;
-  $('hIndices').innerHTML = ind('IBOV', db.indices.ibov, v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })) +
+  const itens = ind('IBOV', db.indices.ibov, v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })) +
     ind('Dólar', db.indices.usd, v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 })) +
     [['Dow Jones', 'dow'], ['S&P 500', 'sp'], ['Nasdaq', 'nasdaq']].map(([n, k]) => ind(n, db.indices[k], v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }))).join('');
+  if ($('hIndices').dataset.itens !== itens) { // só redesenha se mudou: senão o letreiro voltaria ao começo a cada render
+    $('hIndices').dataset.itens = itens;
+    $('hIndices').innerHTML = !itens ? '' : `<div class="faixa"><span>${itens}</span><span class="copia" aria-hidden="true">${itens}</span></div>`;
+  }
   // lucro por tipo; só aparece o tipo que tem posição em aberto
   $('hClasses').innerHTML = [['A', 'Ações'], ['F', 'Fundos']].map(([c, nome]) => {
     const ab = abertos.filter(p => p.classe === c);
