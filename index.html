@@ -1641,7 +1641,12 @@ $('cToken').value = db.token;
 document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
   const q = $(b.getAttribute('aria-controls')), abre = q.hidden; q.hidden = !abre; b.setAttribute('aria-expanded', abre);
 });
-$('btnToken').onclick = () => { db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = ''; alert('Token salvo.'); };
+$('btnToken').onclick = async () => {
+  db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = '';
+  await modal({ titulo: db.token ? 'Token Gravado com Sucesso' : 'Token removido', ok: 'OK',
+    texto: db.token ? 'Toque em Atualizar cotações (no Resumo ou na Carteira) para conferir se as cotações chegam.' : 'Sem token, as cotações não são atualizadas.' });
+  fecharModal();
+};
 // Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
 async function fazerBackup() {
   const dados = db; // vai tudo, inclusive o token do brapi (a pedido): restaurar num celular novo já traz as cotações
