@@ -458,7 +458,22 @@ label.check input { width:auto; margin:0; }
     <h2 style="margin-top:4px">Comparar encerrados</h2>
     <div class="row" style="align-items:center; gap:8px"><button type="button" id="kAtualizar" style="flex:none">Atualizar cotações</button><span class="mut" id="kQuando"></span></div>
     <div class="card">
-      <label>Ativos</label>
+      <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><label>Ativos</label>
+        <button type="button" class="info" aria-expanded="false" aria-controls="kInfo" aria-label="De onde vem a cotação atual">i</button></div>
+      <div id="kInfo" class="ajuda" hidden>
+        <b>Cotação atual (coluna Atual R$)</b>
+        <ul>
+          <li>A cotação de agora de cada ativo encerrado vem da aba <b>Dash.</b>, que é atualizada sozinha no horário do pregão e pelo botão <b>Atualizar cotações</b> (desta aba ou do Dash.).</li>
+          <li>Por isso, o ativo encerrado precisa estar <b>cadastrado no Dash.</b> Se não estiver, a coluna Atual R$ e as diferenças aparecem com <b>"—"</b>.</li>
+          <li>Para resolver: vá na aba Dash., digite o código do ativo no cadastro (abaixo da tabela), toque em <b>Adicionar</b> e volte aqui.</li>
+          <li>Exceção: um ativo encerrado e depois recomprado (de novo na carteira) usa a cotação da carteira, mesmo fora do Dash.</li>
+        </ul>
+        <b>Filtros</b>
+        <ul>
+          <li><b>Ativos</b>: marque um, vários ou <b>Todos</b>.</li>
+          <li><b>Data inicial e final</b>: filtram pela data do encerramento; digite só os números (a partir de 01/07/2023). O botão <b>Todos</b> limpa as datas.</li>
+        </ul>
+      </div>
       <details class="combo"><summary id="kResumo">Todos</summary><div id="kAtivos" class="lista"></div></details>
       <div class="datasTodos">
         <div><label for="kIni">Data inicial</label><input id="kIni" class="dataCampo" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>
