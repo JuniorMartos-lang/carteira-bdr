@@ -482,7 +482,7 @@ label.check input { width:auto; margin:0; }
         </ul>
         <b>Uso</b>
         <ul>
-          <li>Toque no <b>i</b> ao lado do código para ver o nome do ativo.</li>
+          <li>Toque no <b>i</b> ao lado do código para abrir uma janela com o nome do ativo e o fechamento de cada dia do mês corrente, do dia mais recente para o dia 1º (carregado ao tocar em Atualizar cotações).</li>
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
           <li>O botão <b>Atualizar cotações</b> desta aba busca só os ativos do Dashboard.</li>
           <li>Os ativos cadastrados vão no backup.</li>
@@ -670,6 +670,7 @@ label.check input { width:auto; margin:0; }
   <div class="card" style="width:100%; max-width:360px">
     <b id="mdTitulo" style="font-size:17px"></b>
     <p id="mdTexto"></p>
+    <div id="mdHtml" style="max-height:55vh; overflow:auto"></div>
     <div id="mdSenhaBox" hidden>
       <input id="mdSenha" type="password" autocomplete="off" aria-label="Senha do backup">
       <label class="check"><input type="checkbox" class="verSenha" id="mdVer"> Mostrar senha</label>
@@ -1445,7 +1446,6 @@ const semAcento = x => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 // esconde da lista de marcar o que não tem o texto digitado (no código ou no nome)
 const filtraBusca = () => { const q = semAcento($('wBuscaTxt').value.trim());
   $('wBuscaLista').querySelectorAll('label[data-t]').forEach(l => l.hidden = !!q && !semAcento(l.textContent).includes(q)); };
-const nomesAbertos = new Set(); // linhas com o nome do ativo à mostra (botão i)
 function renderDash() {
   [...dashFiltro].forEach(t => { if (!db.dash.some(a => a.ticker === t)) dashFiltro.delete(t); }); // excluído do Dash.
   const marca = (v, txt, sel) => `<label${v === '*' ? '' : ' data-t'}><input type="checkbox" value="${esc(v)}"${sel ? ' checked' : ''}>${esc(txt)}</label>`;
@@ -1458,9 +1458,9 @@ function renderDash() {
   $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
     '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th></tr>' +
     mostrar.map(([a, i]) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
-      <td><span style="display:inline-flex; align-items:center; gap:4px"><button type="button" class="info" data-nome="${i}" aria-expanded="${nomesAbertos.has(a.ticker)}" aria-label="Nome de ${esc(a.ticker)}">i</button><b>${esc(a.ticker)}</b></span></td>
+      <td><span style="display:inline-flex; align-items:center; gap:4px"><button type="button" class="info" data-nome="${i}" aria-label="Nome e cotações do mês de ${esc(a.ticker)}">i</button><b>${esc(a.ticker)}</b></span></td>
       <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes].map(v => `<td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td>`).join('')}</tr>
-      <tr${nomesAbertos.has(a.ticker) ? '' : ' hidden'}><td colspan="5" class="mut" style="white-space:normal; text-align:left">${esc(a.nome ? nomeCurto(a.nome) : 'Nome ainda não carregado: toque em Atualizar cotações.')}</td></tr>`).join('');
+`).join('');
 }
 function limparDash() {
   dashEditando = null; $('wTicker').value = ''; $('wMsg').textContent = '';
@@ -1479,13 +1479,24 @@ async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
       if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
       const a = db.dash.find(x => x.ticker === t); if (!a) continue; // excluído enquanto atualizava
       Object.assign(a, { nome: q.longName || q.shortName || a.nome, preco: q.regularMarketPrice,
-        dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100 },
+        dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100,
+        // fechamento de cada pregão do mês corrente (janela do botão i)
+        dias: (q.historicalDataPrice || []).filter(h => h.close != null).map(h => [diaBR(h.date), h.close]).filter(([d]) => d >= hoje().slice(0, 8) + '01') },
         variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
     } catch (err) { erros.push(`${t} (${err.message})`); }
   }
   if (erros.length < tks.length) db.dashEm = new Date().toISOString();
   salvar(); $('wAtualizar').disabled = false; renderDash();
   $('wErro').textContent = erros.length ? 'Não foi possível atualizar: ' + erros.join(', ') + '.' : '';
+}
+// botão i: nome do ativo + fechamento de cada dia do mês corrente, do mais recente para o mais antigo
+async function janelaAtivo(a) {
+  const dias = (a.dias || []).filter(([d]) => d >= hoje().slice(0, 8) + '01').reverse(); // de um mês anterior não vale
+  await modal({ titulo: a.ticker, ok: 'Fechar', texto: a.nome ? nomeCurto(a.nome) : 'Nome ainda não carregado.',
+    html: !dias.length ? '<p class="mut">Sem cotações deste mês ainda: toque em Atualizar cotações.</p>' :
+      '<table class="compacto" style="width:100%"><tr><th style="text-align:left">Dia</th><th>Atual R$</th></tr>' +
+      dias.map(([d, v]) => `<tr><td style="text-align:left">${d.slice(8)}/${d.slice(5, 7)}/${d.slice(0, 4)}</td><td>${reais(v)}</td></tr>`).join('') + '</table>' });
+  fecharModal();
 }
 $('wAtualizar').onclick = () => atualizarDash();
 $('wBuscaTxt').oninput = filtraBusca;
@@ -1516,7 +1527,7 @@ $('wForm').onsubmit = async e => {
 };
 $('wTabela').onclick = e => {
   const b = e.target.closest('button[data-nome]');
-  if (b) { const t = db.dash[b.dataset.nome].ticker; nomesAbertos.has(t) ? nomesAbertos.delete(t) : nomesAbertos.add(t); return renderDash(); }
+  if (b) return janelaAtivo(db.dash[b.dataset.nome]);
   const a = db.dash[e.target.closest('tr[data-i]')?.dataset.i]; if (!a) return;
   dashEditando = a.ticker; $('wTicker').value = a.ticker; $('wSalvar').textContent = 'Alterar'; $('wExcluir').hidden = false;
   $('wMsg').className = 'msg'; $('wMsg').textContent = 'Ativo carregado: altere o código e toque em Alterar, ou toque em Excluir.';
@@ -1622,8 +1633,8 @@ const novaRuim = (a, b) => a.length < 8 ? 'A senha precisa ter pelo menos 8 cara
 async function definirChaveBackup(senha) { const sal = b64(aleatorio(16)); trava.backup = { sal, chave: await hashSenha(senha, sal) }; }
 
 // Janela de aviso. Devolve true (botão principal) ou false (Cancelar); fica aberta até fecharModal().
-function modal({ titulo, texto, senha = false, ok, cancelar = '', aviso = '' }) {
-  $('mdTitulo').textContent = titulo; $('mdTexto').textContent = texto; $('mdMsg').textContent = aviso;
+function modal({ titulo, texto, senha = false, ok, cancelar = '', aviso = '', html = '' }) {
+  $('mdTitulo').textContent = titulo; $('mdTexto').textContent = texto; $('mdMsg').textContent = aviso; $('mdHtml').innerHTML = html;
   $('mdSenhaBox').hidden = !senha; $('mdSenha').value = ''; $('mdSenha').type = 'password'; $('mdVer').checked = false;
   $('mdOk').textContent = ok; $('mdCancelar').textContent = cancelar; $('mdCancelar').hidden = !cancelar;
   $('modal').hidden = false; if (senha) $('mdSenha').focus();
