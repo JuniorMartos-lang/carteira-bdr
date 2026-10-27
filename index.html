@@ -465,11 +465,11 @@ label.check input { width:auto; margin:0; }
     <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><h2 style="margin:4px 0 8px">Dashboard de Ativos</h2>
       <button type="button" class="info" aria-expanded="false" aria-controls="wInfo" aria-label="Como funciona o Dashboard de Ativos">i</button></div>
     <div id="wInfo" class="ajuda" hidden>
-        <b>Limite de 20 ativos</b>
+        <b>Limite de 50 ativos</b>
         <ul>
           <li>O plano grátis do brapi aceita só um ativo por consulta, então cada atualização faz uma consulta por ativo, uma depois da outra.</li>
-          <li>Com 20 ativos, a atualização leva alguns segundos e usa a cota mensal do seu token (a mesma usada pela Carteira).</li>
-          <li>Mais de 20 deixaria a atualização lenta e gastaria a cota mais rápido.</li>
+          <li>Com 50 ativos, a atualização faz 50 consultas seguidas: pode levar perto de um minuto e usa a cota mensal do seu token (a mesma usada pela Carteira).</li>
+          <li>Mais de 50 deixaria a atualização lenta demais e gastaria a cota mais rápido.</li>
         </ul>
         <b>Colunas</b>
         <ul>
@@ -722,7 +722,7 @@ const INICIO_NA = '2026-10-27';
 let db;
 try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
 // Dash.: lista inicial na primeira vez que o app abre com a aba (depois vale o que o usuário cadastrar ou excluir)
-const DASH_INICIAL = ['SPCX34', 'TSLA34', 'AAPL34', 'AVGO34', 'LILY34', 'CATP34', 'GOGL34', 'AMZO34', 'NVDC34', 'JPMC34', 'WALM34', 'VISA34', 'MUTC34', 'I1SR34', 'DISB34'];
+const DASH_INICIAL = [];
 if (!db.dashIniciado) { if (!db.dash.length) db.dash = DASH_INICIAL.map(ticker => ({ ticker })); db.dashIniciado = true; }
 // o registro de hoje no histórico acompanha o patrimônio não aplicado (de hoje em diante, nunca para trás)
 const salvar = () => {
@@ -1432,7 +1432,7 @@ $('aExcluir').onclick = async () => {
   fecharModal();
 };
 // --- Dash.: lista de acompanhamento (não é carteira; cotações do brapi, um ativo por vez como no resto do app) ---
-const DASH_MAX = 20;
+const DASH_MAX = 50;
 let dashEditando = null; // ticker carregado da lista
 const nomesAbertos = new Set(); // linhas com o nome do ativo à mostra (botão i)
 function renderDash() {
