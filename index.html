@@ -127,7 +127,7 @@ button.exp { width:100%; margin-bottom:10px; }
 button.perigo { background:transparent; color:var(--dn); border:1px solid var(--dn); }
 #ops tr[data-id] { cursor:pointer; }
 #tab-dash .rolagem { max-height:none; }
-#wTabela tr:first-child th:first-child { width:1%; white-space:nowrap; } /* coluna Ativo só do tamanho do conteúdo: sem a sobra que ficava antes de Atual R$ */ /* Dash.: a página rola, não a tabela (a barra vertical cortava o Mês %) */
+#wTabela { width:auto; } /* colunas do tamanho do conteúdo: sem sobra entre Ativo, Atual e os % */ /* Dash.: a página rola, não a tabela (a barra vertical cortava o Mês %) */
 #ops tr.sel td, #aLista tr.sel td, #wTabela tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
 #mdTexto { white-space:pre-line; }
 #ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
