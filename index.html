@@ -720,6 +720,9 @@ const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, ind
 const INICIO_NA = '2026-10-27';
 let db;
 try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
+// Dash.: lista inicial na primeira vez que o app abre com a aba (depois vale o que o usuário cadastrar ou excluir)
+const DASH_INICIAL = ['SPCX34', 'TSLA34', 'AAPL34', 'AVGO34', 'LILY34', 'CATP34', 'GOGL34', 'AMZO34', 'NVDC34', 'JPMC34', 'WALM34', 'VISA34', 'MUTC34', 'I1SR34', 'DISB34'];
+if (!db.dashIniciado) { if (!db.dash.length) db.dash = DASH_INICIAL.map(ticker => ({ ticker })); db.dashIniciado = true; }
 // o registro de hoje no histórico acompanha o patrimônio não aplicado (de hoje em diante, nunca para trás)
 const salvar = () => {
   const r = db.historico.find(x => x.data === hoje()); if (r && r.data >= INICIO_NA) r.na = naoAplicado();
@@ -1574,7 +1577,7 @@ $('fileImp').onchange = async e => {
     const ok = Array.isArray(d.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && [undefined, 'A', 'F'].includes(o.classe) && o.qtd > 0 && o.preco > 0);
     if (!ok) throw new Error('arquivo não parece um backup deste app');
     if (db.ops.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
-    db = { ...vazio, ...d, token: db.token };
+    db = { ...vazio, ...d, token: db.token, ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
     salvar(); render();
     $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.ops.length} lançamentos.`;
     await modal({ titulo: 'Backup restaurado com sucesso', ok: 'OK',
