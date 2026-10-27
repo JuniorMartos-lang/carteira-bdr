@@ -722,7 +722,8 @@ const INICIO_NA = '2026-10-27';
 let db;
 try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
 // Dash.: lista inicial na primeira vez que o app abre com a aba (depois vale o que o usuário cadastrar ou excluir)
-const DASH_INICIAL = [];
+const DASH_INICIAL = [ // lista 1 + lista 2 do usuário (BOAC34 repetido entra uma vez)
+  'TSLA34', 'AMZO34', 'DISB34', 'AAPL34', 'LILY34', 'GOGL34', 'SPCX34', 'AVGO34', 'CATP34', 'WALM34', 'NVDC34', 'MSFT34', 'M1TA34', 'COCA34', 'MCDC34', 'JNJB34', 'BOAC34', 'IVVB11', 'NASD11', 'NFLX34', 'JPMC34', 'TMCO34', 'CHVX34', 'EXXO34', 'IBMB34', 'R1CL34', 'ABUD34', 'H1PE34', 'GPRO34', 'ITLC34', 'M1RN34', 'A1MD34', 'D1EL34'];
 if (!db.dashIniciado) { if (!db.dash.length) db.dash = DASH_INICIAL.map(ticker => ({ ticker })); db.dashIniciado = true; }
 // o registro de hoje no histórico acompanha o patrimônio não aplicado (de hoje em diante, nunca para trás)
 const salvar = () => {
