@@ -901,9 +901,9 @@ function render() {
         <div ${ehB3(p.ticker) ? '' : `data-manual="${esc(p.ticker)}" style="cursor:pointer;text-decoration:underline dotted"`}>
           <span class="mut">Cotação</span>${brl(p.preco)}</div>
         <div><span class="mut">Valor atual</span>${ocR(p.valor)}</div>
-        <div><span class="mut">Hoje</span>${dia(db.variacao[p.ticker])}</div>
-        <div><span class="mut">Dia % (posição)</span><b class="${cor(p.d.p)}">${pct(p.d.p)}</b></div>
-        <div><span class="mut">Dia R$ (posição)</span><b class="${cor(p.d.r)}">${brl(p.d.r)}</b></div>
+        <div><span class="mut">Var. dia</span>${dia(db.variacao[p.ticker])}</div>
+        <div><span class="mut">% Lucro dia</span><b class="${cor(p.d.p)}">${pct(p.d.p)}</b></div>
+        <div><span class="mut">R$ Lucro dia</span><b class="${cor(p.d.r)}">${brl(p.d.r)}</b></div>
       </div>
     </div>`).join('') || '<p class="mut">Nenhum ativo. Lance uma compra na aba Lançar ou importe um backup em Ajustes.</p>';
 
