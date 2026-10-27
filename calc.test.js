@@ -88,12 +88,16 @@ assert.deepStrictEqual(tendencia([null, null]), ['', '']);
 
 // Dash.: semana = sobre o fechamento da sexta anterior; mês = sobre o último fechamento do mês anterior
 const cd = (dia, close) => ({ date: Date.UTC(+dia.slice(0, 4), +dia.slice(5, 7) - 1, +dia.slice(8), 3) / 1000, close }); // meia-noite em Brasília
-const hv = [cd('2026-09-29', 90), cd('2026-09-30', 100), cd('2026-10-01', 105), cd('2026-10-23', 110), cd('2026-10-26', 115)];
+const hv = [cd('2026-08-31', 80), cd('2026-09-29', 90), cd('2026-09-30', 100), cd('2026-10-01', 105), cd('2026-10-23', 110), cd('2026-10-26', 115)];
 let vv = variacoes(121, hv, '2026-10-28'); // quarta
 perto(vv.semana, 121 / 110 - 1); perto(vv.mes, 121 / 100 - 1);
 vv = variacoes(121, hv, '2026-10-25'); // domingo: semana de 19 a 23/10 → base = último fechamento antes de 19/10 (01/10)
 perto(vv.mes, 0.21); perto(vv.semana, 121 / 105 - 1);
-assert.deepStrictEqual(variacoes(10, [], '2026-10-28'), { semana: null, mes: null });
+perto(vv.mesAnt, 100 / 80 - 1); // setembro inteiro: 30/09 sobre 31/08
+vv = variacoes(121, hv, '2026-10-26'); // segunda: semana anterior (19 a 23/10) = 23/10 sobre o último antes de 19/10 (01/10)
+perto(vv.semana, 110 / 105 - 1); perto(vv.mes, 0.21);
+perto(variacoes(121, hv, '2026-10-27').semana, 121 / 110 - 1); // terça: já é a semana corrente
+assert.deepStrictEqual(variacoes(10, [], '2026-10-28'), { semana: null, mes: null, mesAnt: null });
 
 // Atualização automática: dias úteis, 10h00–17h30 de Brasília (UTC-3)
 assert.ok(horarioAuto(new Date('2026-10-26T13:00:00Z')));   // seg 10h00

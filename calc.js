@@ -135,16 +135,25 @@ function horarioAuto(data = new Date()) {
 
 // Dia (AAAA-MM-DD, horário de Brasília) de um candle do brapi (date em segundos unix)
 const diaBR = seg => new Date(seg * 1000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
-// Aba Dash.: variação da semana e do mês correntes = preço atual sobre o último fechamento antes da segunda-feira
-// desta semana (semana de segunda a sexta; no sábado/domingo, a semana que acabou) e antes do dia 1º deste mês.
-// hist: historicalDataPrice do brapi [{date, close}]; hoje: 'AAAA-MM-DD'. Sem fechamento anterior: null.
+// Aba Dash.: variações sobre fechamentos (null quando falta o fechamento de base).
+// semana: preço atual sobre o último fechamento antes da segunda-feira desta semana (de segunda a sexta; no sábado e
+//   no domingo, a semana que acabou). Na segunda-feira ainda mostra a semana anterior inteira, fechada na sexta.
+// mes: preço atual sobre o último fechamento antes do dia 1º deste mês.
+// mesAnt: mês anterior inteiro = último fechamento do mês anterior sobre o último fechamento antes dele.
+// hist: historicalDataPrice do brapi [{date, close}]; hoje: 'AAAA-MM-DD'.
 function variacoes(preco, hist, hoje) {
-  const d = new Date(hoje + 'T12:00Z'), dow = d.getUTCDay();
-  d.setUTCDate(d.getUTCDate() - (dow === 0 ? 6 : dow - 1));
-  const segunda = d.toISOString().slice(0, 10), dia1 = hoje.slice(0, 8) + '01';
+  const desloca = (iso, dias) => { const x = new Date(iso + 'T12:00Z'); x.setUTCDate(x.getUTCDate() + dias); return x.toISOString().slice(0, 10); };
+  const dow = new Date(hoje + 'T12:00Z').getUTCDay();
+  const segunda = desloca(hoje, -(dow === 0 ? 6 : dow - 1)), dia1 = hoje.slice(0, 8) + '01';
+  const m = new Date(dia1 + 'T12:00Z'); m.setUTCMonth(m.getUTCMonth() - 1);
   const dias = hist.filter(h => h.close != null).map(h => [diaBR(h.date), h.close]).sort((x, y) => x[0].localeCompare(y[0]));
-  const desde = lim => { const x = dias.filter(([dd]) => dd < lim).pop(); return x ? preco / x[1] - 1 : null; };
-  return { semana: desde(segunda), mes: desde(dia1) };
+  const antes = lim => dias.filter(([dd]) => dd < lim).pop()?.[1] ?? null; // último fechamento antes do dia lim
+  const varia = (fim, ini) => fim != null && ini != null ? fim / ini - 1 : null;
+  return {
+    semana: dow === 1 ? varia(antes(segunda), antes(desloca(segunda, -7))) : varia(preco, antes(segunda)),
+    mes: varia(preco, antes(dia1)),
+    mesAnt: varia(antes(dia1), antes(m.toISOString().slice(0, 10))),
+  };
 }
 
 // --- Senha do app: guarda só o hash (PBKDF2), nunca a senha ---

@@ -220,7 +220,7 @@ label.check input { width:auto; margin:0; }
   </section>
 
   <section id="tab-resumo">
-    <div class="card" style="padding:6px 8px; overflow-x:auto"><table id="tResumo"></table></div>
+    <div class="card" style="padding:6px 8px; overflow-x:auto"><label class="check" style="margin:2px 0 6px"><input type="checkbox" id="rsAcoes"> Somente Ações</label><table id="tResumo"></table></div>
     <button class="sec exp" data-exp="resumo">Exportar para Excel</button>
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
     <h2>Patrimônio total</h2>
@@ -484,8 +484,9 @@ label.check input { width:auto; margin:0; }
         <ul>
           <li><b>Atual R$</b>: preço de agora.</li>
           <li><b>Dia %</b>: variação sobre o fechamento do pregão anterior.</li>
-          <li><b>Semana %</b>: sobre o último fechamento antes da segunda-feira desta semana (semana de segunda a sexta; no sábado e no domingo, vale a semana que acabou). Na segunda-feira fica igual ao Dia %.</li>
+          <li><b>Semana %</b>: de terça a sexta, sobre o último fechamento antes da segunda-feira desta semana (semana de segunda a sexta). Na <b>segunda-feira</b>, no sábado e no domingo, mostra a semana anterior inteira, fechada na sexta-feira.</li>
           <li><b>Mês %</b>: sobre o último fechamento do mês anterior.</li>
+          <li><b>Mês ant. %</b>: resultado do mês anterior inteiro (último fechamento do mês anterior sobre o último fechamento do mês antes dele).</li>
           <li>Em feriados, vale o último pregão que existiu. Ativo com menos de 3 meses de cotação pode ficar sem Mês % (—).</li>
         </ul>
         <b>Uso</b>
@@ -861,20 +862,26 @@ function render() {
   const comHoje = comDia.filter(p => p.d.r != null);
   const hojeR = comHoje.length ? comHoje.reduce((s, p) => s + p.d.r, 0) : null;
   const hojeP = hojeR == null ? null : hojeR / comHoje.reduce((s, p) => s + p.d.base, 0);
-  const lucroP = inv ? lucro / inv : null;
   // topo: "Hoje" = quanto a carteira subiu/caiu desde o pregão anterior (o mesmo % da linha Total do Resumo)
   $('hHoje').innerHTML = hojeP == null ? '' : `<span class="mut">Hoje:</span> <b class="${cor(hojeP)}">${seta(hojeP)}${pct(hojeP)}</b>`;
-  tabelas.resumo = !comDia.length ? null : [['Ativo', 'Hoje %', 'Hoje R$', 'Lucro R$', 'Lucro %'],
-    ...comDia.map((p, i) => [`${i + 1}º ${p.ticker}`, xP(p.d.p), xR(p.d.r), xR(p.lucro), xP(p.pct)]),
-    ['Total', xP(hojeP), xR(hojeR), xR(lucro), xP(lucroP)]];
+  // tabela do Resumo: "Somente Ações" tira o que não é ação (fundos) e refaz a linha Total só com o que ficou;
+  // o topo do app continua com a carteira inteira
+  const tab = $('rsAcoes').checked ? comDia.filter(p => p.classe === 'A') : comDia;
+  const tHoje = tab.filter(p => p.d.r != null), tInv = tab.reduce((s, p) => s + p.investido, 0);
+  const tHojeR = tHoje.length ? tHoje.reduce((s, p) => s + p.d.r, 0) : null;
+  const tHojeP = tHojeR == null ? null : tHojeR / tHoje.reduce((s, p) => s + p.d.base, 0);
+  const tLucro = tab.filter(p => p.valor != null).reduce((s, p) => s + p.lucro, 0), tLucroP = tInv ? tLucro / tInv : null;
+  tabelas.resumo = !tab.length ? null : [['Ativo', 'Hoje %', 'Hoje R$', 'Lucro R$', 'Lucro %'],
+    ...tab.map((p, i) => [`${i + 1}º ${p.ticker}`, xP(p.d.p), xR(p.d.r), xR(p.lucro), xP(p.pct)]),
+    ['Total', xP(tHojeP), xR(tHojeR), xR(tLucro), xP(tLucroP)]];
   // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
-  $('tResumo').innerHTML = !comDia.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
+  $('tResumo').innerHTML = !tab.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
     '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro R$ e %</th></tr>' +
-    comDia.map((p, i) => `<tr><td><b title="${esc(p.ticker)}">${i + 1}º ${esc(p.ticker.slice(0, 10).trimEnd())}</b></td>
+    tab.map((p, i) => `<tr><td><b title="${esc(p.ticker)}">${i + 1}º ${esc(p.ticker.slice(0, 10).trimEnd())}</b></td>
       <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${reais(p.d.r)}</td>
       <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('') +
-    `<tr class="soma"><th>Total</th><th class="${cor(hojeP)}">${pct(hojeP)}</th><th class="${cor(hojeR)}">${reais(hojeR)}</th>
-      <th class="${cor(lucro)}">${reais(lucro)} <small>${pct(lucroP)}</small></th></tr>`;
+    `<tr class="soma"><th>Total</th><th class="${cor(tHojeP)}">${pct(tHojeP)}</th><th class="${cor(tHojeR)}">${reais(tHojeR)}</th>
+      <th class="${cor(tLucro)}">${reais(tLucro)} <small>${pct(tLucroP)}</small></th></tr>`;
   // Resumo → Patrimônio total: não alocado + valor atual de cada posição aberta (mesma ordem do ranking)
   const naoAloc = naoAplicado(), patri = naoAloc + comDia.reduce((s, p) => s + (p.valor || 0), 0);
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
@@ -1503,10 +1510,10 @@ function renderDash() {
   const mostrar = ordem.filter(([a]) => !dashFiltro.size || dashFiltro.has(a.ticker));
   $('wQuando').textContent = db.dashEm ? 'Atualizado em ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
-    '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th></tr>' +
+    '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th><th>Mês ant. %</th></tr>' +
     mostrar.map(([a, i]) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
       <td><span style="display:inline-flex; align-items:center; gap:4px"><button type="button" class="info" data-nome="${i}" aria-label="Nome e cotações do mês de ${esc(a.ticker)}">i</button><b>${esc(a.ticker)}</b></span></td>
-      <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes].map(v => `<td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td>`).join('')}</tr>
+      <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes, a.mesAnt].map(v => `<td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td>`).join('')}</tr>
 `).join('');
 }
 function limparDash() {
@@ -1554,6 +1561,7 @@ async function janelaAtivo(a) {
   fecharModal();
 }
 $('wAtualizar').onclick = () => atualizarDash();
+$('rsAcoes').onchange = render;
 $('wBuscaTxt').oninput = filtraBusca;
 $('wBusca').ontoggle = () => { if ($('wBusca').open) $('wBuscaTxt').focus(); else { $('wBuscaTxt').value = ''; filtraBusca(); } };
 $('wBuscaLista').onchange = e => { // marcar "Todos" limpa a procura; marcar um ativo desmarca "Todos"
