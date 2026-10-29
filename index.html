@@ -68,6 +68,9 @@ button, .btn { font:inherit; border:0; border-radius:999px; padding:11px 14px; b
 .ic::after { content:""; position:absolute; top:12px; left:50%; width:16px; height:16px; margin-left:-8px; background:var(--icFg);
   -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat; }
 .ic.sec::before { background:transparent; border:1px solid var(--bd); }
+/* ícone dentro do texto (botões largos, ex.: Exportar para Excel) */
+.icl::before { content:""; display:inline-block; width:16px; height:16px; margin-right:6px; vertical-align:-3px;
+  background:currentColor; -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat; }
 .ic.sec::after { background:var(--pri); }
 .ic.perigo::before { background:transparent; border:1px solid var(--dn); }
 .ic.perigo::after { background:var(--dn); }
@@ -286,16 +289,16 @@ label.check input { width:auto; margin:0; }
   <section id="tab-carteira" hidden>
     <label class="check" style="margin:0 0 8px"><input type="checkbox" id="cResAcoes"> Resumido Ações</label>
     <div id="lista"></div>
-    <button class="sec exp ic ic-exportar" data-exp="carteira" id="cResExp" hidden>Exportar para Excel</button>
+    <button class="sec exp icl ic-exportar" data-exp="carteira" id="cResExp" hidden>Exportar para Excel</button>
   </section>
 
   <section id="tab-resumo">
     <div class="card" style="padding:6px 8px; overflow-x:auto"><label class="check" style="margin:2px 0 6px"><input type="checkbox" id="rsAcoes"> Somente Ações</label><table id="tResumo"></table></div>
-    <button class="sec exp ic ic-exportar" data-exp="resumo">Exportar para Excel</button>
+    <button class="sec exp icl ic-exportar" data-exp="resumo">Exportar para Excel</button>
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
-    <div class="row" style="align-items:center; justify-content:flex-start; gap:12px; margin:14px 0 6px"><h2 style="margin:0">Patrimônio total</h2>
-      <button class="sec exp ic ic-exportar" data-exp="patrimonio">Exportar para Excel</button></div>
+    <h2>Patrimônio total</h2>
     <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
+    <button class="sec exp icl ic-exportar" data-exp="patrimonio">Exportar para Excel</button>
     <p class="mut">Patrimônio não aplicado (aba Aporte/Saque) + valor atual de cada ativo ou fundo em aberto.</p>
     <h2>Alocação da carteira</h2>
     <div class="card viz" id="aloc"></div>
@@ -463,7 +466,7 @@ label.check input { width:auto; margin:0; }
       <div id="dResInfo" class="ajuda" hidden>Marcado, a tabela mostra só <b>Data, Dia %, Dia R$, Total R$, Lucro % e Lucro R$</b>, sem as colunas de cada ativo, e cabe na tela do celular. Os totais continuam somando só os ativos escolhidos no filtro. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
     <div class="card rolagem"><table id="tDiario"></table></div>
-    <button class="sec exp ic ic-exportar" data-exp="diario">Exportar para Excel</button>
+    <button class="sec exp icl ic-exportar" data-exp="diario">Exportar para Excel</button>
     <p class="mut">Cada ativo mostra o valor da posição no dia e, embaixo, o % de lucro acumulado. O app grava um registro por dia ao atualizar as cotações.</p>
   </section>
 
@@ -485,7 +488,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="tMensal"></table></div>
-    <button class="sec exp ic ic-exportar" data-exp="mensal">Exportar para Excel</button>
+    <button class="sec exp icl ic-exportar" data-exp="mensal">Exportar para Excel</button>
     <p class="mut">O app guarda o valor da carteira a cada atualização de cotação (um registro por dia). O lucro do mês é a diferença do lucro acumulado entre o fim de um mês e o fim do anterior.</p>
   </section>
 
@@ -573,7 +576,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="tCompar" class="compacto"></table></div>
-    <button class="sec exp ic ic-exportar" data-exp="compar">Exportar para Excel</button>
+    <button class="sec exp icl ic-exportar" data-exp="compar">Exportar para Excel</button>
   </section>
 
   <section id="tab-result" hidden>
@@ -588,7 +591,7 @@ label.check input { width:auto; margin:0; }
       <div id="rResInfo" class="ajuda" hidden>Marcado, os cartões viram uma <b>lista com uma linha por ativo</b>: ativo, data da compra, data da venda, total da venda, lucro R$ e %, IR a pagar e lucro líquido, com a linha <b>Total</b> no fim. A lista rola para o lado e a coluna Ativo fica fixa. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
     <div id="rLista"></div>
-    <button class="sec exp ic ic-exportar" data-exp="resultados">Exportar para Excel</button>
+    <button class="sec exp icl ic-exportar" data-exp="resultados">Exportar para Excel</button>
     <p class="mut">Só ativos encerrados (vendidos por completo). O filtro de meses usa a data da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
   </section>
 
