@@ -1890,7 +1890,7 @@ function renderCompar() {
     '<tr><th>Encerr.</th><th>Ativo</th><th>Unit. enc.<br>R$</th><th>Atual R$</th><th>Dif. R$</th><th>Dif. %</th></tr>' +
     vis.map(e => {
       const [a, d, p] = dif(e);
-      return `<tr><td>${e.data.slice(8)}/${e.data.slice(5, 7)}/${e.data.slice(2, 4)}</td><td style="white-space:nowrap">${logo(e.ticker)}<b>${esc(e.ticker)}</b></td>
+      return `<tr><td>${e.data.slice(8)}/${e.data.slice(5, 7)}/${e.data.slice(2, 4)}</td><td style="white-space:nowrap" title="${esc(e.ticker)}">${logo(e.ticker)}<b class="tkN" style="max-width:52px">${esc(e.ticker)}</b></td>
         <td>${reais(e.preco)}</td><td>${reais(a)}</td><td class="${cor(d)}">${reais(d)}${seta(d)}</td><td class="${cor(p)}">${pct(p)}${seta(p)}</td></tr>`;
     }).join('');
 }
