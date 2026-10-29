@@ -354,6 +354,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="ops" class="compacto"></table></div>
+    <button class="sec exp icl ic-exportar" data-exp="lancamentos">Exportar para Excel</button>
   </section>
 
   <section id="tab-aporte" hidden>
@@ -1130,6 +1131,8 @@ function render() {
   // Lançamentos: uma linha por operação (data, tipo, ativo, qtd, unitário, total), com filtro de datas
   const lIni = isoDe($('lIni')), lFim = isoDe($('lFim'));
   const lanc = [...db.ops].filter(o => (!lIni || o.data >= lIni) && (!lFim || o.data <= lFim)).sort((a, b) => b.data.localeCompare(a.data));
+  tabelas.lancamentos = !lanc.length ? null : [['Data', 'Tipo', 'Ativo', 'Qtd', 'Unitário R$', 'Total R$'],
+    ...lanc.map(o => [o.data.split('-').reverse().join('/'), o.tipo === 'C' ? 'Compra' : 'Venda', o.ticker, o.qtd, xR(o.preco), xR(o.qtd * o.preco)])];
   $('ops').innerHTML = !lanc.length ? `<tr><td class="mut">${db.ops.length ? 'Nenhum lançamento nesse período.' : 'Nenhum lançamento ainda.'}</td></tr>` :
     '<tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd</th><th>Unit. R$</th><th>Total R$</th></tr>' +
     lanc.map(o => `<tr data-id="${o.id}"${o.id === editandoId ? ' class="sel"' : ''}><td>${o.data.slice(8)}/${o.data.slice(5, 7)}/${o.data.slice(2, 4)}</td>
