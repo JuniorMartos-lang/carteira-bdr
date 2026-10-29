@@ -55,11 +55,22 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 .grid > div { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-top:1px dashed var(--bd); }
 button, .btn { font:inherit; border:0; border-radius:999px; padding:11px 14px; background:var(--pri); color:#fff; font-weight:600; cursor:pointer; }
 :where(:root[data-theme=dark]) button, :where(:root[data-theme=dark]) .btn { color:#06201d; } /* mesma força de 'button' e '.btn': o menu e os botões secundários mantêm a cor deles */
-/* botões no modelo "pílula" (escolhido pelo usuário entre 4 propostas): cantos redondos e ícone antes do texto.
-   O ícone é uma máscara (::before), então herda a cor do botão e não some quando o texto muda (ex.: Adicionar/Alterar) */
-.ic { white-space:nowrap; flex:none; } /* o botão não quebra; o texto ao lado (ex.: data das cotações) é que quebra */
-.ic::before { content:""; display:inline-block; width:16px; height:16px; margin-right:6px; vertical-align:-3px; flex:none;
-  background:currentColor; -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat; }
+/* botões com ícone no modelo "D · Compacto" (escolhido pelo usuário; antes era "pílula"): quadrado de 40 px com o
+   ícone e o nome pequeno embaixo. ::before = o quadrado (verde cheio; contorno no secundário; contorno vermelho no
+   Excluir) e ::after = o ícone (máscara SVG, por cima do quadrado). O nome continua sendo o texto do botão, então
+   textos que mudam (Adicionar/Alterar) seguem funcionando. Os demais botões continuam em pílula. */
+:root { --icFg:#fff; }
+:root[data-theme=dark] { --icFg:#06201d; } /* ícone escuro sobre o verde-claro do tema escuro (mesma cor do texto dos botões) */
+.ic { position:relative; display:inline-flex; flex-direction:column; align-items:center; gap:3px; flex:none; white-space:nowrap;
+  background:none !important; border:0 !important; padding:0 2px !important; border-radius:0 !important; width:auto !important;
+  color:var(--mut) !important; font-size:11px; font-weight:500; line-height:1.2; }
+.ic::before { content:""; width:40px; height:40px; box-sizing:border-box; border-radius:12px; background:var(--pri); }
+.ic::after { content:""; position:absolute; top:12px; left:50%; width:16px; height:16px; margin-left:-8px; background:var(--icFg);
+  -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat; }
+.ic.sec::before { background:transparent; border:1px solid var(--bd); }
+.ic.sec::after { background:var(--pri); }
+.ic.perigo::before { background:transparent; border:1px solid var(--dn); }
+.ic.perigo::after { background:var(--dn); }
 .ic-atualizar { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 0 0-14.9-3.9L4 8'/%3E%3Cpath d='M4 4v4h4'/%3E%3Cpath d='M4 13a8 8 0 0 0 14.9 3.9L20 16'/%3E%3Cpath d='M20 20v-4h-4'/%3E%3C/svg%3E"); }
 .ic-salvar { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E"); }
 .ic-limpar { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 20H8.5l-4.2-4.3a1 1 0 0 1 0-1.4l9.6-9.6a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4L12 20'/%3E%3Cpath d='M17 13l-6-6'/%3E%3C/svg%3E"); }
