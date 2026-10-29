@@ -412,7 +412,7 @@ label.check input { width:auto; margin:0; }
         <button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="mResInfo" aria-label="O que são Resumido e Ativos Abertos">i</button></div>
       <div id="mResInfo" class="ajuda" hidden>
         <b>Resumido</b>: a tabela mostra só <b>Mês, Total % e Lucro R$</b>, sem as colunas de cada ativo. Os totais continuam somando só os ativos escolhidos no filtro.<br>
-        <b>Ativos Abertos</b>: mostra só os ativos que você tem hoje na carteira (posição aberta), tanto na tabela completa quanto no Resumido; os totais e a linha Soma passam a considerar só esses ativos, e a caixa Ativos lista só eles.<br>
+        <b>Ativos Abertos</b>: mostra só os ativos que você tem hoje na carteira (posição aberta), tanto na tabela completa quanto no Resumido; os totais e a linha Soma passam a considerar só esses ativos, e a caixa Ativos lista só eles. Um ativo vendido por completo e comprado de novo conta só a partir da nova compra: os meses e o resultado da posição antiga ficam de fora.<br>
         O "Exportar para Excel" segue o que está na tela.
       </div>
     </div>
@@ -997,10 +997,16 @@ function render() {
 }
 
 function renderMensal() {
-  const ms = mensal(db.historico, db.ops);
-  // "Ativos Abertos": só os ativos com posição aberta hoje (na tabela, nos totais e na caixa de ativos)
-  const abertos = new Set(posicoes(db.ops, {}).filter(p => !p.encerrado).map(p => p.ticker));
-  const tks = [...new Set(ms.flatMap(m => Object.keys(m.linhas)))].filter(t => !$('mAbertos').checked || abertos.has(t)).sort();
+  // "Ativos Abertos": só os ativos com posição aberta hoje e só a partir da compra que abriu essa posição (um ativo
+  // vendido e recomprado não traz os meses nem o resultado da posição antiga)
+  let ms;
+  if ($('mAbertos').checked) {
+    const ini = inicioCiclo(db.ops), vale = (t, d) => ini[t] && d >= ini[t];
+    const h = db.historico.map(s => ({ data: s.data, v: Object.fromEntries(Object.entries(s.v).filter(([t]) => vale(t, s.data))) }))
+      .filter(s => Object.keys(s.v).length);
+    ms = mensal(h, db.ops.filter(o => vale(o.ticker, o.data)));
+  } else ms = mensal(db.historico, db.ops);
+  const tks = [...new Set(ms.flatMap(m => Object.keys(m.linhas)))].sort();
   const cols = comboAtivos('m', tks);
   const ini = $('mIni').value, fim = $('mFim').value;
   $('mIni').innerHTML = opcao('', 'Todos os meses', !ini) + ms.map(m => opcao(m.mes, nomeMes(m.mes), m.mes === ini)).join('');

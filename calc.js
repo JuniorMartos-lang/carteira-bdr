@@ -108,6 +108,17 @@ function tendencia(vals) {
     : (vals[i - 1] != null && v > vals[i - 1]) || v === max ? 'sobe' : 'desce');
 }
 
+// Início da posição aberta de cada ativo: a primeira compra depois da última vez que a quantidade zerou (ou a
+// primeira compra, se nunca zerou). Só ativos com posição aberta hoje. Mensal → "Ativos Abertos" ignora o que veio antes.
+function inicioCiclo(ops) {
+  const q = {}, ini = {};
+  [...ops].sort((a, b) => a.data.localeCompare(b.data)).forEach(o => {
+    if (!q[o.ticker]) ini[o.ticker] = o.data; // quantidade zerada (ou primeira operação): começa uma posição nova
+    q[o.ticker] = (q[o.ticker] || 0) + (o.tipo === 'C' ? o.qtd : -o.qtd);
+  });
+  return Object.fromEntries(Object.entries(ini).filter(([t]) => q[t] > 0));
+}
+
 // Aba Compar.: último encerramento de cada ativo (a venda que zerou a posição) e o preço médio das vendas desse dia.
 // Ativo zerado mais de uma vez aparece uma vez só, com o último encerramento (mesmo que hoje esteja recomprado).
 // Devolve [{ticker, data, preco}] do encerramento mais antigo para o mais recente.
@@ -202,5 +213,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -126,6 +126,12 @@ const enc = encerramentos([...ops, { data: '2026-10-27', ticker: 'DISB34', tipo:
   { data: '2026-01-01', ticker: 'Y', tipo: 'C', qtd: 10, preco: 5 }, { data: '2026-02-01', ticker: 'Y', tipo: 'V', qtd: 4, preco: 6 }]);
 assert.deepStrictEqual(enc.map(e => [e.ticker, e.data]), [['X', '2026-04-01'], ['DISB34', '2026-10-06']]);
 perto(enc[0].preco, (4 * 8 + 6 * 10) / 10); perto(enc[1].preco, 34.412);
+
+// Início da posição aberta: DISB34 zerado em 06/10 e recomprado em 27/10 → 27/10; SPCX34 nunca zerou → 1ª compra;
+// encerrado (sem posição aberta) fica de fora
+assert.deepStrictEqual(inicioCiclo([...ops, { data: '2026-10-27', ticker: 'DISB34', tipo: 'C', qtd: 10, preco: 39 }]),
+  { SPCX34: '2026-08-05', DISB34: '2026-10-27' });
+assert.deepStrictEqual(inicioCiclo(ops), { SPCX34: '2026-08-05' });
 
 // Senha: confere a certa, recusa a errada; código de recuperação no formato XXXX-XXXX-XXXX
 (async () => {
