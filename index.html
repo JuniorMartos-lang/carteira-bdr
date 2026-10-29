@@ -1728,6 +1728,8 @@ $('rsAcoes').onchange = $('cResAcoes').onchange = render;
 // Ajustes → Alerta Volatilidade Cabeçalho: dois limites, em %, maiores que 0 e até 100 (aceita vírgula)
 const mostraLimites = () => { $('cAlta').value = numPct(altaPct()).replace('%', ''); $('cQueda').value = numPct(quedaPct()).replace('%', ''); };
 mostraLimites();
+// ao tocar no campo, seleciona o valor inteiro: é só digitar o novo por cima
+['cAlta', 'cQueda'].forEach(id => $(id).onfocus = $(id).onclick = e => e.target.select());
 $('cAlertasSalvar').onclick = async () => {
   const le = id => Number($(id).value.replace(/[^\d,.]/g, '').replace(',', '.'));
   const alta = le('cAlta'), queda = le('cQueda');
