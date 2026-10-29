@@ -261,6 +261,11 @@ header, #topo { background:radial-gradient(rgba(255,255,255,.13) 1px, transparen
 header { color:#fff; }
 /* o azul cobre o cabeçalho inteiro (lucro e cartões Ações/Fundos) e arredonda logo acima da barra de cotações */
 #topo { max-width:none; padding:0 max(16px, calc(50% - 304px)) 14px; border-radius:0 0 28px 28px; }
+/* segundo "cartão" atrás do azul, aparecendo no canto de baixo à direita (sensação de um cartão sobre outro) */
+:root { --navy2:#3b6a8c; } :root[data-theme=dark] { --navy2:#1d3956; }
+#topo { position:relative; }
+#topo::after { content:""; position:absolute; z-index:-1; left:30%; right:0; bottom:-8px; height:90px;
+  background:var(--navy2); border-radius:28px 0 28px 28px; }
 .card { border:0; border-radius:20px; box-shadow:var(--sombra); }
 :root[data-theme=dark] .card { border:1px solid var(--bd); }
 input, select, .combo summary { background:var(--campo); border:1px solid transparent; }
