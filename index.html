@@ -257,8 +257,10 @@ label.check input { width:auto; margin:0; }
 /* aparência no estilo da imagem enviada pelo usuário (app de voos): topo azul-marinho com pontinhos (lembra o mapa),
    verde-água nos botões, campos e botões secundários preenchidos em pílula, cartões brancos bem arredondados e sem borda.
    Só aparência: nenhuma posição, seção ou informação muda. */
-header { background:radial-gradient(rgba(255,255,255,.13) 1px, transparent 1.5px) 0 0/7px 7px, var(--navy); color:#fff;
-  border-radius:0 0 28px 28px; }
+header, #topo { background:radial-gradient(rgba(255,255,255,.13) 1px, transparent 1.5px) 0 0/7px 7px, var(--navy); }
+header { color:#fff; }
+/* o azul cobre o cabeçalho inteiro (lucro e cartões Ações/Fundos) e arredonda logo acima da barra de cotações */
+#topo { max-width:none; padding:0 max(16px, calc(50% - 304px)) 14px; border-radius:0 0 28px 28px; }
 .card { border:0; border-radius:20px; box-shadow:var(--sombra); }
 :root[data-theme=dark] .card { border:1px solid var(--bd); }
 input, select, .combo summary { background:var(--campo); border:1px solid transparent; }
