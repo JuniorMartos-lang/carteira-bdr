@@ -151,7 +151,7 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 /* Diário: título de cada ativo (logo + nome) centralizado sobre o valor e o % da coluna; as células de valor não mudam */
 #tDiario th.tkCol { text-align:center; white-space:nowrap; }
 #tDiario th.tkCol .logo { width:15px; height:15px; margin-right:4px; }
-#tResumo .logo, #tResAcoes .logo { width:15px; height:15px; margin-right:2px; }
+#tResumo .logo, #tResAcoes .logo, #tResResumido .logo { width:15px; height:15px; margin-right:2px; }
 .tkN { display:inline-block; max-width:66px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
 #tPatrimonio td:first-child { white-space:nowrap; }
 #tPatrimonio .tkN { max-width:150px; } /* na tabela do Resumo, menor: cabe em 375 px */
@@ -1184,10 +1184,10 @@ function renderResultados() {
       ['Total', '', '', '', '', '', '', xR(t.lucro), xP(tP), xR(t.ir), xR(t.liq)]];
     $('rLista').innerHTML = !enc.length ? '<p class="mut">Nenhum ativo encerrado ainda.</p>' :
       !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
-      `<div class="card rolagem"><table class="compacto espacado">
+      `<div class="card rolagem"><table class="compacto espacado" id="tResResumido">
         <tr><th>Ativo</th><th>Compra</th><th>Venda</th><th>Unit. compra R$</th><th>Total compra R$</th><th>Unit. venda R$</th><th>Total venda R$</th>
           <th>Lucro R$</th><th>Lucro %</th><th>IR R$</th><th>Líquido R$</th></tr>` +
-      lista.map(p => `<tr><td><b>${esc(p.ticker)}</b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td>
+      lista.map(p => `<tr><td><b style="white-space:nowrap" title="${esc(p.ticker)}">${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span></b></td><td>${curta(p.inicio)}</td><td>${curta(p.fim)}</td>
         <td>${reais(p.custoVendido / p.qtdVendida)}</td><td>${ocN(p.custoVendido)}</td><td>${reais(p.vendido / p.qtdVendida)}</td><td>${ocN(p.vendido)}</td>
         <td class="${cor(p.lucro)}">${reais(p.lucro)}</td><td class="${cor(p.pct)}">${pct(p.pct)}</td><td>${irTxt(p)}</td>
         <td class="${cor(liq(p))}"><b>${reais(liq(p))}</b></td></tr>`).join('') +
@@ -1206,7 +1206,7 @@ function renderResultados() {
   $('rLista').innerHTML = !enc.length ? '<p class="mut">Nenhum ativo encerrado ainda.</p>' :
     !lista.length ? '<p class="mut">Nenhum ativo encerrado com esses filtros.</p>' :
     lista.map(p => `<div class="card">
-      <div class="topo"><span class="tk">${esc(p.ticker)}</span>
+      <div class="topo"><span class="tk">${logo(p.ticker)}${esc(p.ticker)}</span>
         ${db.nomes[p.ticker] ? `<span class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</span>` : ''}
         <span class="tag">${NOME_CLASSE[p.classe]}</span></div>
       <div class="grid">
