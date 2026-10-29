@@ -435,8 +435,8 @@ label.check input { width:auto; margin:0; }
       <div id="gRealInfo" class="ajuda" hidden>
         <b>Incluir realizados</b>
         <ul>
-          <li><b>Desmarcado:</b> a linha da carteira mostra a rentabilidade apenas das posições abertas em cada dia. Quando um ativo é vendido, o resultado dele deixa a conta e a linha pode dar um salto, sem que isso represente ganho ou perda.</li>
-          <li><b>Marcado:</b> a linha soma o lucro das posições abertas com o lucro (ou prejuízo) já realizado nas vendas até aquele dia, sobre o total investido, incluindo o custo das ações vendidas. A linha não salta nas vendas e mostra a evolução do resultado desde o início.</li>
+          <li><b>Desmarcado:</b> a linha mostra só os <b>ativos em aberto hoje</b>, cada um desde a compra que abriu a posição atual (um ativo vendido e comprado de novo conta só a partir da nova compra). Ativos já vendidos ficam de fora. O título do gráfico diz "só ativos em aberto".</li>
+          <li><b>Marcado:</b> a linha soma o lucro das posições abertas com o lucro (ou prejuízo) já realizado nas vendas até aquele dia, sobre o total investido, incluindo o custo das ações vendidas. A linha não salta nas vendas e mostra a evolução do resultado desde o início. O título do gráfico diz "todos os ativos: em aberto e realizados".</li>
           <li>Vale para a linha da carteira ("Todos"). Com ativos escolhidos no filtro, cada linha continua mostrando a rentabilidade da posição daquele ativo.</li>
           <li>O detalhe de cada venda (lucro, IR e lucro líquido) está na aba <b>Resultados</b>.</li>
         </ul>
@@ -448,7 +448,7 @@ label.check input { width:auto; margin:0; }
       <div id="gArea"><svg id="gSvg"></svg><div id="gDica" hidden></div></div>
       <p class="mut" id="gAviso" style="margin:6px 0 0"></p>
     </div>
-    <p class="mut">Toque no gráfico para ver a data e os valores. Com "Todos", aparece a linha da carteira inteira; escolha ativos (até 8) para comparar um com o outro. A % é o lucro acumulado sobre o valor investido, como na aba Diário.</p>
+    <p class="mut">Toque no gráfico para ver a data e os valores. Com "Todos", aparece uma linha só com os ativos em aberto (ou com todos, marcando "Incluir realizados"); escolha ativos (até 8) para comparar um com o outro. A % é o lucro acumulado sobre o valor investido, como na aba Diário.</p>
 
     <h2>Ativos encerrados</h2>
     <div class="card">
@@ -1136,7 +1136,9 @@ function grafico(p, encerrados) {
   $(p + 'Fim').innerHTML = opcao('', 'Todos os meses', !fim) + meses.map(m => opcao(m, nomeMes(m), m === fim)).join('');
   const dias = base.filter(s => (!ini || s.data.slice(0, 7) >= ini) && (!fim || s.data.slice(0, 7) <= fim));
   const pctDe = x => x ? (x[0] - x[1]) / x[1] : null;
-  const total = s => { const vs = Object.entries(s.v).filter(([t]) => !encerrados || (cols.includes(t) && tem(s, t))).map(([, x]) => x);
+  // carteira ("Todos", sem realizados): só os ativos em aberto hoje, cada um desde a compra que abriu a posição atual
+  const ciclo = inicioCiclo(db.ops), entra = (s, t) => encerrados ? cols.includes(t) && tem(s, t) : !!ciclo[t] && s.data >= ciclo[t];
+  const total = s => { const vs = Object.entries(s.v).filter(([t]) => entra(s, t)).map(([, x]) => x);
     const inv = vs.reduce((a, x) => a + x[1], 0);
     return inv ? (vs.reduce((a, x) => a + x[0], 0) - inv) / inv : null; };
   // shortcut: a cor segue a posição entre os escolhidos (não o ativo); com até 8 escolhidos não repete cor
@@ -1149,13 +1151,14 @@ function grafico(p, encerrados) {
     for (const e of vendas) if (e.data <= s.data) { luc += e.realizado; base += e.custo; }
     return base ? luc / base : null;
   };
-  const series = todos ? [{ nome: encerrados ? 'Encerrados' : comReal ? 'Carteira com realizados' : 'Carteira', cor: 'var(--s1)', vals: dias.map(comReal ? totalReal : total) }]
+  const series = todos ? [{ nome: encerrados ? 'Encerrados' : comReal ? 'Carteira com realizados' : 'Ativos em aberto', cor: 'var(--s1)', vals: dias.map(comReal ? totalReal : total) }]
     : cols.slice(0, 8).map((t, i) => ({ nome: t, cor: `var(--s${i + 1})`, vals: dias.map(s => tem(s, t) ? pctDe(s.v[t]) : null) }));
   $(p + 'Aviso').textContent = !todos && cols.length > 8 ? `Mostrando os 8 primeiros de ${cols.length} ativos escolhidos.` : '';
   $(p + 'Legenda').innerHTML = series.length < 2 ? '' :
     series.map(s => `<span><i class="marca" style="background:${s.cor}"></i>${esc(s.nome)}</span>`).join('');
   $(p + 'Titulo').textContent = encerrados ? (todos ? 'Rentabilidade dos ativos encerrados, juntos (%)' : 'Rentabilidade dos ativos encerrados (%)')
-    : todos ? `Rentabilidade acumulada da carteira${comReal ? ', com realizados' : ''} (%)` : 'Rentabilidade acumulada (%)';
+    : todos ? (comReal ? 'Rentabilidade acumulada – todos os ativos: em aberto e realizados (%)' : 'Rentabilidade acumulada – só ativos em aberto (%)')
+    : 'Rentabilidade acumulada (%)';
 
   const svg = $(p + 'Svg'), W = svg.clientWidth, H = 240, L = 44, R = 10, T = 10, B = 24;
   $(p + 'Dica').hidden = true;
