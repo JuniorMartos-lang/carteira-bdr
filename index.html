@@ -1010,13 +1010,16 @@ function render() {
   // Atual verde ▲ se está acima do investido, vermelho ▼ se abaixo (a cor e a seta aparecem mesmo com o olhinho fechado)
   const atualSeta = (v, inv, tag) => v == null ? `<${tag}>—</${tag}>` :
     `<${tag} class="${v > inv ? 'up' : v < inv ? 'dn' : ''}" style="white-space:nowrap">${ocN(v)}${v > inv ? '<small> ▲</small>' : v < inv ? '<small> ▼</small>' : ''}</${tag}>`;
+  // Valor atual (preço unitário de agora) comparado com o preço médio; é cotação pública, não segue o olhinho
+  const precoSeta = (v, pm) => v == null ? '<td>—</td>' :
+    `<td class="${v > pm ? 'up' : v < pm ? 'dn' : ''}" style="white-space:nowrap">${reais(v)}${v > pm ? '<small> ▲</small>' : v < pm ? '<small> ▼</small>' : ''}</td>`;
   // "Resumido Ações": só as ações, em tabela, na mesma ordem (ranking pelo % de lucro); Total só de Investido e Atual
   const acoes = comDia.filter(p => p.classe === 'A'), somaA = k => acoes.reduce((s, p) => s + (p[k] || 0), 0);
   $('lista').innerHTML = $('cResAcoes').checked ? (!acoes.length ? '<p class="mut">Nenhuma ação em carteira.</p>' :
-    '<div class="card rolagem"><table class="compacto" id="tResAcoes"><tr><th>Ativo</th><th>Qtd</th><th>Preço médio R$</th><th>Investido R$</th><th>Atual R$</th></tr>' +
-    acoes.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td><td>${p.qtd.toLocaleString('pt-BR')}</td><td>${reais(p.pm)}</td>
+    '<div class="card rolagem"><table class="compacto" id="tResAcoes"><tr><th>Ativo</th><th>Qtd</th><th>Preço médio R$</th><th>Valor atual R$</th><th>Investido R$</th><th>Atual R$</th></tr>' +
+    acoes.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td><td>${p.qtd.toLocaleString('pt-BR')}</td><td>${reais(p.pm)}</td>${precoSeta(p.preco, p.pm)}
       <td>${ocN(p.investido)}</td>${atualSeta(p.valor, p.investido, 'td')}</tr>`).join('') +
-    `<tr class="soma"><th>Total</th><td></td><td></td><th>${ocN(somaA('investido'))}</th>${atualSeta(somaA('valor'), somaA('investido'), 'th')}</tr></table></div>`) :
+    `<tr class="soma"><th>Total</th><td></td><td></td><td></td><th>${ocN(somaA('investido'))}</th>${atualSeta(somaA('valor'), somaA('investido'), 'th')}</tr></table></div>`) :
   comDia.map((p, i) => `
     <div class="card">
       <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
