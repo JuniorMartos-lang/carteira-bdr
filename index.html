@@ -163,7 +163,9 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 #aloc .nomeA { flex:1; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #aloc .vals { text-align:right; line-height:1.25; }
 #aloc .vals small { color:var(--mut); }
-#tCompar tr > :nth-child(2) { text-align:left; } /* Compar.: coluna Ativo (título e códigos) alinhada à esquerda */
+#tCompar td:nth-child(2) { text-align:left; } /* logo + código à esquerda; o título Ativo centralizado sobre os dois */
+#tCompar th:nth-child(2) { text-align:center; }
+#tCompar .logo { width:15px; height:15px; margin-right:3px; } /* Compar.: coluna Ativo (título e códigos) alinhada à esquerda */
 #tCompar tr > :nth-child(n+3) { text-align:center; } /* colunas de valor (Unit. enc. em diante): no centro do título */
 #tCompar tr > :last-child { padding-right:1px; } /* sem isso a tabela passava 1 px da tela e rolava para o lado */
 #ops tr.sel td, #aLista tr.sel td, #wTabela tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
@@ -1881,10 +1883,10 @@ function renderCompar() {
     ...vis.map(e => { const [a, d, p] = dif(e); return [e.data.split('-').reverse().join('/'), e.ticker, xR(e.preco), xR(a), xR(d), xP(p)]; })];
   $('tCompar').innerHTML = !lista.length ? '<tr><td class="mut">Nenhum ativo encerrado ainda.</td></tr>' :
     !vis.length ? '<tr><td class="mut">Nenhum encerramento nesse filtro.</td></tr>' :
-    '<tr><th>Encerr.</th><th>Ativo</th><th>Unit. enc. R$</th><th>Atual R$</th><th>Dif. R$</th><th>Dif. %</th></tr>' +
+    '<tr><th>Encerr.</th><th>Ativo</th><th>Unit. enc.<br>R$</th><th>Atual R$</th><th>Dif. R$</th><th>Dif. %</th></tr>' +
     vis.map(e => {
       const [a, d, p] = dif(e);
-      return `<tr><td>${e.data.slice(8)}/${e.data.slice(5, 7)}/${e.data.slice(2, 4)}</td><td><b>${esc(e.ticker)}</b></td>
+      return `<tr><td>${e.data.slice(8)}/${e.data.slice(5, 7)}/${e.data.slice(2, 4)}</td><td style="white-space:nowrap">${logo(e.ticker)}<b>${esc(e.ticker)}</b></td>
         <td>${reais(e.preco)}</td><td>${reais(a)}</td><td class="${cor(d)}">${reais(d)}${seta(d)}</td><td class="${cor(p)}">${pct(p)}${seta(p)}</td></tr>`;
     }).join('');
 }
