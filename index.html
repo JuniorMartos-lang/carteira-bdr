@@ -562,7 +562,7 @@ label.check input { width:auto; margin:0; }
         </ul>
         <b>Alertas no cabeçalho</b>
         <ul>
-          <li>Quando um ativo cadastrado aqui <b>sobe</b> ou <b>cai</b> no dia até o limite configurado em <b>Ajustes → Alerta Volatilidade Cabeçalho</b> (padrão 5% para cada lado; 0 desliga aquele lado), ele aparece num letreiro dentro de um retângulo, ao lado do lucro da carteira: verde com ▲ se subiu, vermelho com ▼ se caiu.</li>
+          <li>Quando um ativo cadastrado aqui <b>sobe</b> ou <b>cai</b> no dia até o limite configurado em <b>Ajustes → Alerta Volatilidade Cabeçalho</b> (0 desliga aquele lado; vem com 0 até você configurar), ele aparece num letreiro dentro de um retângulo, ao lado do lucro da carteira: verde com ▲ se subiu, vermelho com ▼ se caiu.</li>
           <li>A lista é refeita a cada atualização de cotações do Dash. (pelo botão ou automática) e mostra sempre a variação atual.</li>
           <li>Depois de entrar na lista, o ativo fica até o fim do dia, mesmo que a variação volte para dentro do limite (ex.: com limite de 5%, subiu 6% e depois ficou em 4%).</li>
           <li>No dia seguinte a lista começa vazia. Sem alertas, o retângulo não aparece.</li>
@@ -606,9 +606,11 @@ label.check input { width:auto; margin:0; }
         <ul>
           <li><b>Alta a partir de (%)</b>: o ativo entra quando sobe esse percentual ou mais no dia.</li>
           <li><b>Queda a partir de (%)</b>: o ativo entra quando cai esse percentual ou mais no dia.</li>
-          <li>Os dois são independentes; aceitam vírgula (ex.: 4,5). O padrão é 5% em cada um.</li>
+          <li>Os dois são independentes; aceitam vírgula (ex.: 4,5).</li>
+          <li>No início (app novo) ou ao restaurar um backup que não tem esses valores, os dois ficam em <b>0</b>, ou seja, desligados, até você configurar.</li>
           <li><b>0 desliga aquele lado.</b> Ex.: alta 0 e queda 5 → só aparecem quedas de 5% ou mais; nenhuma alta é mostrada. Com os dois em 0, não há alertas.</li>
-          <li>Ao tocar em <b>Salvar</b>, os limites valem na hora para as cotações de hoje. Ao desligar um lado, os alertas daquele lado somem do cabeçalho.</li>
+          <li>Ao tocar em <b>Salvar</b>, os limites valem na hora para as cotações de hoje.</li>
+          <li><b>Mudar um limite refaz aquele lado:</b> os alertas daquele lado saem e entram os ativos que passam do novo limite naquele momento. Ex.: a alta estava em 5% e você muda para 3% → saem as altas da lista e entram todos os ativos que estão subindo 3% ou mais agora. Vale igual para a queda; o lado que não mudou continua como estava. Mudar para 0 tira todos os alertas daquele lado.</li>
         </ul>
         <b>Quando atualiza</b>
         <ul>
@@ -621,8 +623,8 @@ label.check input { width:auto; margin:0; }
       </div>
       <p class="mut" style="margin:2px 0 6px">Variação do dia que coloca um ativo do Dash. nos alertas do cabeçalho.</p>
       <div class="two">
-        <div><label for="cAlta">Alta a partir de (%)</label><input id="cAlta" inputmode="decimal" autocomplete="off" placeholder="5"></div>
-        <div><label for="cQueda">Queda a partir de (%)</label><input id="cQueda" inputmode="decimal" autocomplete="off" placeholder="5"></div>
+        <div><label for="cAlta">Alta a partir de (%)</label><input id="cAlta" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+        <div><label for="cQueda">Queda a partir de (%)</label><input id="cQueda" inputmode="decimal" autocomplete="off" placeholder="0"></div>
       </div>
       <div class="botoes"><button type="button" id="cAlertasSalvar">Salvar</button></div>
     </div>
@@ -1634,8 +1636,9 @@ $('aExcluir').onclick = async () => {
 };
 // --- Dash.: lista de acompanhamento (não é carteira; cotações do brapi, um ativo por vez como no resto do app) ---
 const DASH_MAX = 50;
-// limites dos alertas do cabeçalho (Ajustes → Alerta Volatilidade Cabeçalho), em %; padrão 5 para cima e 5 para baixo; vão no backup
-const altaPct = () => db.alertaAlta ?? 5, quedaPct = () => db.alertaQueda ?? 5;
+// limites dos alertas do cabeçalho (Ajustes → Alerta Volatilidade Cabeçalho), em %; vão no backup.
+// Sem valor gravado (app novo ou backup antigo) vale 0, ou seja, desligado
+const altaPct = () => db.alertaAlta ?? 0, quedaPct = () => db.alertaQueda ?? 0;
 const numPct = v => v.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
 // ativo do Dash. que chega ao limite no dia (cotação do pregão de hoje) entra na lista e fica até o fim do dia, mesmo que a
 // variação volte para dentro do limite (aparece sempre com a variação atual); no dia seguinte a lista zera
@@ -1730,8 +1733,15 @@ $('cAlertasSalvar').onclick = async () => {
     await modal({ titulo: 'Valor inválido', ok: 'OK', texto: 'Digite em cada campo um percentual de 0 a 100 (ex.: 5 ou 4,5). Use 0 para desligar aquele lado.' });
     fecharModal(); return mostraLimites();
   }
+  // o lado cujo limite mudou é refeito: saem os alertas daquele lado e entram os ativos que passam do novo limite agora
+  // (o outro lado mantém a lista do dia); sinal da variação atual de cada ativo decide o lado
+  const mudouAlta = alta !== altaPct(), mudouQueda = queda !== quedaPct();
+  if (db.alertas?.dia === hoje()) db.alertas.tks = db.alertas.tks.filter(t => {
+    const d = db.dash.find(a => a.ticker === t)?.dia ?? 0;
+    return d >= 0 ? !mudouAlta : !mudouQueda;
+  });
   db.alertaAlta = alta; db.alertaQueda = queda;
-  atualizaAlertas(); // já vale para as cotações de hoje: quem chegou aos novos limites entra na lista
+  atualizaAlertas();
   salvar(); render(); mostraLimites();
   await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK',
     texto: `Alerta Volatilidade Cabeçalho:\n${limTxt('Alta', alta)}\n${limTxt('Queda', queda)}\n\nOs limites vão no backup.` });
@@ -1899,7 +1909,7 @@ function conteudoBackup(d) {
     `Ativos encerrados: ${ps.filter(p => p.encerrado).length}`, `Dias de histórico (Diário): ${(d.historico || []).length}`,
     `Aportes e saques: ${(d.movs || []).length}`,
     `Ativos no Dash.: ${d.dashIniciado ? (d.dash || []).length : 'mantém a lista atual (backup antigo)'}`,
-    `Alerta Volatilidade Cabeçalho: ${(d.alertaAlta ?? 5) > 0 ? 'alta ' + numPct(d.alertaAlta ?? 5) : 'alta desligada'} · ${(d.alertaQueda ?? 5) > 0 ? 'queda ' + numPct(d.alertaQueda ?? 5) : 'queda desligada'}${d.alertaAlta == null ? ' (padrão)' : ''}`,
+    `Alerta Volatilidade Cabeçalho: ${d.alertaAlta > 0 ? 'alta ' + numPct(d.alertaAlta) : 'alta desligada'} · ${d.alertaQueda > 0 ? 'queda ' + numPct(d.alertaQueda) : 'queda desligada'}${d.alertaAlta == null ? ' (sem valores no backup: 0)' : ''}`,
     `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`].join('\n');
 }
 $('fileImp').onchange = async e => {
