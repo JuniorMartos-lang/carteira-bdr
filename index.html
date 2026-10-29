@@ -1220,7 +1220,10 @@ function renderDiario() {
   const vivo = (t, d) => qtdEm(db.ops, t, d) > 0 || db.ops.some(o => o.ticker === t && o.data === d) || !db.ops.some(o => o.ticker === t);
   const h = [...db.historico].sort((a, b) => a.data.localeCompare(b.data))
     .map(s => ({ ...s, v: Object.fromEntries(Object.entries(s.v).filter(([t]) => vivo(t, s.data))) }));
-  const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].sort();
+  // ordem das colunas (e da caixa de ativos): primeiro os ativos em aberto, depois os demais; cada grupo em ordem
+  // alfabética. Calculada a cada desenho a partir dos lançamentos: comprar ou vender já muda a ordem
+  const aberto = new Set(posicoes(db.ops, {}).filter(p => !p.encerrado).map(p => p.ticker));
+  const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].sort((a, b) => aberto.has(b) - aberto.has(a) || a.localeCompare(b));
   const cols = comboAtivos('d', tks);
   const ini = isoDe($('dIni')), fim = isoDe($('dFim'));
   let antes = null; // registro do dia anterior (com ativos escolhidos), para o "no dia"
