@@ -219,6 +219,7 @@ label.check input { width:auto; margin:0; }
   </div>
 
   <section id="tab-carteira" hidden>
+    <label class="check" style="margin:0 0 8px"><input type="checkbox" id="cResAcoes"> Resumido Ações</label>
     <div id="lista"></div>
   </section>
 
@@ -933,7 +934,14 @@ function render() {
     `<tr><td>Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
     comDia.map(p => `<tr><td>${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
     `<tr class="soma"><th>Patrimônio total</th><th>${ocN(patri)}</th></tr>`;
-  $('lista').innerHTML = comDia.map((p, i) => `
+  // "Resumido Ações": só as ações, em tabela, na mesma ordem (ranking pelo % de lucro); Total só de Investido e Atual
+  const acoes = comDia.filter(p => p.classe === 'A'), somaA = k => acoes.reduce((s, p) => s + (p[k] || 0), 0);
+  $('lista').innerHTML = $('cResAcoes').checked ? (!acoes.length ? '<p class="mut">Nenhuma ação em carteira.</p>' :
+    '<div class="card rolagem"><table class="compacto"><tr><th>Ativo</th><th>Qtd</th><th>Preço médio R$</th><th>Investido R$</th><th>Atual R$</th></tr>' +
+    acoes.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td><td>${p.qtd.toLocaleString('pt-BR')}</td><td>${reais(p.pm)}</td>
+      <td>${ocN(p.investido)}</td><td>${ocN(p.valor)}</td></tr>`).join('') +
+    `<tr class="soma"><th>Total</th><td></td><td></td><th>${ocN(somaA('investido'))}</th><th>${ocN(somaA('valor'))}</th></tr></table></div>`) :
+  comDia.map((p, i) => `
     <div class="card">
       <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
         ${db.nomes[p.ticker] ? `<span class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</span>` : ''}
@@ -1229,7 +1237,7 @@ function renderDiario() {
     `<tr><th>Data</th>${vis.map(t => `<th>${esc(t)}</th>`).join('')}<th>Dia %</th><th>Dia R$</th><th>Total R$</th><th>Lucro %</th><th>Lucro R$</th></tr>` +
     linhas.map(({ s, i, vs, valor, lucro, p, noDia, pDia }) =>
       `<tr><td>${resumido ? data(s.data).slice(0, 6) + s.data.slice(2, 4) : data(s.data)}</td>${vis.map(t => { const x = s.v[t]; if (!x) return '<td></td>';
-        return `<td>${ocR(x[0])}<br><small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
+        return `<td style="white-space:nowrap">${ocR(x[0])} <small class="cf ${tend[t][i]}">${pct(pctDe(x))}</small></td>`; }).join('')}` +
       `<th class="${cor(pDia)}">${pct(pDia)}</th><th class="${cor(noDia)}">${din(noDia)}</th>` +
       `<th>${vs.length ? (resumido ? ocN(valor + naDe(s)) : ocR(valor)) : '—'}</th><th><span class="cf ${tendTot[i]}">${pct(p)}</span></th>` +
       `<th class="${cor(lucro)}">${vs.length ? din(lucro) : '—'}</th></tr>`).join('');
@@ -1607,7 +1615,7 @@ async function janelaAtivo(a) {
   fecharModal();
 }
 $('wAtualizar').onclick = () => atualizarDash();
-$('rsAcoes').onchange = render;
+$('rsAcoes').onchange = $('cResAcoes').onchange = render;
 $('kAtualizar').onclick = async () => { // não roda junto com outra atualização (o brapi grátis recusa consultas simultâneas)
   if ($('btnAtualizar').disabled || $('wAtualizar').disabled) return;
   $('kAtualizar').disabled = true; await atualizarDash(); $('kAtualizar').disabled = false; };
