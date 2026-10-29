@@ -562,7 +562,7 @@ label.check input { width:auto; margin:0; }
         </ul>
         <b>Alertas no cabeçalho</b>
         <ul>
-          <li>Quando um ativo cadastrado aqui <b>sobe</b> ou <b>cai</b> no dia até o limite configurado em <b>Ajustes → Alerta Volatilidade Cabeçalho</b> (padrão 5% para cada lado), ele aparece num letreiro dentro de um retângulo, ao lado do lucro da carteira: verde com ▲ se subiu, vermelho com ▼ se caiu.</li>
+          <li>Quando um ativo cadastrado aqui <b>sobe</b> ou <b>cai</b> no dia até o limite configurado em <b>Ajustes → Alerta Volatilidade Cabeçalho</b> (padrão 5% para cada lado; 0 desliga aquele lado), ele aparece num letreiro dentro de um retângulo, ao lado do lucro da carteira: verde com ▲ se subiu, vermelho com ▼ se caiu.</li>
           <li>A lista é refeita a cada atualização de cotações do Dash. (pelo botão ou automática) e mostra sempre a variação atual.</li>
           <li>Depois de entrar na lista, o ativo fica até o fim do dia, mesmo que a variação volte para dentro do limite (ex.: com limite de 5%, subiu 6% e depois ficou em 4%).</li>
           <li>No dia seguinte a lista começa vazia. Sem alertas, o retângulo não aparece.</li>
@@ -594,7 +594,31 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-config" hidden>
     <div class="card">
-      <label style="margin-top:0"><b style="color:var(--tx); font-size:15px">Alerta Volatilidade Cabeçalho</b></label>
+      <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><b style="color:var(--tx); font-size:15px">Alerta Volatilidade Cabeçalho</b>
+        <button type="button" class="info" aria-expanded="false" aria-controls="cAlertaInfo" aria-label="Como funciona o alerta de volatilidade">i</button></div>
+      <div id="cAlertaInfo" class="ajuda" hidden>
+        <b>O que é</b>
+        <ul>
+          <li>Um retângulo no cabeçalho, ao lado do lucro da carteira, com um letreiro dos ativos <b>cadastrados no Dash.</b> que tiveram variação forte no dia (em relação ao fechamento do dia anterior).</li>
+          <li>Verde com ▲ quando sobe; vermelho com ▼ quando cai. Os mesmos ativos aparecem também na janela <b>Visão Cotação</b>, em "Alertas do dia".</li>
+        </ul>
+        <b>Os dois limites</b>
+        <ul>
+          <li><b>Alta a partir de (%)</b>: o ativo entra quando sobe esse percentual ou mais no dia.</li>
+          <li><b>Queda a partir de (%)</b>: o ativo entra quando cai esse percentual ou mais no dia.</li>
+          <li>Os dois são independentes; aceitam vírgula (ex.: 4,5). O padrão é 5% em cada um.</li>
+          <li><b>0 desliga aquele lado.</b> Ex.: alta 0 e queda 5 → só aparecem quedas de 5% ou mais; nenhuma alta é mostrada. Com os dois em 0, não há alertas.</li>
+          <li>Ao tocar em <b>Salvar</b>, os limites valem na hora para as cotações de hoje. Ao desligar um lado, os alertas daquele lado somem do cabeçalho.</li>
+        </ul>
+        <b>Quando atualiza</b>
+        <ul>
+          <li>A cada atualização de cotações do Dash. (pelo botão, ou automática de segunda a sexta, das 10h às 17h30).</li>
+          <li>O ativo que entrou fica até o fim do dia, sempre com a variação atual, mesmo que volte para dentro do limite (ex.: com limite de 5%, subiu 6% e depois ficou em 4%).</li>
+          <li>No dia seguinte a lista começa vazia. Sem alertas, o retângulo não aparece.</li>
+        </ul>
+        <b>Backup</b>
+        <ul><li>Os dois limites vão no backup e voltam ao restaurar.</li></ul>
+      </div>
       <p class="mut" style="margin:2px 0 6px">Variação do dia que coloca um ativo do Dash. nos alertas do cabeçalho.</p>
       <div class="two">
         <div><label for="cAlta">Alta a partir de (%)</label><input id="cAlta" inputmode="decimal" autocomplete="off" placeholder="5"></div>
@@ -894,7 +918,7 @@ const pontos = v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
 const INDICES = [['IBOV', 'ibov', pontos], ['Dólar', 'usd', v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 })],
   ['Dow Jones', 'dow', pontos], ['S&P 500', 'sp', pontos], ['Nasdaq', 'nasdaq', pontos]];
 // alertas do dia (ativos do Dash. que chegaram aos limites hoje), com os dados atuais de cada um
-const alertasHoje = () => db.alertas?.dia === hoje() ? db.alertas.tks.map(t => db.dash.find(a => a.ticker === t)).filter(Boolean) : [];
+const alertasHoje = () => db.alertas?.dia === hoje() ? db.alertas.tks.map(t => db.dash.find(a => a.ticker === t)).filter(a => a && ligado(a.dia ?? 0)) : [];
 function render() {
   const ps = posicoesComClasse();
   const abertos = ps.filter(p => !p.encerrado).sort((a, b) => (b.pct ?? -9) - (a.pct ?? -9));
@@ -1615,10 +1639,13 @@ const altaPct = () => db.alertaAlta ?? 5, quedaPct = () => db.alertaQueda ?? 5;
 const numPct = v => v.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
 // ativo do Dash. que chega ao limite no dia (cotação do pregão de hoje) entra na lista e fica até o fim do dia, mesmo que a
 // variação volte para dentro do limite (aparece sempre com a variação atual); no dia seguinte a lista zera
+// limite 0 desliga aquele lado (alta 0: nenhuma alta entra; queda 0: nenhuma queda entra)
+const passouLimite = d => (altaPct() > 0 && d >= altaPct() / 100) || (quedaPct() > 0 && d <= -quedaPct() / 100);
+const ligado = d => d >= 0 ? altaPct() > 0 : quedaPct() > 0; // lado desligado some da lista do dia na hora
+const limTxt = (nome, v) => v > 0 ? `${nome} a partir de ${numPct(v)}` : `${nome}: desligada`;
 function atualizaAlertas() {
   if (db.alertas?.dia !== hoje()) db.alertas = { dia: hoje(), tks: [] };
-  for (const a of db.dash) if (a.pregao === hoje() && a.dia != null && (a.dia >= altaPct() / 100 || a.dia <= -quedaPct() / 100)
-    && !db.alertas.tks.includes(a.ticker)) db.alertas.tks.push(a.ticker);
+  for (const a of db.dash) if (a.pregao === hoje() && a.dia != null && passouLimite(a.dia) && !db.alertas.tks.includes(a.ticker)) db.alertas.tks.push(a.ticker);
 }
 let dashEditando = null; // ticker carregado da lista
 const dashFiltro = new Set(); // procura: ativos marcados (vazio = todos)
@@ -1699,15 +1726,15 @@ mostraLimites();
 $('cAlertasSalvar').onclick = async () => {
   const le = id => Number($(id).value.replace(/[^\d,.]/g, '').replace(',', '.'));
   const alta = le('cAlta'), queda = le('cQueda');
-  if (!(alta > 0 && alta <= 100 && queda > 0 && queda <= 100)) {
-    await modal({ titulo: 'Valor inválido', ok: 'OK', texto: 'Digite em cada campo um percentual maior que 0 e até 100 (ex.: 5 ou 4,5).' });
+  if (!$('cAlta').value.trim() || !$('cQueda').value.trim() || !(alta >= 0 && alta <= 100 && queda >= 0 && queda <= 100)) {
+    await modal({ titulo: 'Valor inválido', ok: 'OK', texto: 'Digite em cada campo um percentual de 0 a 100 (ex.: 5 ou 4,5). Use 0 para desligar aquele lado.' });
     fecharModal(); return mostraLimites();
   }
   db.alertaAlta = alta; db.alertaQueda = queda;
   atualizaAlertas(); // já vale para as cotações de hoje: quem chegou aos novos limites entra na lista
   salvar(); render(); mostraLimites();
-  await modal({ titulo: 'Gravado com sucesso', ok: 'OK',
-    texto: `Alerta Volatilidade Cabeçalho:\nAlta a partir de ${numPct(alta)}\nQueda a partir de ${numPct(queda)}\n\nOs limites vão no backup.` });
+  await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK',
+    texto: `Alerta Volatilidade Cabeçalho:\n${limTxt('Alta', alta)}\n${limTxt('Queda', queda)}\n\nOs limites vão no backup.` });
   fecharModal();
 };
 // "Visão Cotação": as cotações do letreiro numa janela, paradas; ao fechar, a caixa desmarca e fica só o letreiro
@@ -1722,7 +1749,7 @@ $('hVisao').onchange = async () => {
       `<table class="compacto" style="width:100%"><tr><th style="text-align:left">Índice</th><th>Valor</th><th>Dia</th></tr>${linhas}</table>`) +
       // segundo quadro: os alertas do dia (ativos do Dash. que chegaram aos limites), com a variação atual
       `<div style="margin-top:12px; border:1px solid var(--bd); border-radius:8px; padding:6px 8px"><b>Alertas do dia</b>
-        <span class="mut" style="font-size:12px">(alta ≥ ${numPct(altaPct())} · queda ≥ ${numPct(quedaPct())})</span>` +
+        <span class="mut" style="font-size:12px">(${altaPct() > 0 ? 'alta ≥ ' + numPct(altaPct()) : 'alta desligada'} · ${quedaPct() > 0 ? 'queda ≥ ' + numPct(quedaPct()) : 'queda desligada'})</span>` +
       (!alertasHoje().length ? '<p class="mut" style="margin:4px 0 0">Nenhum ativo do Dash. chegou aos limites hoje.</p>' :
         `<table class="compacto" style="width:100%; margin-top:4px"><tr><th style="text-align:left">Ativo</th><th>Atual R$</th><th>Dia</th></tr>${alertasHoje().map(a =>
           `<tr><td style="text-align:left"><b>${esc(a.ticker)}</b></td><td>${reais(a.preco)}</td>
@@ -1872,7 +1899,7 @@ function conteudoBackup(d) {
     `Ativos encerrados: ${ps.filter(p => p.encerrado).length}`, `Dias de histórico (Diário): ${(d.historico || []).length}`,
     `Aportes e saques: ${(d.movs || []).length}`,
     `Ativos no Dash.: ${d.dashIniciado ? (d.dash || []).length : 'mantém a lista atual (backup antigo)'}`,
-    `Alerta Volatilidade Cabeçalho: alta ${numPct(d.alertaAlta ?? 5)} · queda ${numPct(d.alertaQueda ?? 5)}${d.alertaAlta == null ? ' (padrão)' : ''}`,
+    `Alerta Volatilidade Cabeçalho: ${(d.alertaAlta ?? 5) > 0 ? 'alta ' + numPct(d.alertaAlta ?? 5) : 'alta desligada'} · ${(d.alertaQueda ?? 5) > 0 ? 'queda ' + numPct(d.alertaQueda ?? 5) : 'queda desligada'}${d.alertaAlta == null ? ' (padrão)' : ''}`,
     `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`].join('\n');
 }
 $('fileImp').onchange = async e => {
