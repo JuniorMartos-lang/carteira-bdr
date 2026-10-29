@@ -884,6 +884,8 @@ const posicoesComClasse = () => posicoes(db.ops, db.precos).map(p => ({ ...p, cl
 const pontos = v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
 const INDICES = [['IBOV', 'ibov', pontos], ['Dólar', 'usd', v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 })],
   ['Dow Jones', 'dow', pontos], ['S&P 500', 'sp', pontos], ['Nasdaq', 'nasdaq', pontos]];
+// alertas do dia (ativos do Dash. que chegaram a ±5% hoje), com os dados atuais de cada um
+const alertasHoje = () => db.alertas?.dia === hoje() ? db.alertas.tks.map(t => db.dash.find(a => a.ticker === t)).filter(Boolean) : [];
 function render() {
   const ps = posicoesComClasse();
   const abertos = ps.filter(p => !p.encerrado).sort((a, b) => (b.pct ?? -9) - (a.pct ?? -9));
@@ -901,7 +903,7 @@ function render() {
   const itens = INDICES.map(([nome, k, fmt]) => { const x = db.indices[k]; return !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
     <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`; }).join('');
   // alertas do Dash. (só os do dia de hoje), com a variação atual de cada um
-  const al = db.alertas?.dia === hoje() ? db.alertas.tks.map(t => db.dash.find(a => a.ticker === t)).filter(Boolean) : [];
+  const al = alertasHoje();
   const itensAl = al.map(a => `<span class="${a.dia >= 0 ? 'up' : 'dn'}"><b>${esc(a.ticker)}</b> ${a.dia >= 0 ? '▲ +' : '▼ '}${pct(a.dia)}</span>`).join('');
   $('hAlertas').style.display = al.length ? '' : 'none';
   if ($('hAlertas').dataset.itens !== itensAl) {
@@ -1684,8 +1686,14 @@ $('hVisao').onchange = async () => {
       <td class="${x.pct >= 0 ? 'up' : 'dn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</td></tr>`; }).join('');
   const quando = db.atualizado ? new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   await modal({ titulo: 'Cotações', ok: 'Fechar', texto: quando ? 'Atualizadas em ' + quando : '',
-    html: !linhas ? '<p class="mut">Sem cotações ainda: toque em Atualizar cotações.</p>' :
-      `<table class="compacto" style="width:100%"><tr><th style="text-align:left">Índice</th><th>Valor</th><th>Dia</th></tr>${linhas}</table>` });
+    html: (!linhas ? '<p class="mut">Sem cotações ainda: toque em Atualizar cotações.</p>' :
+      `<table class="compacto" style="width:100%"><tr><th style="text-align:left">Índice</th><th>Valor</th><th>Dia</th></tr>${linhas}</table>`) +
+      // segundo quadro: os alertas do dia (ativos do Dash. que chegaram a ±5%), com a variação atual
+      `<div style="margin-top:12px; border:1px solid var(--bd); border-radius:8px; padding:6px 8px"><b>Alertas do dia (±5%)</b>` +
+      (!alertasHoje().length ? '<p class="mut" style="margin:4px 0 0">Nenhum ativo do Dash. chegou a 5% hoje.</p>' :
+        `<table class="compacto" style="width:100%; margin-top:4px"><tr><th style="text-align:left">Ativo</th><th>Atual R$</th><th>Dia</th></tr>${alertasHoje().map(a =>
+          `<tr><td style="text-align:left"><b>${esc(a.ticker)}</b></td><td>${reais(a.preco)}</td>
+          <td class="${a.dia >= 0 ? 'up' : 'dn'}">${a.dia >= 0 ? '▲ +' : '▼ '}${pct(a.dia)}</td></tr>`).join('')}</table>`) + '</div>' });
   fecharModal(); $('hVisao').checked = false;
 };
 $('kAtualizar').onclick = async () => { // não roda junto com outra atualização (o brapi grátis recusa consultas simultâneas)
