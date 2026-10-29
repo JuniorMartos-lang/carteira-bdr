@@ -151,6 +151,10 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 /* Diário: título de cada ativo (logo + nome) centralizado sobre o valor e o % da coluna; as células de valor não mudam */
 #tDiario th.tkCol { text-align:center; white-space:nowrap; }
 #tDiario th.tkCol .logo { width:15px; height:15px; margin-right:4px; }
+/* Dash.: i + logo + código; i e espaços menores nesta tabela para o logo caber quase sem mexer nas outras colunas */
+.wAtivo { display:inline-flex; align-items:center; gap:2px; white-space:nowrap; }
+.wAtivo button.info { width:20px; height:20px; font-size:12px; }
+.wAtivo .logo { width:14px; height:14px; margin:0 1px 0 0; }
 #tResumo .logo, #tResAcoes .logo, #tResResumido .logo { width:15px; height:15px; margin-right:2px; }
 .tkN { display:inline-block; max-width:66px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
 #tPatrimonio td:first-child { white-space:nowrap; }
@@ -1726,7 +1730,7 @@ function renderDash() {
   $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
     '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th><th>Mês ant. %</th></tr>' +
     mostrar.map(([a, i]) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
-      <td><span style="display:inline-flex; align-items:center; gap:4px"><button type="button" class="info" data-nome="${i}" aria-label="Nome e cotações do mês de ${esc(a.ticker)}">i</button><b>${esc(a.ticker)}</b></span></td>
+      <td><span class="wAtivo"><button type="button" class="info" data-nome="${i}" aria-label="Nome e cotações do mês de ${esc(a.ticker)}">i</button>${logo(a.ticker)}<b>${esc(a.ticker)}</b></span></td>
       <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes, a.mesAnt].map(v => `<td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td>`).join('')}</tr>
 `).join('');
 }
