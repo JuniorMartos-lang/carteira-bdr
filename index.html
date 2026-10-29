@@ -168,8 +168,12 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 #ops .tk2 { max-width:68px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* coluna Ativo: logo afastado de Compra/Venda pela folga da própria coluna (Qtd e seguintes não mudam de lugar);
    título centralizado sobre os nomes (descontado o espaço do logo) */
-#ops td:nth-child(3) { text-align:left; padding-left:15px; }
-#ops th:nth-child(3) { text-align:center; padding-left:33px; }
+/* Data e Tipo mais justos (letra 12 px, sem espaço sobrando entre eles): o Tipo vai para a esquerda e o espaço ganho
+   afasta o logo e o código para a direita; Qtd, Unit. e Total não mudam de lugar */
+#ops tr > :nth-child(1) { font-size:12px; padding-right:1px; }
+#ops tr > :nth-child(2) { font-size:12px; padding-left:1px; padding-right:1px; }
+#ops td:nth-child(3) { text-align:left; padding-left:21px; }
+#ops th:nth-child(3) { text-align:center; padding-left:39px; }
 #ops .logo { width:15px; height:15px; margin-right:3px; }
 #ops button.link { padding:2px 0 2px 4px; font-size:15px; }
 /* Gráficos: cores das linhas em ordem fixa (paleta validada para daltonismo), versão própria no modo escuro */
