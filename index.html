@@ -148,7 +148,7 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 /* Resumo → Alocação: rosca + lista (bolinha da cor da fatia, ativo, valor e %) */
 .logo { position:relative; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%;
   overflow:hidden; flex:none; vertical-align:middle; margin-right:5px; background:var(--bd); color:var(--mut); font-size:8px; font-weight:700; }
-#tResumo .logo { width:15px; height:15px; margin-right:2px; }
+#tResumo .logo, #tResAcoes .logo { width:15px; height:15px; margin-right:2px; }
 .tkN { display:inline-block; max-width:66px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
 #tPatrimonio td:first-child { white-space:nowrap; }
 #tPatrimonio .tkN { max-width:150px; } /* na tabela do Resumo, menor: cabe em 375 px */
@@ -1052,12 +1052,12 @@ function render() {
   const acoes = comDia.filter(p => p.classe === 'A'), somaA = k => acoes.reduce((s, p) => s + (p[k] || 0), 0);
   $('lista').innerHTML = $('cResAcoes').checked ? (!acoes.length ? '<p class="mut">Nenhuma ação em carteira.</p>' :
     '<div class="card rolagem"><table class="compacto" id="tResAcoes"><tr><th>Ativo</th><th>Qtd</th><th>Preço médio R$</th><th>Valor atual R$</th><th>Investido R$</th><th>Atual R$</th></tr>' +
-    acoes.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td><td>${p.qtd.toLocaleString('pt-BR')}</td><td>${reais(p.pm)}</td>${precoSeta(p.preco, p.pm)}
+    acoes.map((p, i) => `<tr><td><b style="white-space:nowrap" title="${esc(p.ticker)}">${i + 1}º ${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span></b></td><td>${p.qtd.toLocaleString('pt-BR')}</td><td>${reais(p.pm)}</td>${precoSeta(p.preco, p.pm)}
       <td>${ocN(p.investido)}</td>${atualSeta(p.valor, p.investido, 'td')}</tr>`).join('') +
     `<tr class="soma"><th>Total</th><td></td><td></td><td></td><th>${ocN(somaA('investido'))}</th>${atualSeta(somaA('valor'), somaA('investido'), 'th')}</tr></table></div>`) :
   comDia.map((p, i) => `
     <div class="card">
-      <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
+      <div class="topo"><span class="tk">${i + 1}º ${logo(p.ticker)}${esc(p.ticker)}</span>
         ${db.nomes[p.ticker] ? `<span class="nome">${esc(nomeCurto(db.nomes[p.ticker]))}</span>` : ''}
         <span class="tag">${NOME_CLASSE[p.classe]}</span></div>
       <div class="grid">
