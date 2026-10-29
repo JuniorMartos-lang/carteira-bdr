@@ -34,6 +34,19 @@ function posicoes(ops, precos) {
   });
 }
 
+// Aba Resultados: cada posição encerrada (da compra que a abriu até a venda que a zerou), com os mesmos campos de
+// posicoes(). Um ativo vendido por completo e comprado de novo continua com a posição antiga aqui; a nova (aberta) não
+// entra. Não muda a carteira: posicoes() segue igual para as posições abertas.
+function ciclosEncerrados(ops) {
+  const atual = {}, fechados = [];
+  [...ops].sort((a, b) => a.data.localeCompare(b.data)).forEach(o => {
+    const c = atual[o.ticker] ||= { ops: [], q: 0 };
+    c.ops.push(o); c.q += o.tipo === 'C' ? o.qtd : -o.qtd;
+    if (c.q === 0) { fechados.push(posicoes(c.ops, {})[0]); delete atual[o.ticker]; }
+  });
+  return fechados;
+}
+
 // IR sobre o lucro de um ativo encerrado: BDR/ação 15% (BDR não tem a isenção de R$ 20 mil); prejuízo não paga.
 // Fundo: null = IR retido na fonte pelo próprio fundo.
 // shortcut: não compensa prejuízos de outros meses nem day trade (20%); para isso, apurar por mês num ledger de IR.
@@ -213,5 +226,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

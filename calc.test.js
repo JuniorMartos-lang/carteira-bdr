@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -132,6 +132,16 @@ perto(enc[0].preco, (4 * 8 + 6 * 10) / 10); perto(enc[1].preco, 34.412);
 assert.deepStrictEqual(inicioCiclo([...ops, { data: '2026-10-27', ticker: 'DISB34', tipo: 'C', qtd: 10, preco: 39 }]),
   { SPCX34: '2026-08-05', DISB34: '2026-10-27' });
 assert.deepStrictEqual(inicioCiclo(ops), { SPCX34: '2026-08-05' });
+
+// Resultados por posição encerrada: SPCX34 vendido todo e recomprado → a posição antiga aparece (com o lucro dela) e a
+// nova, aberta, não; DISB34 encerrado aparece igual a posicoes()
+const opsCiclo = [...ops, { data: '2026-10-26', ticker: 'SPCX34', tipo: 'V', qtd: 200, preco: 60 },
+  { data: '2026-10-28', ticker: 'SPCX34', tipo: 'C', qtd: 50, preco: 51 }];
+const cic = ciclosEncerrados(opsCiclo);
+assert.deepStrictEqual(cic.map(p => [p.ticker, p.inicio, p.fim]), [['DISB34', '2026-08-06', '2026-10-06'], ['SPCX34', '2026-08-05', '2026-10-26']]);
+perto(cic[1].lucro, 200 * 60 - 10000); perto(cic[1].custoVendido, 10000); assert.ok(cic[1].encerrado);
+perto(cic[0].lucro, disb.lucro);
+assert.strictEqual(posicoes(opsCiclo, {}).find(p => p.ticker === 'SPCX34').qtd, 50); // carteira: só a posição nova
 
 // Senha: confere a certa, recusa a errada; código de recuperação no formato XXXX-XXXX-XXXX
 (async () => {

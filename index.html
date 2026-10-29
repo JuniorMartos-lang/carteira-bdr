@@ -1108,7 +1108,8 @@ function renderMensal() {
 
 // Aba Resultados: só ativos encerrados, com IR e lucro líquido; filtro de ativos e mês do encerramento
 function renderResultados() {
-  const enc = posicoesComClasse().filter(p => p.encerrado).sort((a, b) => b.fim.localeCompare(a.fim));
+  // cada posição encerrada (ativo vendido e recomprado mostra a posição antiga; a carteira não muda)
+  const enc = ciclosEncerrados(db.ops).map(p => ({ ...p, classe: p.classe || (ehB3(p.ticker) ? 'A' : 'F') })).sort((a, b) => b.fim.localeCompare(a.fim));
   const cols = comboAtivos('r', [...new Set(enc.map(p => p.ticker))].sort());
   const meses = [...new Set(enc.map(p => p.fim.slice(0, 7)))].sort();
   const ini = $('rIni').value, fim = $('rFim').value;
