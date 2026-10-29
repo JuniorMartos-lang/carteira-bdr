@@ -1365,7 +1365,6 @@ document.querySelector('nav').onclick = e => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   $('barra').hidden = !['resumo', 'carteira'].includes(t);
-  $('hVisaoBox').style.display = t === 'resumo' ? '' : 'none'; // "Visão Cotação" só no Resumo
   if (t === 'graf') renderGraficos(); // o gráfico precisa da largura da tela, que só existe com a aba visível
   if (['resumo', 'carteira', 'dash', 'compar'].includes(t)) autoAtualizar();
   b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados: mantém a aba visível
