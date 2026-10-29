@@ -145,6 +145,14 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 #wTabela tr:first-child th:first-child { width:1%; white-space:nowrap; } /* coluna Ativo só do tamanho do conteúdo: a sobra vai para as colunas de valor */
 #tResAcoes th, #tResAcoes td { padding-left:2px; padding-right:2px; } /* cabe em 375 px com a seta do Atual */
 #tResAcoes tr > :nth-child(n+3) { text-align:center; } /* Carteira, Resumido Ações: Preço médio, Investido e Atual no centro do título */
+/* Resumo → Alocação: rosca + lista (bolinha da cor da fatia, ativo, valor e %) */
+#aloc svg { display:block; margin:4px auto 10px; }
+#aloc .item { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--bd); }
+#aloc .item:first-of-type { border-top:0; }
+#aloc .bola { width:14px; height:14px; border-radius:50%; flex:none; }
+#aloc .nomeA { flex:1; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#aloc .vals { text-align:right; line-height:1.25; }
+#aloc .vals small { color:var(--mut); }
 #tCompar tr > :nth-child(2) { text-align:left; } /* Compar.: coluna Ativo (título e códigos) alinhada à esquerda */
 #tCompar tr > :nth-child(n+3) { text-align:center; } /* colunas de valor (Unit. enc. em diante): no centro do título */
 #tCompar tr > :last-child { padding-right:1px; } /* sem isso a tabela passava 1 px da tela e rolava para o lado */
@@ -240,6 +248,8 @@ label.check input { width:auto; margin:0; }
     <h2>Patrimônio total</h2>
     <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
     <p class="mut">Patrimônio não aplicado (aba Aporte/Saque) + valor atual de cada ativo ou fundo em aberto.</p>
+    <h2>Alocação da carteira</h2>
+    <div class="card viz" id="aloc"></div>
   </section>
 
   <section id="tab-lancar" hidden>
@@ -1003,6 +1013,20 @@ function render() {
       <th class="${cor(tLucro)}">${reais(tLucro)} <small>${pct(tLucroP)}</small></th></tr>`;
   // Resumo → Patrimônio total: não alocado + valor atual de cada posição aberta (mesma ordem do ranking)
   const naoAloc = naoAplicado(), patri = naoAloc + comDia.reduce((s, p) => s + (p.valor || 0), 0);
+  // Resumo → Alocação da carteira: fatia = valor atual da posição (qtd × preço de agora) sobre a soma das posições
+  // abertas com cotação (sem o patrimônio não aplicado), do maior para o menor; valores seguem o olhinho, % não
+  const fatias = comDia.filter(p => p.valor > 0).sort((a, b) => b.valor - a.valor), somaAloc = fatias.reduce((x, p) => x + p.valor, 0);
+  const corF = i => `var(--s${i % 8 + 1})`; // shortcut: com mais de 8 ativos as cores se repetem; agrupar o resto em "Outros" se incomodar
+  const R = 54, C = 2 * Math.PI * R;
+  let acum = 0;
+  $('aloc').innerHTML = !fatias.length ? '<p class="mut" style="margin:0">Sem posições com cotação ainda.</p>' :
+    `<svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="Alocação da carteira por ativo">
+      ${fatias.map((p, i) => { const l = p.valor / somaAloc * C, sv = `<circle cx="85" cy="85" r="${R}" fill="none" stroke="${corF(i)}" stroke-width="30"
+        stroke-dasharray="${Math.max(l - 1.5, 0.5)} ${C}" stroke-dashoffset="${-acum}" transform="rotate(-90 85 85)"/>`; acum += l; return sv; }).join('')}
+      <text x="85" y="81" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">Aplicado</text>
+      <text x="85" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${ocN(somaAloc)}</text></svg>` +
+    fatias.map((p, i) => `<div class="item"><span class="bola" style="background:${corF(i)}"></span><span class="nomeA" title="${esc(p.ticker)}">${esc(p.ticker)}</span>
+      <span class="vals"><b>${ocN(p.valor)}</b><br><small>${pct(p.valor / somaAloc)}</small></span></div>`).join('');
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
     `<tr><td>Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
     comDia.map(p => `<tr><td>${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
