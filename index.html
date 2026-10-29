@@ -165,8 +165,11 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 #tCompar tr > :last-child { padding-right:1px; } /* sem isso a tabela passava 1 px da tela e rolava para o lado */
 #ops tr.sel td, #aLista tr.sel td, #wTabela tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
 #mdTexto { white-space:pre-line; }
-#ops .tk2 { max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#ops tr > :nth-child(3) { text-align:left; } /* coluna Ativo: título e códigos alinhados à esquerda, logo antes do código */
+#ops .tk2 { max-width:68px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* coluna Ativo: logo afastado de Compra/Venda pela folga da própria coluna (Qtd e seguintes não mudam de lugar);
+   título centralizado sobre os nomes (descontado o espaço do logo) */
+#ops td:nth-child(3) { text-align:left; padding-left:15px; }
+#ops th:nth-child(3) { text-align:center; padding-left:33px; }
 #ops .logo { width:15px; height:15px; margin-right:3px; }
 #ops button.link { padding:2px 0 2px 4px; font-size:15px; }
 /* Gráficos: cores das linhas em ordem fixa (paleta validada para daltonismo), versão própria no modo escuro */
