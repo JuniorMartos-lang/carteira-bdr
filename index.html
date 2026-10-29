@@ -165,7 +165,9 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 #tCompar tr > :last-child { padding-right:1px; } /* sem isso a tabela passava 1 px da tela e rolava para o lado */
 #ops tr.sel td, #aLista tr.sel td, #wTabela tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
 #mdTexto { white-space:pre-line; }
-#ops .tk2 { max-width:62px; overflow:hidden; text-overflow:ellipsis; }
+#ops .tk2 { max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#ops tr > :nth-child(3) { text-align:left; } /* coluna Ativo: título e códigos alinhados à esquerda, logo antes do código */
+#ops .logo { width:15px; height:15px; margin-right:3px; }
 #ops button.link { padding:2px 0 2px 4px; font-size:15px; }
 /* Gráficos: cores das linhas em ordem fixa (paleta validada para daltonismo), versão própria no modo escuro */
 .viz { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; }
@@ -1082,7 +1084,7 @@ function render() {
     '<tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd</th><th>Unit. R$</th><th>Total R$</th></tr>' +
     lanc.map(o => `<tr data-id="${o.id}"${o.id === editandoId ? ' class="sel"' : ''}><td>${o.data.slice(8)}/${o.data.slice(5, 7)}/${o.data.slice(2, 4)}</td>
       <td class="${o.tipo === 'C' ? 'up' : 'dn'}">${o.tipo === 'C' ? 'Compra' : 'Venda'}</td>
-      <td><div class="tk2" title="${esc(o.ticker)}"><b>${esc(o.ticker)}</b></div></td><td>${o.qtd.toLocaleString('pt-BR')}</td>
+      <td><div class="tk2" title="${esc(o.ticker)}">${logo(o.ticker)}<b>${esc(o.ticker)}</b></div></td><td>${o.qtd.toLocaleString('pt-BR')}</td>
       <td>${reais(o.preco)}</td><td>${reais(o.qtd * o.preco)}</td></tr>`).join('');
 
   const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
