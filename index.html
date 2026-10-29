@@ -286,13 +286,15 @@ label.check input { width:auto; margin:0; }
   <section id="tab-carteira" hidden>
     <label class="check" style="margin:0 0 8px"><input type="checkbox" id="cResAcoes"> Resumido Ações</label>
     <div id="lista"></div>
+    <button class="sec exp ic ic-exportar" data-exp="carteira" id="cResExp" hidden>Exportar para Excel</button>
   </section>
 
   <section id="tab-resumo">
     <div class="card" style="padding:6px 8px; overflow-x:auto"><label class="check" style="margin:2px 0 6px"><input type="checkbox" id="rsAcoes"> Somente Ações</label><table id="tResumo"></table></div>
     <button class="sec exp ic ic-exportar" data-exp="resumo">Exportar para Excel</button>
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
-    <h2>Patrimônio total</h2>
+    <div class="row" style="align-items:center; justify-content:flex-start; gap:12px; margin:14px 0 6px"><h2 style="margin:0">Patrimônio total</h2>
+      <button class="sec exp ic ic-exportar" data-exp="patrimonio">Exportar para Excel</button></div>
     <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
     <p class="mut">Patrimônio não aplicado (aba Aporte/Saque) + valor atual de cada ativo ou fundo em aberto.</p>
     <h2>Alocação da carteira</h2>
@@ -1078,6 +1080,8 @@ function render() {
       <text x="85" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${ocN(somaAloc)}</text></svg>` +
     fatias.map((p, i) => `<div class="item"><span class="bola" style="background:${corF(i)}"></span><span class="nomeA" title="${esc(p.ticker)}">${logo(p.ticker)}${esc(p.ticker)}</span>
       <span class="vals"><b>${ocN(p.valor)}</b><br><small>${pct(p.valor / somaAloc)}</small></span></div>`).join('');
+  tabelas.patrimonio = [['Item', 'Tipo', 'Valor R$'], ['Patrimônio não aplicado', '', xR(naoAloc)],
+    ...comDia.map(p => [p.ticker, NOME_CLASSE[p.classe], xR(p.valor)]), ['Patrimônio total', '', xR(patri)]];
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
     `<tr><td>Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
     comDia.map(p => `<tr><td title="${esc(p.ticker)}">${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span> <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
@@ -1090,6 +1094,11 @@ function render() {
     `<td class="${v > pm ? 'up' : v < pm ? 'dn' : ''}" style="white-space:nowrap">${reais(v)}${v > pm ? '<small> ▲</small>' : v < pm ? '<small> ▼</small>' : ''}</td>`;
   // "Resumido Ações": só as ações, em tabela, na mesma ordem (ranking pelo % de lucro); Total só de Investido e Atual
   const acoes = comDia.filter(p => p.classe === 'A'), somaA = k => acoes.reduce((s, p) => s + (p[k] || 0), 0);
+  // exportação do Resumido Ações: mesmas colunas e ordem da tabela; botão só aparece com a caixa marcada
+  tabelas.carteira = !acoes.length ? null : [['Ativo', 'Qtd', 'Preço médio R$', 'Valor atual R$', 'Investido R$', 'Atual R$'],
+    ...acoes.map((p, i) => [`${i + 1}º ${p.ticker}`, p.qtd, xR(p.pm), xR(p.preco), xR(p.investido), xR(p.valor)]),
+    ['Total', '', '', '', xR(somaA('investido')), xR(somaA('valor'))]];
+  $('cResExp').hidden = !$('cResAcoes').checked || !acoes.length;
   $('lista').innerHTML = $('cResAcoes').checked ? (!acoes.length ? '<p class="mut">Nenhuma ação em carteira.</p>' :
     '<div class="card rolagem"><table class="compacto" id="tResAcoes"><tr><th>Ativo</th><th>Qtd</th><th>Preço médio R$</th><th>Valor atual R$</th><th>Investido R$</th><th>Atual R$</th></tr>' +
     acoes.map((p, i) => `<tr><td><b style="white-space:nowrap" title="${esc(p.ticker)}">${i + 1}º ${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span></b></td><td>${p.qtd.toLocaleString('pt-BR')}</td><td>${reais(p.pm)}</td>${precoSeta(p.preco, p.pm)}
