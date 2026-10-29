@@ -136,6 +136,7 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 #ops tr[data-id] { cursor:pointer; }
 #tab-dash .rolagem { max-height:none; } /* Dash.: a página rola, não a tabela (a barra vertical cortava o Mês %) */
 #wTabela tr:first-child th:first-child { width:1%; white-space:nowrap; } /* coluna Ativo só do tamanho do conteúdo: a sobra vai para as colunas de valor */
+#tResAcoes th, #tResAcoes td { padding-left:2px; padding-right:2px; } /* cabe em 375 px com a seta do Atual */
 #tResAcoes tr > :nth-child(n+3) { text-align:center; } /* Carteira, Resumido Ações: Preço médio, Investido e Atual no centro do título */
 #tCompar tr > :nth-child(2) { text-align:left; } /* Compar.: coluna Ativo (título e códigos) alinhada à esquerda */
 #tCompar tr > :nth-child(n+3) { text-align:center; } /* colunas de valor (Unit. enc. em diante): no centro do título */
@@ -944,13 +945,16 @@ function render() {
     `<tr><td>Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
     comDia.map(p => `<tr><td>${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
     `<tr class="soma"><th>Patrimônio total</th><th>${ocN(patri)}</th></tr>`;
+  // Atual verde ▲ se está acima do investido, vermelho ▼ se abaixo (a cor e a seta aparecem mesmo com o olhinho fechado)
+  const atualSeta = (v, inv, tag) => v == null ? `<${tag}>—</${tag}>` :
+    `<${tag} class="${v > inv ? 'up' : v < inv ? 'dn' : ''}" style="white-space:nowrap">${ocN(v)}${v > inv ? '<small> ▲</small>' : v < inv ? '<small> ▼</small>' : ''}</${tag}>`;
   // "Resumido Ações": só as ações, em tabela, na mesma ordem (ranking pelo % de lucro); Total só de Investido e Atual
   const acoes = comDia.filter(p => p.classe === 'A'), somaA = k => acoes.reduce((s, p) => s + (p[k] || 0), 0);
   $('lista').innerHTML = $('cResAcoes').checked ? (!acoes.length ? '<p class="mut">Nenhuma ação em carteira.</p>' :
     '<div class="card rolagem"><table class="compacto" id="tResAcoes"><tr><th>Ativo</th><th>Qtd</th><th>Preço médio R$</th><th>Investido R$</th><th>Atual R$</th></tr>' +
     acoes.map((p, i) => `<tr><td><b>${i + 1}º ${esc(p.ticker)}</b></td><td>${p.qtd.toLocaleString('pt-BR')}</td><td>${reais(p.pm)}</td>
-      <td>${ocN(p.investido)}</td><td>${ocN(p.valor)}</td></tr>`).join('') +
-    `<tr class="soma"><th>Total</th><td></td><td></td><th>${ocN(somaA('investido'))}</th><th>${ocN(somaA('valor'))}</th></tr></table></div>`) :
+      <td>${ocN(p.investido)}</td>${atualSeta(p.valor, p.investido, 'td')}</tr>`).join('') +
+    `<tr class="soma"><th>Total</th><td></td><td></td><th>${ocN(somaA('investido'))}</th>${atualSeta(somaA('valor'), somaA('investido'), 'th')}</tr></table></div>`) :
   comDia.map((p, i) => `
     <div class="card">
       <div class="topo"><span class="tk">${i + 1}º ${esc(p.ticker)}</span>
