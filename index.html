@@ -196,7 +196,8 @@ label.check input { width:auto; margin:0; }
 </header>
 <div id="topo">
   <div class="card lucroCard">
-    <div class="mut">Lucro da carteira</div>
+    <div class="row" style="align-items:center"><span class="mut">Lucro da carteira</span>
+      <label class="check" id="hVisaoBox" style="margin:0; font-size:13px"><input type="checkbox" id="hVisao"> Visão Cotação</label></div>
     <div id="hLucro">—</div>
     <div class="row"><span id="hPct" class="pill"></span><span id="hHoje"></span></div>
     <div class="row divide"><span><span class="mut">Investido</span><br><b id="hInv"></b></span>
@@ -863,6 +864,10 @@ const nomeCurto = n => n.split(/\s+(?:Shs|Unsponsored|Sponsored)\b/i)[0];
 // posições com tipo; lançamentos antigos sem tipo: código da B3 = ação, resto = fundo
 const posicoesComClasse = () => posicoes(db.ops, db.precos).map(p => ({ ...p, classe: p.classe || (ehB3(p.ticker) ? 'A' : 'F') }));
 
+// cotações do topo (letreiro e janela "Visão Cotação"): nome, chave em db.indices, formato do valor
+const pontos = v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+const INDICES = [['IBOV', 'ibov', pontos], ['Dólar', 'usd', v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 })],
+  ['Dow Jones', 'dow', pontos], ['S&P 500', 'sp', pontos], ['Nasdaq', 'nasdaq', pontos]];
 function render() {
   const ps = posicoesComClasse();
   const abertos = ps.filter(p => !p.encerrado).sort((a, b) => (b.pct ?? -9) - (a.pct ?? -9));
@@ -877,11 +882,8 @@ function render() {
   $('hPct').textContent = seta(pTot) + pct(pTot); $('hPct').className = 'pill ' + cor(pTot);
   // Investido e Atual começam escondidos a cada abertura do app (mostrarValores não é gravado)
   $('hInv').textContent = mostrarValores ? brl(inv) : 'R$ ••••••'; $('hAtual').textContent = mostrarValores ? brl(valor) : 'R$ ••••••';
-  const ind = (nome, x, fmt) => !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
-    <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`;
-  const itens = ind('IBOV', db.indices.ibov, v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })) +
-    ind('Dólar', db.indices.usd, v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 3 })) +
-    [['Dow Jones', 'dow'], ['S&P 500', 'sp'], ['Nasdaq', 'nasdaq']].map(([n, k]) => ind(n, db.indices[k], v => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }))).join('');
+  const itens = INDICES.map(([nome, k, fmt]) => { const x = db.indices[k]; return !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
+    <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`; }).join('');
   if ($('hIndices').dataset.itens !== itens) { // só redesenha se mudou: senão o letreiro voltaria ao começo a cada render
     $('hIndices').dataset.itens = itens;
     $('hIndices').innerHTML = !itens ? '' : `<div class="faixa"><span>${itens}</span><span class="copia" aria-hidden="true">${itens}</span></div>`;
@@ -1360,6 +1362,7 @@ document.querySelector('nav').onclick = e => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   $('barra').hidden = !['resumo', 'carteira'].includes(t);
+  $('hVisaoBox').style.display = t === 'resumo' ? '' : 'none'; // "Visão Cotação" só no Resumo
   if (t === 'graf') renderGraficos(); // o gráfico precisa da largura da tela, que só existe com a aba visível
   if (['resumo', 'carteira', 'dash', 'compar'].includes(t)) autoAtualizar();
   b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados: mantém a aba visível
@@ -1632,6 +1635,18 @@ async function janelaAtivo(a) {
 }
 $('wAtualizar').onclick = () => atualizarDash();
 $('rsAcoes').onchange = $('cResAcoes').onchange = render;
+// "Visão Cotação": as cotações do letreiro numa janela, paradas; ao fechar, a caixa desmarca e fica só o letreiro
+$('hVisao').onchange = async () => {
+  if (!$('hVisao').checked) return;
+  const linhas = INDICES.filter(([, k]) => db.indices[k]).map(([nome, k, fmt]) => { const x = db.indices[k];
+    return `<tr><td style="text-align:left"><b>${nome}</b></td><td>${fmt(x.v)}</td>
+      <td class="${x.pct >= 0 ? 'up' : 'dn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</td></tr>`; }).join('');
+  const quando = db.atualizado ? new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
+  await modal({ titulo: 'Cotações', ok: 'Fechar', texto: quando ? 'Atualizadas em ' + quando : '',
+    html: !linhas ? '<p class="mut">Sem cotações ainda: toque em Atualizar cotações.</p>' :
+      `<table class="compacto" style="width:100%"><tr><th style="text-align:left">Índice</th><th>Valor</th><th>Dia</th></tr>${linhas}</table>` });
+  fecharModal(); $('hVisao').checked = false;
+};
 $('kAtualizar').onclick = async () => { // não roda junto com outra atualização (o brapi grátis recusa consultas simultâneas)
   if ($('btnAtualizar').disabled || $('wAtualizar').disabled) return;
   $('kAtualizar').disabled = true; await atualizarDash(); $('kAtualizar').disabled = false; };
