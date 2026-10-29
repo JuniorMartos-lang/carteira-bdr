@@ -148,7 +148,10 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 /* Resumo → Alocação: rosca + lista (bolinha da cor da fatia, ativo, valor e %) */
 .logo { position:relative; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%;
   overflow:hidden; flex:none; vertical-align:middle; margin-right:5px; background:var(--bd); color:var(--mut); font-size:8px; font-weight:700; }
-#tResumo .logo { width:15px; height:15px; margin-right:2px; } /* na tabela do Resumo, menor: cabe em 375 px */
+#tResumo .logo { width:15px; height:15px; margin-right:2px; }
+.tkN { display:inline-block; max-width:66px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
+#tPatrimonio td:first-child { white-space:nowrap; }
+#tPatrimonio .tkN { max-width:150px; } /* na tabela do Resumo, menor: cabe em 375 px */
 .logo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#fff; }
 #aloc svg { display:block; margin:4px auto 10px; }
 #aloc .item { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--bd); }
@@ -1014,7 +1017,7 @@ function render() {
   // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
   $('tResumo').innerHTML = !tab.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
     '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro R$ e %</th></tr>' +
-    tab.map((p, i) => `<tr><td><b title="${esc(p.ticker)}" style="white-space:nowrap">${i + 1}º ${logo(p.ticker)}${esc(p.ticker.slice(0, 10).trimEnd())}</b></td>
+    tab.map((p, i) => `<tr><td><b title="${esc(p.ticker)}" style="white-space:nowrap">${i + 1}º ${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span></b></td>
       <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${reais(p.d.r)}</td>
       <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('') +
     `<tr class="soma"><th>Total</th><th class="${cor(tHojeP)}">${pct(tHojeP)}</th><th class="${cor(tHojeR)}">${reais(tHojeR)}</th>
@@ -1037,7 +1040,7 @@ function render() {
       <span class="vals"><b>${ocN(p.valor)}</b><br><small>${pct(p.valor / somaAloc)}</small></span></div>`).join('');
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
     `<tr><td>Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
-    comDia.map(p => `<tr><td>${logo(p.ticker)}${esc(p.ticker)} <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
+    comDia.map(p => `<tr><td title="${esc(p.ticker)}">${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span> <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
     `<tr class="soma"><th>Patrimônio total</th><th>${ocN(patri)}</th></tr>`;
   // Atual verde ▲ se está acima do investido, vermelho ▼ se abaixo (a cor e a seta aparecem mesmo com o olhinho fechado)
   const atualSeta = (v, inv, tag) => v == null ? `<${tag}>—</${tag}>` :
