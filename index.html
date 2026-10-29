@@ -53,8 +53,19 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 /* dados do card: uma informação por linha, nome à esquerda e valor à direita */
 .grid { margin-top:6px; }
 .grid > div { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-top:1px dashed var(--bd); }
-button, .btn { font:inherit; border:0; border-radius:10px; padding:11px 14px; background:var(--pri); color:#fff; font-weight:600; cursor:pointer; }
+button, .btn { font:inherit; border:0; border-radius:999px; padding:11px 14px; background:var(--pri); color:#fff; font-weight:600; cursor:pointer; }
 :where(:root[data-theme=dark]) button, :where(:root[data-theme=dark]) .btn { color:#06201d; } /* mesma força de 'button' e '.btn': o menu e os botões secundários mantêm a cor deles */
+/* botões no modelo "pílula" (escolhido pelo usuário entre 4 propostas): cantos redondos e ícone antes do texto.
+   O ícone é uma máscara (::before), então herda a cor do botão e não some quando o texto muda (ex.: Adicionar/Alterar) */
+.ic { white-space:nowrap; flex:none; } /* o botão não quebra; o texto ao lado (ex.: data das cotações) é que quebra */
+.ic::before { content:""; display:inline-block; width:16px; height:16px; margin-right:6px; vertical-align:-3px; flex:none;
+  background:currentColor; -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat; }
+.ic-atualizar { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 0 0-14.9-3.9L4 8'/%3E%3Cpath d='M4 4v4h4'/%3E%3Cpath d='M4 13a8 8 0 0 0 14.9 3.9L20 16'/%3E%3Cpath d='M20 20v-4h-4'/%3E%3C/svg%3E"); }
+.ic-salvar { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E"); }
+.ic-limpar { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 20H8.5l-4.2-4.3a1 1 0 0 1 0-1.4l9.6-9.6a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4L12 20'/%3E%3Cpath d='M17 13l-6-6'/%3E%3C/svg%3E"); }
+.ic-excluir { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16'/%3E%3Cpath d='M10 11v6M14 11v6'/%3E%3Cpath d='M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12'/%3E%3Cpath d='M9 7V4h6v3'/%3E%3C/svg%3E"); }
+.ic-exportar { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11'/%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E"); }
+.ic-backup { --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V5'/%3E%3Cpath d='M7 10l5-5 5 5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E"); }
 button.sec { background:transparent; color:var(--pri); border:1px solid var(--bd); }
 button.link { background:none; color:var(--dn); padding:4px 6px; font-weight:500; }
 button:disabled { opacity:.5; }
@@ -255,7 +266,7 @@ label.check input { width:auto; margin:0; }
   <div id="barra" style="margin-bottom:10px">
     <div class="row">
       <span class="mut" id="atualizado"></span>
-      <button id="btnAtualizar">Atualizar cotações</button>
+      <button id="btnAtualizar" class="ic ic-atualizar">Atualizar cotações</button>
     </div>
     <div class="msg dn" id="erroCot"></div>
     <div class="msg dn" id="lembrete"></div>
@@ -268,7 +279,7 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-resumo">
     <div class="card" style="padding:6px 8px; overflow-x:auto"><label class="check" style="margin:2px 0 6px"><input type="checkbox" id="rsAcoes"> Somente Ações</label><table id="tResumo"></table></div>
-    <button class="sec exp" data-exp="resumo">Exportar para Excel</button>
+    <button class="sec exp ic ic-exportar" data-exp="resumo">Exportar para Excel</button>
     <p class="mut">Hoje % e Hoje R$: quanto a sua posição em cada ativo subiu ou caiu desde o pregão anterior.</p>
     <h2>Patrimônio total</h2>
     <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
@@ -297,7 +308,7 @@ label.check input { width:auto; margin:0; }
         <div><label for="fTotal">Valor total</label><input id="fTotal" readonly tabindex="-1" placeholder="R$ 0,00" aria-readonly="true"></div>
       </div>
       <div class="msg" id="fMsg"></div>
-      <div class="botoes"><button>Salvar</button><button type="button" class="sec" id="fLimpar">Limpar</button><button type="button" class="perigo" id="fExcluir" hidden>Excluir</button></div>
+      <div class="botoes"><button class="ic ic-salvar">Salvar</button><button type="button" class="ic ic-limpar sec" id="fLimpar">Limpar</button><button type="button" class="ic ic-excluir perigo" id="fExcluir" hidden>Excluir</button></div>
     </form>
     <div class="row" style="align-items:center"><h2>Lançamentos</h2>
       <button type="button" class="info" aria-expanded="false" aria-controls="lancInfo" aria-label="Como usar os lançamentos">i</button></div>
@@ -381,7 +392,7 @@ label.check input { width:auto; margin:0; }
     <div class="card">
       <label for="aInicial" style="margin-top:0">Patrimônio inicial</label>
       <div class="datasTodos" style="grid-template-columns:1fr auto"><input id="aInicial" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off">
-        <button type="button" id="aInicialSalvar">Salvar</button></div>
+        <button type="button" id="aInicialSalvar" class="ic ic-salvar">Salvar</button></div>
     </div>
     <form class="card" id="aForm">
       <div class="two">
@@ -390,7 +401,7 @@ label.check input { width:auto; margin:0; }
       </div>
       <label for="aValor">Valor</label><input id="aValor" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" required>
       <div class="msg" id="aMsg"></div>
-      <div class="botoes"><button>Salvar</button><button type="button" class="sec" id="aLimpar">Limpar</button><button type="button" class="perigo" id="aExcluir" hidden>Excluir</button></div>
+      <div class="botoes"><button class="ic ic-salvar">Salvar</button><button type="button" class="ic ic-limpar sec" id="aLimpar">Limpar</button><button type="button" class="ic ic-excluir perigo" id="aExcluir" hidden>Excluir</button></div>
     </form>
     <h2>Aportes e saques</h2>
     <div class="card">
@@ -439,7 +450,7 @@ label.check input { width:auto; margin:0; }
       <div id="dResInfo" class="ajuda" hidden>Marcado, a tabela mostra só <b>Data, Dia %, Dia R$, Total R$, Lucro % e Lucro R$</b>, sem as colunas de cada ativo, e cabe na tela do celular. Os totais continuam somando só os ativos escolhidos no filtro. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
     <div class="card rolagem"><table id="tDiario"></table></div>
-    <button class="sec exp" data-exp="diario">Exportar para Excel</button>
+    <button class="sec exp ic ic-exportar" data-exp="diario">Exportar para Excel</button>
     <p class="mut">Cada ativo mostra o valor da posição no dia e, embaixo, o % de lucro acumulado. O app grava um registro por dia ao atualizar as cotações.</p>
   </section>
 
@@ -461,7 +472,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="tMensal"></table></div>
-    <button class="sec exp" data-exp="mensal">Exportar para Excel</button>
+    <button class="sec exp ic ic-exportar" data-exp="mensal">Exportar para Excel</button>
     <p class="mut">O app guarda o valor da carteira a cada atualização de cotação (um registro por dia). O lucro do mês é a diferença do lucro acumulado entre o fim de um mês e o fim do anterior.</p>
   </section>
 
@@ -513,7 +524,7 @@ label.check input { width:auto; margin:0; }
 
   <section id="tab-compar" hidden>
     <h2 style="margin-top:4px">Comparar encerrados</h2>
-    <div class="row" style="align-items:center; gap:8px"><button type="button" id="kAtualizar" style="flex:none">Atualizar cotações</button><span class="mut" id="kQuando"></span></div>
+    <div class="row" style="align-items:center; gap:8px"><button type="button" id="kAtualizar" style="flex:none" class="ic ic-atualizar">Atualizar cotações</button><span class="mut" id="kQuando"></span></div>
     <div class="card">
       <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><label>Ativos</label>
         <button type="button" class="info" aria-expanded="false" aria-controls="kInfo" aria-label="De onde vem a cotação atual">i</button></div>
@@ -549,7 +560,7 @@ label.check input { width:auto; margin:0; }
       </div>
     </div>
     <div class="card rolagem"><table id="tCompar" class="compacto"></table></div>
-    <button class="sec exp" data-exp="compar">Exportar para Excel</button>
+    <button class="sec exp ic ic-exportar" data-exp="compar">Exportar para Excel</button>
   </section>
 
   <section id="tab-result" hidden>
@@ -564,7 +575,7 @@ label.check input { width:auto; margin:0; }
       <div id="rResInfo" class="ajuda" hidden>Marcado, os cartões viram uma <b>lista com uma linha por ativo</b>: ativo, data da compra, data da venda, total da venda, lucro R$ e %, IR a pagar e lucro líquido, com a linha <b>Total</b> no fim. A lista rola para o lado e a coluna Ativo fica fixa. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
     <div id="rLista"></div>
-    <button class="sec exp" data-exp="resultados">Exportar para Excel</button>
+    <button class="sec exp ic ic-exportar" data-exp="resultados">Exportar para Excel</button>
     <p class="mut">Só ativos encerrados (vendidos por completo). O filtro de meses usa a data da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
   </section>
 
@@ -614,7 +625,7 @@ label.check input { width:auto; margin:0; }
           <li>A mesma ordem vale para a lista da caixa Procurar.</li>
         </ul>
     </div>
-    <div class="row" style="align-items:flex-start; gap:8px"><button type="button" id="wAtualizar" style="flex:none">Atualizar cotações</button>
+    <div class="row" style="align-items:flex-start; gap:8px"><button type="button" id="wAtualizar" style="flex:none" class="ic ic-atualizar">Atualizar cotações</button>
       <details class="combo" id="wBusca" style="flex:1; min-width:0"><summary id="wBuscaResumo">Procurar: Todos</summary>
         <input id="wBuscaTxt" type="search" placeholder="Nome ou código do ativo" autocomplete="off" aria-label="Procurar ativo" style="margin-top:4px">
         <div class="lista" id="wBuscaLista"></div></details></div>
@@ -625,7 +636,7 @@ label.check input { width:auto; margin:0; }
       <label for="wTicker" style="margin-top:0">Ativo (ex.: PETR4, AAPL34)</label>
       <input id="wTicker" autocapitalize="characters" autocomplete="off" maxlength="12">
       <div class="msg" id="wMsg"></div>
-      <div class="botoes"><button id="wSalvar">Adicionar</button><button type="button" class="sec" id="wLimpar">Limpar</button><button type="button" class="perigo" id="wExcluir" hidden>Excluir</button></div>
+      <div class="botoes"><button id="wSalvar" class="ic ic-salvar">Adicionar</button><button type="button" class="ic ic-limpar sec" id="wLimpar">Limpar</button><button type="button" class="ic ic-excluir perigo" id="wExcluir" hidden>Excluir</button></div>
     </form>
   </section>
 
@@ -663,7 +674,7 @@ label.check input { width:auto; margin:0; }
         <div><label for="cAlta">Alta a partir de (%)</label><input id="cAlta" inputmode="decimal" autocomplete="off" placeholder="0"></div>
         <div><label for="cQueda">Queda a partir de (%)</label><input id="cQueda" inputmode="decimal" autocomplete="off" placeholder="0"></div>
       </div>
-      <div class="botoes"><button type="button" id="cAlertasSalvar">Salvar</button></div>
+      <div class="botoes"><button type="button" id="cAlertasSalvar" class="ic ic-salvar">Salvar</button></div>
     </div>
     <div class="card">
       <label for="cTema" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Aparência</b></label>
@@ -772,7 +783,7 @@ label.check input { width:auto; margin:0; }
       </div>
       <input id="cToken" autocomplete="off" spellcheck="false">
       <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado só neste celular.</p>
-      <button id="btnToken">Salvar token</button>
+      <button id="btnToken" class="ic ic-salvar">Salvar token</button>
     </div>
     <div class="card">
       <div class="row" style="align-items:center"><b>Backup</b>
@@ -814,8 +825,8 @@ label.check input { width:auto; margin:0; }
       <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo no OneDrive.</p>
       <p id="ultBackup"></p>
       <div class="two">
-        <button id="btnExp">Salvar backup</button>
-        <button id="btnImp" class="sec">Restaurar</button>
+        <button id="btnExp" class="ic ic-backup">Salvar backup</button>
+        <button id="btnImp" class="ic ic-exportar sec">Restaurar</button>
       </div>
       <input type="file" id="fileImp" accept=".txt,.json,text/plain,application/json" hidden>
       <div class="msg" id="cMsg"></div>
