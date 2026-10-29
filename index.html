@@ -87,6 +87,13 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 @keyframes letreiro { from { transform:translateX(0); } to { transform:translateX(-50%); } }
 /* quem pediu menos movimento no celular: sem animação, uma vez só, rolando com o dedo */
 @media (prefers-reduced-motion: reduce) { #hIndices { overflow-x:auto; } #hIndices .faixa { animation:none; } #hIndices .copia { display:none; } }
+/* alertas do Dash. (±5% no dia): retângulo com letreiro na metade direita da linha do lucro */
+#hAlertas { flex:0 0 50%; min-width:0; overflow:hidden; white-space:nowrap; font-size:12px; border:1px solid var(--bd); border-radius:8px; padding:5px 0;
+  mask-image:linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image:linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+#hAlertas .faixa { display:inline-block; animation:letreiro 18s linear infinite; }
+#hAlertas .faixa > span > span { margin-right:16px; }
+#hAlertas:active .faixa { animation-play-state:paused; }
+@media (prefers-reduced-motion: reduce) { #hAlertas { overflow-x:auto; } #hAlertas .faixa { animation:none; } #hAlertas .copia { display:none; } }
 #hIndices .iup { color:#bbf7d0; } #hIndices .idn { color:#fecaca; }
 :where(:root[data-theme=dark]) #hIndices .iup { color:#14532d; } :where(:root[data-theme=dark]) #hIndices .idn { color:#7f1d1d; }
 /* um cartão por tipo (Ações / Fundos); se só houver um tipo, ocupa a largura toda */
@@ -199,7 +206,7 @@ label.check input { width:auto; margin:0; }
   <div class="card lucroCard">
     <div class="row" style="align-items:center"><span class="mut">Lucro da carteira</span>
       <label class="check" id="hVisaoBox" style="margin:0; font-size:13px"><input type="checkbox" id="hVisao"> Visão Cotação</label></div>
-    <div id="hLucro">—</div>
+    <div class="row" style="gap:8px"><div id="hLucro">—</div><div id="hAlertas" style="display:none" aria-label="Alertas de variação do dia"></div></div>
     <div class="row"><span id="hPct" class="pill"></span><span id="hHoje"></span></div>
     <div class="row divide"><span><span class="mut">Investido</span><br><b id="hInv"></b></span>
       <button type="button" class="olho" id="hOlho" aria-pressed="false" aria-label="Mostrar valores">
@@ -553,6 +560,13 @@ label.check input { width:auto; margin:0; }
           <li><b>Atualização automática</b>: de segunda a sexta, das 10h00 às 17h30 (horário de Brasília), ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou nesta aba, se a última atualização tiver mais de 15 minutos, as cotações são buscadas sozinhas (primeiro as da carteira, depois as do Dashboard). Fora desse horário (e com o app fechado) nada é atualizado sozinho: use o botão. Feriados não são reconhecidos: num feriado em dia útil a atualização automática roda normalmente.</li>
           <li>Os ativos cadastrados vão no backup.</li>
         </ul>
+        <b>Alertas no cabeçalho</b>
+        <ul>
+          <li>Quando um ativo cadastrado aqui varia <b>5% ou mais no dia</b> (para cima ou para baixo), ele aparece num letreiro dentro de um retângulo, ao lado do lucro da carteira: verde com ▲ se subiu, vermelho com ▼ se caiu.</li>
+          <li>A lista é refeita a cada atualização de cotações do Dash. (pelo botão ou automática) e mostra sempre a variação atual.</li>
+          <li>Depois de entrar na lista, o ativo fica até o fim do dia, mesmo que a variação volte para menos de 5% (ex.: subiu 6% e depois ficou em 4%).</li>
+          <li>No dia seguinte a lista começa vazia. Sem alertas, o retângulo não aparece.</li>
+        </ul>
         <b>Ordem dos ativos</b>
         <ul>
           <li>Primeiro aparecem, em ordem alfabética, os ativos que você tem na carteira (os que estão no Resumo).</li>
@@ -886,6 +900,14 @@ function render() {
   $('hInv').textContent = mostrarValores ? brl(inv) : 'R$ ••••••'; $('hAtual').textContent = mostrarValores ? brl(valor) : 'R$ ••••••';
   const itens = INDICES.map(([nome, k, fmt]) => { const x = db.indices[k]; return !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
     <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`; }).join('');
+  // alertas do Dash. (só os do dia de hoje), com a variação atual de cada um
+  const al = db.alertas?.dia === hoje() ? db.alertas.tks.map(t => db.dash.find(a => a.ticker === t)).filter(Boolean) : [];
+  const itensAl = al.map(a => `<span class="${a.dia >= 0 ? 'up' : 'dn'}"><b>${esc(a.ticker)}</b> ${a.dia >= 0 ? '▲ +' : '▼ '}${pct(a.dia)}</span>`).join('');
+  $('hAlertas').style.display = al.length ? '' : 'none';
+  if ($('hAlertas').dataset.itens !== itensAl) {
+    $('hAlertas').dataset.itens = itensAl;
+    $('hAlertas').innerHTML = `<div class="faixa"><span>${itensAl}</span><span class="copia" aria-hidden="true">${itensAl}</span></div>`;
+  }
   if ($('hIndices').dataset.itens !== itens) { // só redesenha se mudou: senão o letreiro voltaria ao começo a cada render
     $('hIndices').dataset.itens = itens;
     $('hIndices').innerHTML = !itens ? '' : `<div class="faixa"><span>${itens}</span><span class="copia" aria-hidden="true">${itens}</span></div>`;
@@ -1577,6 +1599,7 @@ $('aExcluir').onclick = async () => {
 };
 // --- Dash.: lista de acompanhamento (não é carteira; cotações do brapi, um ativo por vez como no resto do app) ---
 const DASH_MAX = 50;
+const ALERTA = 0.05; // variação do dia (para cima ou para baixo) que põe o ativo nos alertas do cabeçalho
 let dashEditando = null; // ticker carregado da lista
 const dashFiltro = new Set(); // procura: ativos marcados (vazio = todos)
 const semAcento = x => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -1619,12 +1642,17 @@ async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
       if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
       const a = db.dash.find(x => x.ticker === t); if (!a) continue; // excluído enquanto atualizava
       Object.assign(a, { nome: q.longName || q.shortName || a.nome, preco: q.regularMarketPrice,
+        pregao: q.regularMarketTime ? pregaoDe(q.regularMarketTime) : null,
         dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100,
         dias: diasDoMes(q.historicalDataPrice || []) },
         variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
     } catch (err) { erros.push(`${t} (${err.message})`); }
   }
   if (erros.length < tks.length) db.dashEm = new Date().toISOString();
+  // alertas do cabeçalho: ativo do Dash. que chega a ±5% no dia (cotação do pregão de hoje) entra na lista e fica até o
+  // fim do dia, mesmo que a variação volte para menos de 5% (aparece sempre com a variação atual); no dia seguinte a lista zera
+  if (db.alertas?.dia !== hoje()) db.alertas = { dia: hoje(), tks: [] };
+  for (const a of db.dash) if (a.pregao === hoje() && Math.abs(a.dia ?? 0) >= ALERTA && !db.alertas.tks.includes(a.ticker)) db.alertas.tks.push(a.ticker);
   salvar(); $('wAtualizar').disabled = false; renderDash();
   $('wErro').textContent = erros.length ? 'Não foi possível atualizar: ' + erros.join(', ') + '.' : '';
 }
