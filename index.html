@@ -534,13 +534,14 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <div><label for="gIni">Mês inicial</label><select id="gIni"></select></div>
         <div><label for="gFim">Mês final</label><select id="gFim"></select></div>
       </div>
-      <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="gRealizados"> Incluir realizados</label><label class="check"><input type="checkbox" id="gAcoes"> Somente Ações</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="gRealInfo" aria-label="O que é Incluir realizados">i</button></div>
+      <div class="row" style="justify-content:flex-start; flex-wrap:wrap; gap:0 8px; align-items:center"><label class="check"><input type="checkbox" id="gRealizados"> Incluir realizados</label><label class="check"><input type="checkbox" id="gAbertos"> Ativos Abertos</label><label class="check"><input type="checkbox" id="gAcoes"> Somente Ações</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="gRealInfo" aria-label="O que é Incluir realizados">i</button></div>
       <div id="gRealInfo" class="ajuda" hidden>
         <b>Incluir realizados</b>
         <ul>
           <li><b>Desmarcado:</b> a linha mostra só os <b>ativos em aberto hoje</b>, cada um desde a compra que abriu a posição atual (um ativo vendido e comprado de novo conta só a partir da nova compra). Ativos já vendidos ficam de fora. O título do gráfico diz "só ativos em aberto".</li>
           <li><b>Marcado:</b> a linha soma o lucro das posições abertas com o lucro (ou prejuízo) já realizado nas vendas até aquele dia, sobre o total investido, incluindo o custo das ações vendidas. A linha não salta nas vendas e mostra a evolução do resultado desde o início. O título do gráfico diz "todos os ativos: em aberto e realizados".</li>
           <li>Vale para a linha da carteira ("Todos"). Com ativos escolhidos no filtro, cada linha continua mostrando a rentabilidade da posição daquele ativo.</li>
+          <li><b>Ativos Abertos</b>: a caixa Ativos lista só os ativos em aberto hoje e cada linha começa na compra que abriu a posição atual, sem a posição antiga de quem foi vendido e recomprado. O gráfico começa na compra mais antiga dessas posições. Não combina com "Incluir realizados": marcar uma desmarca a outra.</li>
           <li><b>Somente Ações</b>: tira do gráfico tudo o que não é ação (fundos), seguindo as mesmas regras acima, com ou sem "Incluir realizados"; a caixa Ativos também lista só as ações. O título do gráfico ganha "– só ações".</li>
           <li>O detalhe de cada venda (lucro, IR e lucro líquido) está na aba <b>Resultados</b>.</li>
         </ul>
@@ -1409,10 +1410,12 @@ function grafico(p, encerrados) {
   // "Somente Ações" (só no gráfico da carteira): fundos ficam fora da caixa de ativos, da linha da carteira e dos realizados
   const soAcoes = !encerrados && $('gAcoes').checked;
   const classe = Object.fromEntries(posicoesComClasse().map(x => [x.ticker, x.classe])), acao = t => !soAcoes || classe[t] === 'A';
-  const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].filter(t => (!encerrados || fimDe[t]) && acao(t)).sort();
+  // "Ativos Abertos" (só no gráfico da carteira): só quem está em aberto hoje, desde a compra que abriu a posição atual
+  const soAbertos = !encerrados && $('gAbertos').checked, ciclo = inicioCiclo(db.ops);
+  const tks = [...new Set(h.flatMap(s => Object.keys(s.v)))].filter(t => (!encerrados || fimDe[t]) && acao(t) && (!soAbertos || ciclo[t])).sort();
   const cols = comboAtivos(p, tks), todos = cols === tks || cols.length === tks.length;
   // encerrados: só os dias em que algum dos ativos escolhidos ainda estava na carteira
-  const base = encerrados ? h.filter(s => cols.some(t => tem(s, t))) : h;
+  const base = encerrados ? h.filter(s => cols.some(t => tem(s, t))) : soAbertos ? h.filter(s => cols.some(t => s.data >= ciclo[t])) : h; // Ativos Abertos: começa na compra mais antiga das posições abertas
   const meses = [...new Set(base.map(s => s.data.slice(0, 7)))];
   const ini = $(p + 'Ini').value, fim = $(p + 'Fim').value;
   $(p + 'Ini').innerHTML = opcao('', 'Todos os meses', !ini) + meses.map(m => opcao(m, nomeMes(m), m === ini)).join('');
@@ -1420,7 +1423,7 @@ function grafico(p, encerrados) {
   const dias = base.filter(s => (!ini || s.data.slice(0, 7) >= ini) && (!fim || s.data.slice(0, 7) <= fim));
   const pctDe = x => x ? (x[0] - x[1]) / x[1] : null;
   // carteira ("Todos", sem realizados): só os ativos em aberto hoje, cada um desde a compra que abriu a posição atual
-  const ciclo = inicioCiclo(db.ops), entra = (s, t) => encerrados ? cols.includes(t) && tem(s, t) : !!ciclo[t] && s.data >= ciclo[t] && acao(t);
+  const entra = (s, t) => encerrados ? cols.includes(t) && tem(s, t) : !!ciclo[t] && s.data >= ciclo[t] && acao(t);
   const total = s => { const vs = Object.entries(s.v).filter(([t]) => entra(s, t)).map(([, x]) => x);
     const inv = vs.reduce((a, x) => a + x[1], 0);
     return inv ? (vs.reduce((a, x) => a + x[0], 0) - inv) / inv : null; };
@@ -1435,13 +1438,13 @@ function grafico(p, encerrados) {
     return base ? luc / base : null;
   };
   const series = todos ? [{ nome: encerrados ? 'Encerrados' : comReal ? 'Carteira com realizados' : 'Ativos em aberto', cor: 'var(--s1)', vals: dias.map(comReal ? totalReal : total) }]
-    : cols.slice(0, 8).map((t, i) => ({ nome: t, cor: `var(--s${i + 1})`, vals: dias.map(s => tem(s, t) ? pctDe(s.v[t]) : null) }));
+    : cols.slice(0, 8).map((t, i) => ({ nome: t, cor: `var(--s${i + 1})`, vals: dias.map(s => tem(s, t) && (!soAbertos || s.data >= ciclo[t]) ? pctDe(s.v[t]) : null) }));
   $(p + 'Aviso').textContent = !todos && cols.length > 8 ? `Mostrando os 8 primeiros de ${cols.length} ativos escolhidos.` : '';
   $(p + 'Legenda').innerHTML = series.length < 2 ? '' :
     series.map(s => `<span><i class="marca" style="background:${s.cor}"></i>${esc(s.nome)}</span>`).join('');
   $(p + 'Titulo').textContent = encerrados ? (todos ? 'Rentabilidade dos ativos encerrados, juntos (%)' : 'Rentabilidade dos ativos encerrados (%)')
     : (todos ? (comReal ? 'Rentabilidade acumulada – todos os ativos: em aberto e realizados' : 'Rentabilidade acumulada – só ativos em aberto')
-      : 'Rentabilidade acumulada') + (soAcoes ? ' – só ações' : '') + ' (%)';
+      : soAbertos ? 'Rentabilidade acumulada – só ativos em aberto' : 'Rentabilidade acumulada') + (soAcoes ? ' – só ações' : '') + ' (%)';
 
   const svg = $(p + 'Svg'), W = svg.clientWidth, H = 240, L = 44, R = 10, T = 10, B = 24;
   $(p + 'Dica').hidden = true;
@@ -1556,7 +1559,8 @@ function renderDiario() {
 }
 
 [['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['mAbertos', renderMensal], ['dResumido', renderDiario],
- ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['rRank', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', renderGraficos], ['gAcoes', renderGraficos], ['eIni', renderGraficos], ['eFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
+ ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['rRank', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', () => { if ($('gRealizados').checked) $('gAbertos').checked = false; renderGraficos(); }],
+ ['gAbertos', () => { if ($('gAbertos').checked) $('gRealizados').checked = false; renderGraficos(); }], ['gAcoes', renderGraficos], ['eIni', renderGraficos], ['eFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
 [['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos], ['e', renderGraficos], ['k', renderCompar]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
