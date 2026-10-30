@@ -132,6 +132,17 @@ function inicioCiclo(ops) {
   return Object.fromEntries(Object.entries(ini).filter(([t]) => q[t] > 0));
 }
 
+// Gráfico de barras de Resultados: lucro somado por ativo, das posições encerradas com venda final nos meses (aaaa-mm;
+// vazio = sem limite). Ativo encerrado mais de uma vez no período soma; do maior para o menor.
+function lucroPorAtivo(ciclos, ini, fim) {
+  const soma = {};
+  for (const p of ciclos) {
+    const m = p.fim.slice(0, 7);
+    if ((!ini || m >= ini) && (!fim || m <= fim)) soma[p.ticker] = (soma[p.ticker] || 0) + p.lucro;
+  }
+  return Object.entries(soma).map(([ticker, lucro]) => ({ ticker, lucro })).sort((a, b) => b.lucro - a.lucro);
+}
+
 // Aba Compar.: último encerramento de cada ativo (a venda que zerou a posição) e o preço médio das vendas desse dia.
 // Ativo zerado mais de uma vez aparece uma vez só, com o último encerramento (mesmo que hoje esteja recomprado).
 // Devolve [{ticker, data, preco}] do encerramento mais antigo para o mais recente.
@@ -226,5 +237,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, lucroPorAtivo,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

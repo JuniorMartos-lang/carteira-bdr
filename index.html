@@ -285,6 +285,23 @@ th { color:var(--mut); }
 nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
 .ajuda { border:0; border-radius:14px; }
 .ic::before { border-radius:14px; }
+/* Resultados: gráfico de barras (lucro por ativo); a coluna de valores fica fixa e as barras rolam */
+.bGraf { display:flex; margin-top:10px; }
+.bEixo { position:relative; flex:none; width:40px; font-size:10px; color:var(--mut); }
+.bEixo span { position:absolute; right:5px; transform:translateY(-50%); white-space:nowrap; }
+.bRola { flex:1; min-width:0; overflow-x:auto; }
+.bPlot { position:relative; display:flex; }
+.bPlot > i { position:absolute; left:0; right:0; height:1px; background:var(--bd); }
+.bPlot > i.zero { background:var(--mut); }
+.bCol { position:relative; flex:1 1 0; min-width:0; }
+.bBarra { position:absolute; left:50%; width:20px; margin-left:-10px; }
+.bBarra.pos { background:var(--up); border-radius:4px 4px 0 0; }
+.bBarra.neg { background:var(--dn); border-radius:0 0 4px 4px; }
+.bVal { position:absolute; left:0; right:0; text-align:center; font-size:10px; font-weight:600; color:var(--tx); white-space:nowrap; }
+.bNomes { display:flex; margin-top:2px; }
+.bNomes > div { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:8.5px; color:var(--tx); }
+.bNomes .logo { margin:0; }
+.bNomes span:last-child { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -637,6 +654,21 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
     <div id="rLista"></div>
     <button class="sec exp icl ic-exportar" data-exp="resultados">Exportar para Excel</button>
     <p class="mut">Só ativos encerrados (vendidos por completo). O filtro de meses usa a data da venda final. IR: 15% sobre o lucro de BDR/ação (BDR não tem a isenção de R$ 20 mil); prejuízo não paga; fundos já têm o IR retido na fonte. Não compensa prejuízos de outros meses. Confirme com seu contador.</p>
+    <h2>Lucro por ativo</h2>
+    <div class="card">
+      <label>Ativos</label>
+      <details class="combo"><summary id="bResumo">Todos</summary><div id="bAtivos" class="lista"></div></details>
+      <div class="two">
+        <div><label for="bIni">Mês inicial</label><select id="bIni"></select></div>
+        <div><label for="bFim">Mês final</label><select id="bFim"></select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="bAcoes"> Somente Ações</label>
+    </div>
+    <div class="card">
+      <b id="bTitulo">Lucro por ativo encerrado (R$)</b>
+      <div id="bGrafico"></div>
+    </div>
+    <p class="mut">Soma o lucro de todas as posições encerradas de cada ativo com venda final nos meses escolhidos, antes do IR, do maior para o menor. Com muitos ativos, o gráfico rola para o lado.</p>
   </section>
 
   <section id="tab-dash" hidden>
@@ -1012,7 +1044,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
 </nav>
 
 <!-- ?v= igual à versão do app: o celular busca o calc.js novo junto com a tela nova (sem misturar com o do cache) -->
-<script src="calc.js?v=1.19.0"></script>
+<script src="calc.js?v=1.22.0"></script>
 <script>
 const KEY = 'carteira-bdr';
 const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, indices: {}, token: '', atualizado: null,
@@ -1275,6 +1307,7 @@ function render() {
   renderCompar();
   renderDiario();
   renderResultados();
+  renderBarras();
   if (!$('tab-graf').hidden) renderGraficos();
 }
 
@@ -1318,6 +1351,33 @@ function renderMensal() {
 }
 
 // Aba Resultados: só ativos encerrados, com IR e lucro líquido; filtro de ativos e mês do encerramento
+// Resultados: gráfico de barras, com filtros próprios; barra para cima = lucro, para baixo = prejuízo
+function renderBarras() {
+  const classeDe = p => p.classe || (ehB3(p.ticker) ? 'A' : 'F');
+  const enc = ciclosEncerrados(db.ops).filter(p => !$('bAcoes').checked || classeDe(p) === 'A');
+  const cols = comboAtivos('b', [...new Set(enc.map(p => p.ticker))].sort());
+  const meses = [...new Set(enc.map(p => p.fim.slice(0, 7)))].sort();
+  const ini = $('bIni').value, fim = $('bFim').value;
+  $('bIni').innerHTML = opcao('', 'Todos os meses', !ini) + meses.map(m => opcao(m, nomeMes(m), m === ini)).join('');
+  $('bFim').innerHTML = opcao('', 'Todos os meses', !fim) + meses.map(m => opcao(m, nomeMes(m), m === fim)).join('');
+  const dados = lucroPorAtivo(enc.filter(p => cols.includes(p.ticker)), ini, fim);
+  $('bTitulo').textContent = 'Lucro por ativo encerrado (R$)' + ($('bAcoes').checked ? ' – só ações' : '');
+  if (!dados.length) { $('bGrafico').innerHTML = `<p class="mut">${db.ops.length && meses.length ? 'Nenhum ativo encerrado com esses filtros.' : 'Nenhum ativo encerrado ainda.'}</p>`; return; }
+  const inteiro = v => Math.round(v).toLocaleString('pt-BR');
+  const vals = dados.map(d => d.lucro), bruto = Math.max(0, ...vals) - Math.min(0, ...vals) || 1;
+  const ordem = 10 ** Math.floor(Math.log10(bruto)), passo = [0.2, 0.5, 1, 2, 5].map(x => x * ordem).find(x => bruto / x <= 5); // linhas "redondas"
+  const min = Math.floor(Math.min(0, ...vals) / passo) * passo, max = Math.ceil(Math.max(0, ...vals) / passo) * passo;
+  const H = 220, F = 18, y = v => F + (max - v) / (max - min) * (H - 2 * F); // F: folga para o valor acima/abaixo da barra
+  const linhas = []; for (let v = min; v <= max + passo / 2; v += passo) linhas.push(v);
+  $('bGrafico').innerHTML = `<div class="bGraf"><div class="bEixo" style="height:${H}px">${linhas.map(v => `<span style="top:${y(v)}px">${inteiro(v)}</span>`).join('')}</div>
+    <div class="bRola"><div class="bArea" style="min-width:${dados.length * 34}px">
+      <div class="bPlot" style="height:${H}px">${linhas.map(v => `<i class="${Math.abs(v) < passo / 2 ? 'zero' : ''}" style="top:${y(v)}px"></i>`).join('')}
+        ${dados.map(d => { const a = y(Math.max(d.lucro, 0)), b = y(Math.min(d.lucro, 0)), up = d.lucro >= 0;
+          return `<div class="bCol" title="${esc(d.ticker)}: ${esc(brl(d.lucro))}"><div class="bBarra ${up ? 'pos' : 'neg'}" style="top:${a}px; height:${Math.max(b - a, 2)}px"></div>
+            <span class="bVal" style="top:${up ? a - 15 : b + 2}px">${inteiro(d.lucro)}</span></div>`; }).join('')}</div>
+      <div class="bNomes">${dados.map(d => `<div title="${esc(d.ticker)}">${logo(d.ticker)}<span>${esc(d.ticker)}</span></div>`).join('')}</div>
+    </div></div></div>`;
+}
 function renderResultados() {
   // cada posição encerrada (ativo vendido e recomprado mostra a posição antiga; a carteira não muda)
   const enc = ciclosEncerrados(db.ops).map(p => ({ ...p, classe: p.classe || (ehB3(p.ticker) ? 'A' : 'F') })).sort((a, b) => b.fim.localeCompare(a.fim));
@@ -1559,10 +1619,10 @@ function renderDiario() {
 }
 
 [['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['mAbertos', renderMensal], ['dResumido', renderDiario],
- ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['rRank', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', () => { if ($('gRealizados').checked) $('gAbertos').checked = false; renderGraficos(); }],
+ ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['rRank', renderResultados], ['bIni', renderBarras], ['bFim', renderBarras], ['bAcoes', renderBarras], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', () => { if ($('gRealizados').checked) $('gAbertos').checked = false; renderGraficos(); }],
  ['gAbertos', () => { if ($('gAbertos').checked) $('gRealizados').checked = false; renderGraficos(); }], ['gAcoes', renderGraficos], ['eIni', renderGraficos], ['eFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
-[['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos], ['e', renderGraficos], ['k', renderCompar]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
+[['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['b', renderBarras], ['g', renderGraficos], ['e', renderGraficos], ['k', renderCompar]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
   $(p + 'Ativos').querySelectorAll('input').forEach(i => { if (e.target.checked && (i.value === '*') !== tudo) i.checked = false; });
   f();

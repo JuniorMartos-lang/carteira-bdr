@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, lucroPorAtivo, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -100,6 +100,13 @@ perto(variacoes(121, hv, '2026-10-27').semana, 121 / 110 - 1); // terça: já é
 assert.deepStrictEqual(variacoes(10, [], '2026-10-28'), { semana: null, mes: null, mesAnt: null });
 
 // Atualização automática: dias úteis, 10h00–17h30 de Brasília (UTC-3)
+{ // lucro por ativo: soma as posições encerradas no período, do maior para o menor
+  const c = [{ ticker: 'A', fim: '2026-08-10', lucro: 100 }, { ticker: 'A', fim: '2026-09-05', lucro: 50 }, { ticker: 'A', fim: '2026-09-20', lucro: -20 },
+    { ticker: 'B', fim: '2026-09-01', lucro: 200 }, { ticker: 'C', fim: '2026-10-01', lucro: -5 }];
+  assert.deepStrictEqual(lucroPorAtivo(c), [{ ticker: 'B', lucro: 200 }, { ticker: 'A', lucro: 130 }, { ticker: 'C', lucro: -5 }]);
+  assert.deepStrictEqual(lucroPorAtivo(c, '2026-08', '2026-08'), [{ ticker: 'A', lucro: 100 }]);
+  assert.deepStrictEqual(lucroPorAtivo(c, '2026-09', '2026-10').map(x => x.lucro), [200, 30, -5]);
+}
 assert.ok(horarioAuto(new Date('2026-10-26T13:00:00Z')));   // seg 10h00
 assert.ok(horarioAuto(new Date('2026-10-30T21:00:00Z')));   // sex 18h00
 assert.ok(!horarioAuto(new Date('2026-10-26T12:59:00Z')));  // seg 09h59
