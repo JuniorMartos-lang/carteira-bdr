@@ -169,6 +169,8 @@ button.exp { width:100%; margin-bottom:10px; }
 button.perigo { background:transparent; color:var(--dn); border:1px solid var(--dn); }
 #ops tr[data-id] { cursor:pointer; }
 #tab-dash .rolagem { max-height:none; } /* Dash.: a página rola, não a tabela (a barra vertical cortava o Mês %) */
+.wChk { width:auto; margin:0 4px 0 0; padding:0; flex:none; }
+#wTabela tr.off td { opacity:.55; }
 #wTabela tr:first-child th:first-child { width:1%; white-space:nowrap; } /* coluna Ativo só do tamanho do conteúdo: a sobra vai para as colunas de valor */
 #tResAcoes th, #tResAcoes td { padding-left:2px; padding-right:2px; } /* cabe em 375 px com a seta do Atual */
 #tResAcoes tr > :nth-child(n+3) { text-align:center; } /* Carteira, Resumido Ações: Preço médio, Investido e Atual no centro do título */
@@ -569,17 +571,16 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
 
   <section id="tab-compar" hidden>
     <h2 style="margin-top:4px">Comparar encerrados</h2>
-    <div class="row" style="align-items:center; gap:8px"><button type="button" id="kAtualizar" style="flex:none" class="ic ic-atualizar">Atualizar cotações</button><span class="mut" id="kQuando"></span></div>
+    <div class="row" style="align-items:center; gap:8px"><button type="button" id="kAtualizar" style="flex:none" class="ic ic-atualizar">Atualizar cotações</button><span class="mut" id="kQuando"></span><span class="msg dn" id="kErro" style="flex-basis:100%"></span></div>
     <div class="card">
       <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><label>Ativos</label>
         <button type="button" class="info" aria-expanded="false" aria-controls="kInfo" aria-label="De onde vem a cotação atual">i</button></div>
       <div id="kInfo" class="ajuda" hidden>
         <b>Cotação atual (coluna Atual R$)</b>
         <ul>
-          <li>A cotação de agora de cada ativo encerrado vem da aba <b>Dash.</b>, que é atualizada sozinha no horário do pregão e pelo botão <b>Atualizar cotações</b> (desta aba ou do Dash.).</li>
-          <li>Por isso, o ativo encerrado precisa estar <b>cadastrado no Dash.</b> Se não estiver, a coluna Atual R$ e as diferenças aparecem com <b>"—"</b>.</li>
-          <li>Para resolver: vá na aba Dash., digite o código do ativo no cadastro (abaixo da tabela), toque em <b>Adicionar</b> e volte aqui.</li>
-          <li>Exceção: um ativo encerrado e depois recomprado (de novo na carteira) usa a cotação da carteira, mesmo fora do Dash.</li>
+          <li>Só muda ao tocar em <b>Atualizar cotações</b> desta aba; nada é buscado sozinho.</li>
+          <li>Ativo que está no <b>Resumo</b> (encerrado e recomprado): usa o valor carregado no Resumo, sem nova consulta.</li>
+          <li>Os demais são buscados no brapi, uma consulta por ativo. O ativo <b>desmarcado no Dash.</b> não é buscado e mostra o último valor (ou "—").</li>
         </ul>
         <b>Como ler a tabela</b>
         <ul>
@@ -647,9 +648,10 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <ul>
           <li>Toque no <b>i</b> ao lado do código para abrir uma janela com o nome do ativo e o fechamento de cada dia do mês corrente, do dia mais recente para o dia 1º (carregado ao tocar em Atualizar cotações).</li>
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
-          <li>O botão <b>Atualizar cotações</b> desta aba busca só os ativos do Dashboard.</li>
-          <li><b>Esta aba só atualiza pelo botão</b> (para economizar consultas do brapi). A exceção são os ativos que também estão na carteira: eles vêm junto na atualização da carteira (automática ou pelo botão do Resumo/Carteira), sem gastar consulta a mais, e o botão daqui pula os que foram atualizados há menos de 15 minutos.</li>
-          <li><b>Atualização automática da carteira</b>: de segunda a sexta, das 10h00 às 17h30 (horário de Brasília), ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira, nesta aba ou na Compar., se a última tiver mais de 30 minutos. Para sozinha ao chegar no limite de consultas do mês (Ajustes → Token do brapi). Fora desse horário (e com o app fechado) nada é atualizado sozinho. Feriados não são reconhecidos.</li>
+          <li><b>Nada é atualizado sozinho:</b> só ao tocar em <b>Atualizar cotações</b>.</li>
+          <li>Ativo que está no <b>Resumo</b>: usa o valor carregado no Resumo, sem nova consulta, mesmo desmarcado. Semana % e Mês % dele vêm junto com o Atualizar do Resumo.</li>
+          <li>Demais ativos: a <b>caixa de marcar</b> antes do "i" decide. <b>Marcado:</b> é buscado no brapi (uma consulta por ativo). <b>Desmarcado:</b> fica em espera, com os últimos valores, e não gasta consulta.</li>
+          <li>Ativo novo aparece sem valores até o próximo Atualizar.</li>
           <li>Os ativos cadastrados vão no backup.</li>
         </ul>
         <b>Alertas no cabeçalho</b>
@@ -708,7 +710,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         </ul>
         <b>Quando atualiza</b>
         <ul>
-          <li>A cada atualização do Dash. (pelo botão) e a cada atualização da carteira (automática de segunda a sexta, das 10h às 17h30, ou pelo botão), esta só para os ativos da carteira que estão no Dash.</li>
+          <li>A cada atualização do Dash. (pelo botão) e a cada atualização da carteira (pelo botão do Resumo), esta só para os ativos da carteira que estão no Dash.</li>
           <li>O ativo que entrou fica até o fim do dia, sempre com a variação atual, mesmo que volte para dentro do limite (ex.: com limite de 5%, subiu 6% e depois ficou em 4%).</li>
           <li>No dia seguinte a lista começa vazia. Sem alertas, o retângulo não aparece.</li>
         </ul>
@@ -800,14 +802,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       </div>
     </div>
     <div class="card">
-      <label for="cHg">Chave da HG Brasil (cotações da carteira e índices)</label>
-      <input id="cHg" autocomplete="off" spellcheck="false">
-      <p class="mut">Com a chave, a carteira e os índices (IBOV, Dow Jones, Nasdaq) vêm da HG Brasil (400 consultas por dia no plano grátis; todos os ativos numa consulta só). O que a HG não tiver, o S&amp;P 500 e o Dash. continuam pelo brapi. Sem a chave, tudo pelo brapi como antes. A chave vai no backup.</p>
-      <p id="cHgStatus" class="mut" style="margin-top:0"></p>
-      <button id="cHgSalvar" class="ic ic-salvar">Salvar chave</button>
-    </div>
-    <div class="card">
-      <div class="row" style="align-items:center"><label for="cToken">Token do brapi.dev (cotações da B3)</label>
+      <div class="row" style="align-items:center"><b style="font-size:16px">Brapi (cotações dos ativos)</b>
         <button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="Como conseguir o token">i</button></div>
       <div id="tokInfo" class="ajuda" hidden>
         <b>Como conseguir o token do brapi (grátis)</b>
@@ -824,26 +819,33 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <b>2. Colocar o token aqui</b>
         <ol>
           <li>Toque no campo abaixo e <b>cole</b> o token (segure o dedo no campo → Colar).</li>
-          <li>Toque em <b>Salvar token</b>.</li>
-          <li>Vá para <b>Resumo</b> ou <b>Carteira</b> e toque em <b>Atualizar cotações</b>.</li>
+          <li>Toque em <b>Salvar</b>.</li>
+          <li>Vá para <b>Resumo</b> e toque em <b>Atualizar cotações</b>.</li>
         </ol>
         <b>3. Para saber se deu certo</b>
         <ul>
           <li>Aparece "Cotações de [data e hora]" ao lado do botão, e o IBOV e o dólar no topo.</li>
           <li>Se aparecer "Não foi possível atualizar", leia o motivo: token incompleto (copie de novo, sem espaços no começo ou no fim) ou celular sem internet.</li>
         </ul>
-        <p class="mut">Trocar de token: copie o novo no painel do brapi, apague o antigo deste campo, cole o novo e toque em Salvar token. O token vai junto no backup e volta ao restaurar. O plano grátis tem um limite de consultas por mês (veja no painel do brapi); cada atualização usa uma consulta por ativo.</p>
+        <p class="mut">Trocar de token: copie o novo no painel do brapi, apague o antigo deste campo, cole o novo e toque em Salvar. O token vai junto no backup e volta ao restaurar. O plano grátis tem um limite de consultas por mês (veja no painel do brapi); cada atualização usa uma consulta por ativo.</p>
       </div>
+      <label for="cToken">Token</label>
       <input id="cToken" autocomplete="off" spellcheck="false">
-      <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado só neste celular.</p>
-      <button id="btnToken" class="ic ic-salvar">Salvar token</button>
-      <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--bd)">
-        <p id="cConsultas" style="margin:0 0 8px"></p>
-        <label for="cLimite">Parar a atualização automática ao chegar em (consultas usadas)</label>
-        <input id="cLimite" inputmode="numeric" autocomplete="off" onfocus="this.select()">
-        <button id="cLimiteSalvar" class="ic ic-salvar" style="margin-top:8px">Salvar limite</button>
-        <p class="mut">O número vem do próprio brapi a cada consulta e conta os últimos 30 dias corridos (inclui o que for gasto em outros aparelhos com o mesmo token). Ao chegar no limite, só a atualização automática para; os botões Atualizar cotações continuam funcionando. Sem limite gravado, vale 80% do plano. Só o limite vai no backup.</p>
-      </div>
+      <p id="cConsultas" style="margin:10px 0 8px"></p>
+      <label for="cLimite">Limite: parar de consultar ao chegar em (consultas usadas)</label>
+      <input id="cLimite" inputmode="numeric" autocomplete="off" onfocus="this.select()">
+      <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. O número de consultas vem do próprio brapi e conta os últimos 30 dias corridos, em todos os aparelhos com o mesmo token. Ao chegar no limite, o app não consulta mais o brapi até você aumentá-lo aqui. Sem limite gravado, vale 80% do plano. O token e o limite vão no backup.</p>
+      <button id="btnToken" class="ic ic-salvar">Salvar</button>
+    </div>
+    <div class="card">
+      <b style="font-size:16px">HG Brasil (IBOV, Dow Jones e Nasdaq)</b>
+      <label for="cHg" style="margin-top:8px">Chave</label>
+      <input id="cHg" autocomplete="off" spellcheck="false">
+      <p id="cHgUso" style="margin:10px 0 8px"></p>
+      <label for="cHgLimite">Limite: parar de consultar ao chegar em (consultas por dia)</label>
+      <input id="cHgLimite" inputmode="numeric" autocomplete="off" onfocus="this.select()">
+      <p class="mut">Cada toque em Atualizar cotações no Resumo usa 1 consulta da HG. A HG não informa o uso: o número é contado por este celular e zera todo dia. O plano grátis tem 400 por dia e não dá cotação de ações. Ao chegar no limite (sem limite gravado, 320), os índices vêm do brapi. A chave e o limite vão no backup.</p>
+      <button id="cHgSalvar" class="ic ic-salvar">Salvar</button>
     </div>
     <div class="card">
       <div class="row" style="align-items:center"><b>Backup</b>
@@ -1187,15 +1189,16 @@ function render() {
   // último backup: data e hora em azul e negrito; sem backup, aviso em vermelho
   const quandoBkp = db.ultimoBackupEm ? new Date(db.ultimoBackupEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')
     : db.ultimoBackup && db.ultimoBackup.split('-').reverse().join('/'); // backups antigos só guardavam o dia
-  const hs = db.hgStatus;
-  $('cHgStatus').innerHTML = !db.hgKey || !hs ? '' : db.hgSemAcoes ? '<b class="azul">Índices (IBOV, Dow Jones, Nasdaq) pela HG.</b> As ações não: o plano desta chave não libera cotação de ações (precisa do plano Member ou superior), então vêm do brapi.' : `Última atualização pela HG (${new Date(hs.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')}): ` +
-    (hs.erro ? `<b class="dn">não funcionou (${esc(hs.erro)})</b> — usado o brapi.` : `<b class="azul">${hs.ok} de ${hs.total} ativos</b>${hs.ok < hs.total ? ' (os outros pelo brapi)' : ''}.`);
+  const hgN = hgUsadas(), hgParou = hgN >= limiteHg();
+  $('cHgUso').innerHTML = `Consultas hoje (contadas neste celular): <b class="${hgParou ? 'dn' : 'azul'}">${hgN.toLocaleString('pt-BR')}</b> de ${limiteHg().toLocaleString('pt-BR')}.` +
+    (hgParou ? '<br><b class="dn">Limite atingido: hoje os índices vêm do brapi.</b>' : '');
   if (document.activeElement !== $('cHg')) $('cHg').value = db.hgKey || '';
+  if (document.activeElement !== $('cHgLimite')) $('cHgLimite').value = limiteHg().toLocaleString('pt-BR');
   const u = db.brapiUso, nCons = usadas(), parou = nCons != null && nCons >= limiteConsultas(), mil = v => v.toLocaleString('pt-BR');
   $('cConsultas').innerHTML = !u ? 'Consultas ao brapi: aparece depois da próxima atualização de cotações.' :
     `Consultas usadas (últimos 30 dias, informado pelo brapi): <b class="${parou ? 'dn' : 'azul'}">${mil(nCons)}</b> de ${mil(u.limite)} — restam ${mil(u.restante)}.` +
     `<br><span class="mut">Conferido em ${new Date(u.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')}.</span>` +
-    (parou ? '<br><b class="dn">Atualização automática parada (limite atingido).</b>' : '') +
+    (parou ? '<br><b class="dn">Limite atingido: o app não consulta mais o brapi.</b>' : '') +
     (u.aviso ? `<br><b class="dn">Aviso do brapi:</b> ${esc(u.aviso)}` : '');
   if (document.activeElement !== $('cLimite')) $('cLimite').value = limiteConsultas().toLocaleString('pt-BR');
   $('ultBackup').innerHTML = quandoBkp ? `Último backup: <b class="azul">${quandoBkp}</b>` : '<b class="dn">Nenhum backup feito ainda.</b>';
@@ -1517,34 +1520,26 @@ let editandoId = null; // Lançar: id do lançamento carregado da lista (Salvar 
 let falhou = false; // última tentativa de atualizar não trouxe nenhuma cotação
 // Uso da conta no brapi: cada resposta traz o limite do plano e quantas consultas restam nos últimos 30 dias corridos
 // (cabeçalhos RateLimit-Limit / RateLimit-Remaining, conferidos em 29/10/2026). Fica em db.brapiUso (fora do backup:
-// é da conta, não do celular). A atualização automática para ao chegar no limite escolhido em Ajustes (padrão: 80% do plano).
+// é da conta, não do celular). Ao chegar no limite escolhido em Ajustes (padrão: 80% do plano) o app não consulta mais o brapi.
 const usadas = () => db.brapiUso ? db.brapiUso.limite - db.brapiUso.restante : null;
 const limiteConsultas = () => db.limiteConsultas ?? Math.round((db.brapiUso?.limite ?? 15000) * 0.8);
+const limiteBrapiMsg = () => `Limite de consultas do brapi atingido (${usadas().toLocaleString('pt-BR')} de ${limiteConsultas().toLocaleString('pt-BR')}). Para continuar, aumente o limite em Ajustes.`;
 async function brapiFetch(url) {
+  if (usadas() >= limiteConsultas()) throw new Error(limiteBrapiMsg());
   const r = await fetch(url), lim = +r.headers.get('ratelimit-limit'), rest = r.headers.get('ratelimit-remaining');
   if (lim && rest != null) db.brapiUso = { limite: lim, restante: +rest, em: new Date().toISOString(), aviso: r.headers.get('x-usage-warning') || '' };
   return r;
 }
-// HG Brasil (chave em Ajustes, 400 consultas por dia no plano grátis): todos os ativos da carteira numa consulta só
-// e IBOV/Dow Jones/Nasdaq noutra. O que não vier (ativo que a HG não tem, chave inválida, erro) é buscado no brapi.
-const hgUrl = (rota, extra = '') => `https://api.hgbrasil.com/${rota}?${extra}format=json-cors&key=${encodeURIComponent(db.hgKey)}`;
-async function hgCotacoes(tks) {
-  // plano grátis da HG não libera ações (conferido em 29/10/2026: "UNAUTHORIZED_KEY"); depois da 1ª recusa não pergunta
-  // de novo até a chave ser trocada (hgSemAcoes), para não gastar consulta à toa
-  const m = new Map(); if (!db.hgKey || !tks.length || db.hgSemAcoes) return m;
-  try {
-    const r = await fetch(hgUrl('v2/finance/quotes', `tickers=${tks.map(t => 'B3:' + t).join(',')}&`)), j = await r.json();
-    for (const q of j.results || []) if (q.symbol && q.quote?.value != null) m.set(q.symbol, q);
-    db.hgStatus = { em: new Date().toISOString(), ok: m.size, total: tks.length,
-      erro: m.size ? '' : String(j.errors?.[0]?.message || j.message || j.results?.message || r.status) };
-    if (j.errors?.some(e => e.code === 'UNAUTHORIZED_KEY')) db.hgSemAcoes = true;
-  } catch (e) { db.hgStatus = { em: new Date().toISOString(), ok: 0, total: tks.length, erro: e.message }; }
-  return m;
-}
+// HG Brasil (plano grátis: 400 consultas por dia; não libera ações, conferido em 29/10/2026): só IBOV, Dow Jones e Nasdaq.
+// A HG não informa o uso nas respostas: o app conta as consultas deste celular, por dia (db.hgUso, fora do backup).
+// No limite escolhido em Ajustes (padrão: 80% do plano) não consulta mais a HG naquele dia; os índices vêm do brapi.
+const hgUsadas = () => db.hgUso?.dia === hoje() ? db.hgUso.n : 0;
+const limiteHg = () => db.limiteHg ?? 320;
 async function hgIndices() {
-  if (!db.hgKey) return {};
+  if (!db.hgKey || hgUsadas() >= limiteHg()) return {};
   try {
-    const s = (await (await fetch(hgUrl('finance'))).json()).results?.stocks || {};
+    db.hgUso = { dia: hoje(), n: hgUsadas() + 1 };
+    const s = (await (await fetch(`https://api.hgbrasil.com/finance?format=json-cors&key=${encodeURIComponent(db.hgKey)}`)).json()).results?.stocks || {};
     const x = k => s[k]?.points != null ? { v: s[k].points, pct: s[k].variation } : null;
     return { ibov: x('IBOVESPA'), dow: x('DOWJONES'), nasdaq: x('NASDAQ') };
   } catch { return {}; }
@@ -1566,19 +1561,9 @@ async function atualizar() {
   // uma requisição por ativo e uma de cada vez: o plano grátis do brapi aceita 1 ativo por chamada
   // e recusa chamadas simultâneas ("Limite de requisições simultâneas")
   const ativos = async () => {
-    const hg = await hgCotacoes(tks);
     for (const t of tks) {
     try {
       const a = db.dash.find(x => x.ticker === t); // ativo também no Dash.: a mesma consulta atualiza a linha dele lá
-      const h = hg.get(t);
-      if (h) { // veio pela HG: preço, variação do dia e data; no Dash. só preço e Dia % (Semana/Mês continuam pelo botão de lá)
-        db.precos[t] = h.quote.value; db.variacao[t] = h.quote.change_percent;
-        if (h.quote.updated_at) datas.push(pregaoDe(h.quote.updated_at));
-        if (h.full_name || h.name) db.nomes[t] = h.full_name || h.name;
-        if (a) Object.assign(a, { preco: h.quote.value, pregao: h.quote.updated_at ? pregaoDe(h.quote.updated_at) : a.pregao,
-          dia: h.quote.change_percent == null ? a.dia : h.quote.change_percent / 100 });
-        continue;
-      }
       const q = await brapi(t, !!a);
       if (a) dashAplicar(a, q);
       db.precos[t] = q.regularMarketPrice;
@@ -1622,16 +1607,8 @@ async function atualizar() {
   $('btnAtualizar').disabled = false;
 }
 
-// Atualização automática (só a carteira; o Dash. só pelo botão, a pedido, para economizar consultas): ao abrir o app,
-// ao voltar para ele e ao entrar no Resumo, Carteira, Dash. ou Compar., de segunda a sexta das 10h00 às 17h30 (horarioAuto),
-// se a última tiver mais de 30 min (era 15; mudado para economizar consultas) e o limite de consultas do mês não tiver sido atingido. Sem servidor, nada atualiza com o app fechado.
-const AUTO_MIN = 30;
-const velho = (iso, min = AUTO_MIN) => !iso || Date.now() - new Date(iso) > min * 60e3;
-async function autoAtualizar() {
-  if (!horarioAuto() || !(db.token || db.hgKey) || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // fora do horário, sem token ou já atualizando
-  if (usadas() >= limiteConsultas()) return render(); // limite atingido: só pelos botões
-  if (db.ops.length && velho(db.atualizado)) { $('wAtualizar').disabled = true; await atualizar(); $('wAtualizar').disabled = false; }
-}
+// sem consultas automáticas (a pedido): tudo só pelos botões Atualizar cotações (Resumo, Dash., Compar.)
+const velho = (iso, min) => !iso || Date.now() - new Date(iso) > min * 60e3;
 
 // --- eventos ---
 document.querySelector('nav').onclick = e => {
@@ -1639,8 +1616,8 @@ document.querySelector('nav').onclick = e => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   $('barra').hidden = !['resumo', 'carteira'].includes(t);
+  $('btnAtualizar').hidden = t === 'carteira'; // a Carteira usa o que o Resumo carregou
   if (t === 'graf') renderGraficos(); // o gráfico precisa da largura da tela, que só existe com a aba visível
-  if (['resumo', 'carteira', 'dash', 'compar'].includes(t)) autoAtualizar();
   b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados: mantém a aba visível
   scrollTo(0, 0);
 };
@@ -1874,8 +1851,8 @@ function renderDash() {
   $('wQuando').textContent = db.dashEm ? 'Atualizado em ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
     '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th><th>Mês ant. %</th></tr>' +
-    mostrar.map(([a, i]) => `<tr data-i="${i}"${a.ticker === dashEditando ? ' class="sel"' : ''}>
-      <td><span class="wAtivo"><button type="button" class="info" data-nome="${i}" aria-label="Nome e cotações do mês de ${esc(a.ticker)}">i</button>${logo(a.ticker)}<b>${esc(a.ticker)}</b></span></td>
+    mostrar.map(([a, i]) => `<tr data-i="${i}" class="${a.ticker === dashEditando ? 'sel' : ''}${a.off ? ' off' : ''}">
+      <td><span class="wAtivo"><input type="checkbox" class="wChk" aria-label="Buscar cotação de ${esc(a.ticker)}"${a.off ? '' : ' checked'}><button type="button" class="info" data-nome="${i}" aria-label="Nome e cotações do mês de ${esc(a.ticker)}">i</button>${logo(a.ticker)}<b>${esc(a.ticker)}</b></span></td>
       <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes, a.mesAnt].map(v => `<td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td>`).join('')}</tr>
 `).join('');
 }
@@ -1885,6 +1862,7 @@ function limparDash() {
 }
 async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
   if (!db.token) { $('wErro').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
+  if (usadas() >= limiteConsultas()) { $('wErro').textContent = limiteBrapiMsg(); return; }
   if (!tks.length) return;
   $('wAtualizar').disabled = true; $('wErro').textContent = '';
   const erros = [];
@@ -1894,8 +1872,8 @@ async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
       const r = await brapiFetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?range=3mo&interval=1d&token=${encodeURIComponent(db.token)}`);
       const j = await r.json(), q = j.results?.[0];
       if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
-      const a = db.dash.find(x => x.ticker === t); if (!a) continue; // excluído enquanto atualizava
-      dashAplicar(a, q);
+      const a = db.dash.find(x => x.ticker === t);
+      if (a) dashAplicar(a, q); else db.precos[t] = q.regularMarketPrice; // fora do Dash. (encerrado na Compar.)
     } catch (err) { erros.push(`${t} (${err.message})`); }
   }
   if (erros.length < tks.length) db.dashEm = new Date().toISOString();
@@ -1911,11 +1889,29 @@ function dashAplicar(a, q) {
     dias: diasDoMes(q.historicalDataPrice || []), em: new Date().toISOString() },
     variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
 }
-// botões Atualizar do Dash. e da Compar.: pula os ativos que a carteira trouxe há menos de 15 min (não gasta consulta duas vezes)
+// ativos em aberto no Resumo: Dash. e Compar. usam o valor carregado lá e não gastam consulta com eles
+const noResumo = () => new Set(posicoes(db.ops, {}).filter(p => !p.encerrado).map(p => p.ticker));
+function dashDoResumo() {
+  const r = noResumo();
+  for (const a of db.dash) if (r.has(a.ticker) && db.precos[a.ticker] != null) Object.assign(a, { preco: db.precos[a.ticker],
+    dia: db.variacao[a.ticker] == null ? a.dia : db.variacao[a.ticker] / 100, pregao: db.dataPregao || a.pregao });
+}
+// botão do Dash.: o que está no Resumo vem de lá (mesmo desmarcado); busca só os marcados que não estão no Resumo
 async function atualizarDashBotao() {
-  const tks = db.dash.filter(a => velho(a.em, 15)).map(a => a.ticker);
-  if (tks.length) return atualizarDash(tks);
-  db.dashEm = new Date().toISOString(); atualizaAlertas(); salvar(); renderDash();
+  dashDoResumo();
+  const r = noResumo(), tks = db.dash.filter(a => !a.off && !r.has(a.ticker)).map(a => a.ticker);
+  $('wErro').textContent = '';
+  if (tks.length) await atualizarDash(tks); else db.dashEm = new Date().toISOString();
+  atualizaAlertas(); salvar(); renderDash();
+}
+// botão da Compar.: o que está no Resumo vem de lá; busca só os encerrados fora do Resumo e não desmarcados no Dash.
+async function atualizarCompar() {
+  dashDoResumo();
+  const r = noResumo(), tks = [...new Set(encerramentos(db.ops).map(e => e.ticker))]
+    .filter(t => !r.has(t) && !db.dash.find(a => a.ticker === t)?.off);
+  $('wErro').textContent = '';
+  if (tks.length) await atualizarDash(tks); else db.dashEm = new Date().toISOString();
+  salvar(); render(); $('kErro').textContent = $('wErro').textContent;
 }
 // fechamentos [dia, valor] do mês corrente + o último do mês anterior (base do dia 1º), para a janela do botão i
 function diasDoMes(hist) {
@@ -1942,16 +1938,6 @@ const mostraLimites = () => { $('cAlta').value = numPct(altaPct()).replace('%', 
 mostraLimites();
 // ao tocar no campo, seleciona o valor inteiro: é só digitar o novo por cima
 ['cAlta', 'cQueda'].forEach(id => $(id).onfocus = $(id).onclick = e => e.target.select());
-$('cLimiteSalvar').onclick = async () => {
-  const v = Number($('cLimite').value.replace(/\D/g, ''));
-  if (!$('cLimite').value.trim() || !(v > 0)) {
-    await modal({ titulo: 'Valor inválido', ok: 'OK', texto: 'Digite um número de consultas maior que 0 (ex.: 12000).' });
-    fecharModal(); return render();
-  }
-  db.limiteConsultas = v; salvar(); render();
-  await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: `A atualização automática para ao chegar em ${v.toLocaleString('pt-BR')} consultas usadas.` + (usadas() != null ? ` Usadas agora: ${usadas().toLocaleString('pt-BR')}.` : '') });
-  fecharModal();
-};
 $('cAlertasSalvar').onclick = async () => {
   const le = id => Number($(id).value.replace(/[^\d,.]/g, '').replace(',', '.'));
   const alta = le('cAlta'), queda = le('cQueda');
@@ -1994,7 +1980,7 @@ $('hVisao').onchange = async () => {
 };
 $('kAtualizar').onclick = async () => { // não roda junto com outra atualização (o brapi grátis recusa consultas simultâneas)
   if ($('btnAtualizar').disabled || $('wAtualizar').disabled) return;
-  $('kAtualizar').disabled = true; await atualizarDashBotao(); $('kAtualizar').disabled = false; };
+  $('kAtualizar').disabled = true; await atualizarCompar(); $('kAtualizar').disabled = false; };
 $('wBuscaTxt').oninput = filtraBusca;
 $('wBusca').ontoggle = () => { if ($('wBusca').open) $('wBuscaTxt').focus(); else { $('wBuscaTxt').value = ''; filtraBusca(); } };
 $('wBuscaLista').onchange = e => { // marcar "Todos" limpa a procura; marcar um ativo desmarca "Todos"
@@ -2016,12 +2002,15 @@ $('wForm').onsubmit = async e => {
     fecharModal(); if (!sim) return;
     db.dash[db.dash.findIndex(a => a.ticker === antes)] = { ticker: t };
   } else db.dash.push({ ticker: t });
-  salvar(); limparDash(); renderDash();
-  const busca = atualizarDash([t]); // já busca a cotação do novo ativo
+  dashDoResumo(); salvar(); limparDash(); renderDash(); // cotação do novo: do Resumo, se estiver lá; senão, no próximo Atualizar
   await modal({ titulo: 'Gravado com sucesso', ok: 'OK', texto: antes ? `Ativo alterado:\nDe: ${antes}\nPara: ${t}` : `${t} adicionado ao Dash (${db.dash.length} de ${DASH_MAX}).` });
-  fecharModal(); await busca;
+  fecharModal();
 };
 $('wTabela').onclick = e => {
+  if (e.target.matches('.wChk')) { // desmarcado = em espera: o botão não busca este ativo
+    const a = db.dash[e.target.closest('tr[data-i]').dataset.i]; a.off = !e.target.checked || undefined;
+    e.target.closest('tr').classList.toggle('off', !e.target.checked); return salvar();
+  }
   const b = e.target.closest('button[data-nome]');
   if (b) return janelaAtivo(db.dash[b.dataset.nome]);
   const a = db.dash[e.target.closest('tr[data-i]')?.dataset.i]; if (!a) return;
@@ -2043,9 +2032,9 @@ function renderCompar() {
   const cols = comboAtivos('k', [...new Set(lista.map(e => e.ticker))].sort());
   const ini = isoDe($('kIni')), fim = isoDe($('kFim'));
   const vis = lista.filter(e => cols.includes(e.ticker) && (!ini || e.data >= ini) && (!fim || e.data <= fim));
-  // cotação do Dash. (atualizada sozinha e pelo botão); fora do Dash., a da carteira (ativo recomprado); sem nenhuma: "—"
-  const atual = t => db.dash.find(a => a.ticker === t)?.preco ?? (posicoes(db.ops, {}).some(x => x.ticker === t && !x.encerrado) ? db.precos[t] : null);
-  $('kQuando').textContent = db.dashEm ? 'Cotações do Dash. de ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
+  // ativo no Resumo (recomprado): o valor do Resumo; senão o do Dash.; senão o buscado pelo botão desta aba; sem nenhum: "—"
+  const r = noResumo(), atual = t => (r.has(t) ? db.precos[t] : null) ?? db.dash.find(a => a.ticker === t)?.preco ?? db.precos[t] ?? null;
+  $('kQuando').textContent = db.dashEm ? 'Cotações de ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   const seta = v => v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : '';
   const dif = e => { const a = atual(e.ticker), d = a == null ? null : a - e.preco; return [a, d, d == null ? null : d / e.preco]; };
   tabelas.compar = !vis.length ? null : [['Encerramento', 'Ativo', 'Unitário no encerramento R$', 'Atual R$', 'Dif. R$', 'Dif. %'],
@@ -2096,23 +2085,25 @@ $('cToken').value = db.token;
 document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
   const q = $(b.getAttribute('aria-controls')), abre = q.hidden; q.hidden = !abre; b.setAttribute('aria-expanded', abre);
 });
-$('cHgSalvar').onclick = async () => {
-  db.hgKey = $('cHg').value.trim(); db.hgStatus = null; db.hgSemAcoes = false; salvar(); render();
-  await modal({ titulo: db.hgKey ? 'Chave Gravada com Sucesso' : 'Chave removida', ok: 'OK',
-    texto: db.hgKey ? 'Toque em Atualizar cotações (no Resumo ou na Carteira) e volte aqui para ver quantos ativos vieram pela HG.' : 'Sem a chave, as cotações voltam a vir só do brapi.' });
+// Ajustes → Brapi e HG Brasil: um botão Salvar para o token/chave e o limite do quadro
+async function salvarServico(campo, campoLimite, grava, nome) {
+  const v = Number($(campoLimite).value.replace(/\D/g, ''));
+  if (!(v > 0)) {
+    await modal({ titulo: 'Valor inválido', ok: 'OK', texto: 'Digite no limite um número de consultas maior que 0. Nada foi alterado.' });
+    fecharModal(); return render();
+  }
+  const chave = $(campo).value.trim();
+  grava(chave, v); salvar(); $('cMsg').textContent = ''; render();
+  await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: `${nome}: ${chave ? 'gravado' : 'removido'}.\nLimite: ${v.toLocaleString('pt-BR')} consultas.` });
   fecharModal();
-};
-$('btnToken').onclick = async () => {
-  db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = '';
-  await modal({ titulo: db.token ? 'Token Gravado com Sucesso' : 'Token removido', ok: 'OK',
-    texto: db.token ? 'Toque em Atualizar cotações (no Resumo ou na Carteira) para conferir se as cotações chegam.' : 'Sem token, as cotações não são atualizadas.' });
-  fecharModal();
-};
+}
+$('btnToken').onclick = () => salvarServico('cToken', 'cLimite', (c, v) => { db.token = c; db.limiteConsultas = v; }, 'Token do brapi');
+$('cHgSalvar').onclick = () => salvarServico('cHg', 'cHgLimite', (c, v) => { db.hgKey = c; db.limiteHg = v; }, 'Chave da HG Brasil');
 // Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
 async function fazerBackup() {
-  // vai tudo, inclusive o token do brapi (a pedido): restaurar num celular novo já traz as cotações; o uso do brapi
-  // não vai (é da conta, vem do próprio brapi), só o limite escolhido
-  const { brapiUso, consultas, ...dados } = db;
+  // vai tudo, inclusive token e chave (a pedido): restaurar num celular novo já traz as cotações; o uso de brapi e HG
+  // não vai, só os limites escolhidos
+  const { brapiUso, consultas, hgUso, hgStatus, hgSemAcoes, ...dados } = db;
   let txt = JSON.stringify(dados, null, 1);
   if (trava.backup) txt = JSON.stringify({ carteiraBdrProtegido: 1, sal: trava.backup.sal, ...await cifrar(txt, trava.backup.chave) });
   // .txt: o Chrome do Android recusa compartilhar .json ("Permission denied"); o conteúdo continua sendo JSON
@@ -2146,7 +2137,8 @@ function conteudoBackup(d) {
     `Alerta Volatilidade Cabeçalho: ${d.alertaAlta > 0 ? 'alta ' + numPct(d.alertaAlta) : 'alta desligada'} · ${d.alertaQueda > 0 ? 'queda ' + numPct(d.alertaQueda) : 'queda desligada'}${d.alertaAlta == null ? ' (sem valores no backup: 0)' : ''}`,
     `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`,
     `Chave da HG Brasil: ${d.hgKey ? 'incluída' : 'não incluída (mantém a deste aparelho)'}`,
-    `Limite da atualização automática: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas usadas' : 'sem valor no backup (80% do plano do brapi)'}`].join('\n');
+    `Limite do brapi: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas usadas' : 'sem valor no backup (80% do plano)'}`,
+    `Limite da HG Brasil: ${d.limiteHg ? d.limiteHg.toLocaleString('pt-BR') + ' consultas por dia' : 'sem valor no backup (320 por dia)'}`].join('\n');
 }
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return; // limpa já: escolher o mesmo arquivo de novo funciona mesmo após cancelar
@@ -2165,7 +2157,7 @@ $('fileImp').onchange = async e => {
       texto: `Todos os dados atuais deste celular serão substituídos pelos do backup.\n\nArquivo: ${f.name}\n\n${conteudoBackup(d)}` });
     fecharModal(); if (!sim) return;
     db = { ...vazio, ...d, token: d.token || db.token, hgKey: d.hgKey || db.hgKey, // backup sem token/chave mantém o deste celular
-      brapiUso: db.brapiUso, consultas: undefined, // uso do brapi é o deste celular (vem do brapi), não o do arquivo
+      brapiUso: db.brapiUso, hgUso: db.hgUso, consultas: undefined, hgStatus: undefined, hgSemAcoes: undefined, // uso é o deste celular, não o do arquivo
       ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
     $('cToken').value = db.token; $('cHg').value = db.hgKey || ''; mostraLimites();
     salvar(); render();
@@ -2313,7 +2305,7 @@ $('tForm').onsubmit = async e => {
 let saiu = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) saiu = Date.now();
-  else { if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear(); autoAtualizar(); }
+  else { if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear(); }
 });
 if (temSenha()) bloquear();
 renderSenha();
@@ -2321,7 +2313,6 @@ window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
   .then(ok => { bioDisponivel = ok; renderSenha(); }).catch(() => {});
 
 render();
-autoAtualizar();
 </script>
 </body>
 </html>
