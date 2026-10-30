@@ -667,8 +667,9 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <b>Ordem dos ativos</b>
         <ul>
           <li>Primeiro aparecem, em ordem alfabética, os ativos que você tem na carteira (os que estão no Resumo).</li>
-          <li>Depois, também em ordem alfabética, todos os outros ativos cadastrados.</li>
-          <li>A ordem se ajusta sozinha: ao comprar um ativo do Dashboard, ele sobe para o primeiro grupo; ao vender tudo, desce para o segundo.</li>
+          <li>Depois, em ordem alfabética, os ativos <b>marcados</b> (os que são buscados).</li>
+          <li>Por último, em ordem alfabética, os ativos <b>desmarcados</b> (em espera).</li>
+          <li>A ordem se ajusta sozinha: ao marcar um ativo, ele sobe para junto dos marcados; ao desmarcar, desce para os em espera. Ao comprar, sobe para o primeiro grupo; ao vender tudo, volta para o grupo da sua caixa.</li>
           <li>Ativo da carteira que não está cadastrado aqui não aparece no Dashboard.</li>
           <li>Na ordem alfabética, número vem antes de letra (ex.: A1MD34 aparece antes de AAPL34).</li>
           <li>A mesma ordem vale para a lista da caixa Procurar.</li>
@@ -1902,7 +1903,9 @@ function renderDash() {
   [...dashFiltro].forEach(t => { if (!db.dash.some(a => a.ticker === t)) dashFiltro.delete(t); }); // excluído do Dash.
   // ordem: primeiro os ativos em carteira (posição aberta, os do Resumo), depois os outros; cada grupo em ordem alfabética
   const naCarteira = new Set(posicoes(db.ops, {}).filter(p => !p.encerrado).map(p => p.ticker));
-  const ordem = db.dash.map((a, i) => [a, i]).sort(([x], [y]) => naCarteira.has(y.ticker) - naCarteira.has(x.ticker) || x.ticker.localeCompare(y.ticker));
+  // 0 = no Resumo, 1 = marcado (é buscado), 2 = desmarcado; cada grupo em ordem alfabética
+  const grupo = a => naCarteira.has(a.ticker) ? 0 : a.off ? 2 : 1;
+  const ordem = db.dash.map((a, i) => [a, i]).sort(([x], [y]) => grupo(x) - grupo(y) || x.ticker.localeCompare(y.ticker));
   const marca = (v, txt, sel) => `<label${v === '*' ? '' : ' data-t'}><input type="checkbox" value="${esc(v)}"${sel ? ' checked' : ''}>${esc(txt)}</label>`;
   $('wBuscaLista').innerHTML = marca('*', 'Todos', !dashFiltro.size) +
     ordem.map(([a]) => marca(a.ticker, a.nome ? `${a.ticker} · ${nomeCurto(a.nome)}` : a.ticker, dashFiltro.has(a.ticker))).join('');
@@ -2071,7 +2074,7 @@ $('wForm').onsubmit = async e => {
 $('wTabela').onclick = e => {
   if (e.target.matches('.wChk')) { // desmarcado = em espera: o botão não busca este ativo
     const a = db.dash[e.target.closest('tr[data-i]').dataset.i]; a.off = !e.target.checked || undefined;
-    e.target.closest('tr').classList.toggle('off', !e.target.checked); return salvar();
+    salvar(); return renderDash(); // a linha muda de grupo na ordem
   }
   const b = e.target.closest('button[data-nome]');
   if (b) return janelaAtivo(db.dash[b.dataset.nome]);
