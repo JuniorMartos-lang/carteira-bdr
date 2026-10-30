@@ -800,6 +800,13 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       </div>
     </div>
     <div class="card">
+      <label for="cHg">Chave da HG Brasil (cotações da carteira e índices)</label>
+      <input id="cHg" autocomplete="off" spellcheck="false">
+      <p class="mut">Com a chave, a carteira e os índices (IBOV, Dow Jones, Nasdaq) vêm da HG Brasil (400 consultas por dia no plano grátis; todos os ativos numa consulta só). O que a HG não tiver, o S&amp;P 500 e o Dash. continuam pelo brapi. Sem a chave, tudo pelo brapi como antes. A chave vai no backup.</p>
+      <p id="cHgStatus" class="mut" style="margin-top:0"></p>
+      <button id="cHgSalvar" class="ic ic-salvar">Salvar chave</button>
+    </div>
+    <div class="card">
       <div class="row" style="align-items:center"><label for="cToken">Token do brapi.dev (cotações da B3)</label>
         <button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="Como conseguir o token">i</button></div>
       <div id="tokInfo" class="ajuda" hidden>
@@ -1180,6 +1187,10 @@ function render() {
   // último backup: data e hora em azul e negrito; sem backup, aviso em vermelho
   const quandoBkp = db.ultimoBackupEm ? new Date(db.ultimoBackupEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')
     : db.ultimoBackup && db.ultimoBackup.split('-').reverse().join('/'); // backups antigos só guardavam o dia
+  const hs = db.hgStatus;
+  $('cHgStatus').innerHTML = !db.hgKey || !hs ? '' : `Última atualização pela HG (${new Date(hs.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')}): ` +
+    (hs.erro ? `<b class="dn">não funcionou (${esc(hs.erro)})</b> — usado o brapi.` : `<b class="azul">${hs.ok} de ${hs.total} ativos</b>${hs.ok < hs.total ? ' (os outros pelo brapi)' : ''}.`);
+  if (document.activeElement !== $('cHg')) $('cHg').value = db.hgKey || '';
   const u = db.brapiUso, nCons = usadas(), parou = nCons != null && nCons >= limiteConsultas(), mil = v => v.toLocaleString('pt-BR');
   $('cConsultas').innerHTML = !u ? 'Consultas ao brapi: aparece depois da próxima atualização de cotações.' :
     `Consultas usadas (últimos 30 dias, informado pelo brapi): <b class="${parou ? 'dn' : 'azul'}">${mil(nCons)}</b> de ${mil(u.limite)} — restam ${mil(u.restante)}.` +
@@ -1514,13 +1525,35 @@ async function brapiFetch(url) {
   if (lim && rest != null) db.brapiUso = { limite: lim, restante: +rest, em: new Date().toISOString(), aviso: r.headers.get('x-usage-warning') || '' };
   return r;
 }
+// HG Brasil (chave em Ajustes, 400 consultas por dia no plano grátis): todos os ativos da carteira numa consulta só
+// e IBOV/Dow Jones/Nasdaq noutra. O que não vier (ativo que a HG não tem, chave inválida, erro) é buscado no brapi.
+const hgUrl = (rota, extra = '') => `https://api.hgbrasil.com/${rota}?${extra}format=json-cors&key=${encodeURIComponent(db.hgKey)}`;
+async function hgCotacoes(tks) {
+  const m = new Map(); if (!db.hgKey || !tks.length) return m;
+  try {
+    const r = await fetch(hgUrl('v2/finance/quotes', `tickers=${tks.map(t => 'B3:' + t).join(',')}&`)), j = await r.json();
+    for (const q of j.results || []) if (q.symbol && q.quote?.value != null) m.set(q.symbol, q);
+    db.hgStatus = { em: new Date().toISOString(), ok: m.size, total: tks.length,
+      erro: m.size ? '' : String(j.message || j.error?.message || j.results?.message || j.metadata?.key_status || r.status) };
+  } catch (e) { db.hgStatus = { em: new Date().toISOString(), ok: 0, total: tks.length, erro: e.message }; }
+  return m;
+}
+async function hgIndices() {
+  if (!db.hgKey) return {};
+  try {
+    const s = (await (await fetch(hgUrl('finance'))).json()).results?.stocks || {};
+    const x = k => s[k]?.points != null ? { v: s[k].points, pct: s[k].variation } : null;
+    return { ibov: x('IBOVESPA'), dow: x('DOWJONES'), nasdaq: x('NASDAQ') };
+  } catch { return {}; }
+}
 async function atualizar() {
-  if (!db.token) { falhou = true; render(); $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
+  if (!db.token && !db.hgKey) { falhou = true; render(); $('erroCot').textContent = 'Cadastre a chave da HG Brasil ou o token do brapi.dev em Ajustes.'; return; }
   const tks = posicoes(db.ops, {}).filter(p => !p.encerrado && ehB3(p.ticker)).map(p => p.ticker);
   $('btnAtualizar').disabled = true; $('erroCot').textContent = '';
   const erros = [], datas = [];
   // hist: traz também os fechamentos de 3 meses (o que o Dash. precisa), na mesma consulta
   const brapi = async (t, hist) => {
+    if (!db.token) throw new Error('sem token do brapi');
     const r = await brapiFetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?${hist ? 'range=3mo&interval=1d&' : ''}token=${encodeURIComponent(db.token)}`);
     const j = await r.json();
     const q = j.results?.[0];
@@ -1529,9 +1562,20 @@ async function atualizar() {
   };
   // uma requisição por ativo e uma de cada vez: o plano grátis do brapi aceita 1 ativo por chamada
   // e recusa chamadas simultâneas ("Limite de requisições simultâneas")
-  const ativos = async () => { for (const t of tks) {
+  const ativos = async () => {
+    const hg = await hgCotacoes(tks);
+    for (const t of tks) {
     try {
       const a = db.dash.find(x => x.ticker === t); // ativo também no Dash.: a mesma consulta atualiza a linha dele lá
+      const h = hg.get(t);
+      if (h) { // veio pela HG: preço, variação do dia e data; no Dash. só preço e Dia % (Semana/Mês continuam pelo botão de lá)
+        db.precos[t] = h.quote.value; db.variacao[t] = h.quote.change_percent;
+        if (h.quote.updated_at) datas.push(pregaoDe(h.quote.updated_at));
+        if (h.full_name || h.name) db.nomes[t] = h.full_name || h.name;
+        if (a) Object.assign(a, { preco: h.quote.value, pregao: h.quote.updated_at ? pregaoDe(h.quote.updated_at) : a.pregao,
+          dia: h.quote.change_percent == null ? a.dia : h.quote.change_percent / 100 });
+        continue;
+      }
       const q = await brapi(t, !!a);
       if (a) dashAplicar(a, q);
       db.precos[t] = q.regularMarketPrice;
@@ -1544,11 +1588,13 @@ async function atualizar() {
     for (const p of posicoes(db.ops, {}).filter(p => p.encerrado && ehB3(p.ticker) && !db.nomes[p.ticker])) {
       try { const q = await brapi(p.ticker); if (q.longName || q.shortName) db.nomes[p.ticker] = q.longName || q.shortName; } catch {}
     }
-    await brapi('^BVSP').then(q => db.indices.ibov = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent })
+    const hgi = await hgIndices(); // com a chave da HG: IBOV, Dow Jones e Nasdaq numa consulta, a cada atualização
+    for (const k of ['ibov', 'dow', 'nasdaq']) if (hgi[k]) db.indices[k] = hgi[k];
+    if (!hgi.ibov) await brapi('^BVSP').then(q => db.indices.ibov = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent })
       .catch(e => erros.push('IBOV: ' + e.message));
-    // índices dos EUA no topo, no máximo a cada 60 min (economia de consultas); falha aqui não conta como erro (fica o último valor)
-    if (velho(db.indicesEm, 60)) {
-      for (const [k, t] of [['dow', '^DJI'], ['sp', '^GSPC'], ['nasdaq', '^IXIC']])
+    // índices dos EUA que faltarem (o S&P 500 a HG não tem) pelo brapi, no máximo a cada 60 min; falha aqui não conta como erro
+    if (velho(db.indicesEm, 60) && db.token) {
+      for (const [k, t] of [['dow', '^DJI'], ['sp', '^GSPC'], ['nasdaq', '^IXIC']].filter(([k]) => !hgi[k]))
         await brapi(t).then(q => db.indices[k] = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent }).catch(() => {});
       db.indicesEm = new Date().toISOString();
     }
@@ -1579,7 +1625,7 @@ async function atualizar() {
 const AUTO_MIN = 30;
 const velho = (iso, min = AUTO_MIN) => !iso || Date.now() - new Date(iso) > min * 60e3;
 async function autoAtualizar() {
-  if (!horarioAuto() || !db.token || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // fora do horário, sem token ou já atualizando
+  if (!horarioAuto() || !(db.token || db.hgKey) || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // fora do horário, sem token ou já atualizando
   if (usadas() >= limiteConsultas()) return render(); // limite atingido: só pelos botões
   if (db.ops.length && velho(db.atualizado)) { $('wAtualizar').disabled = true; await atualizar(); $('wAtualizar').disabled = false; }
 }
@@ -2047,6 +2093,12 @@ $('cToken').value = db.token;
 document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
   const q = $(b.getAttribute('aria-controls')), abre = q.hidden; q.hidden = !abre; b.setAttribute('aria-expanded', abre);
 });
+$('cHgSalvar').onclick = async () => {
+  db.hgKey = $('cHg').value.trim(); db.hgStatus = null; salvar(); render();
+  await modal({ titulo: db.hgKey ? 'Chave Gravada com Sucesso' : 'Chave removida', ok: 'OK',
+    texto: db.hgKey ? 'Toque em Atualizar cotações (no Resumo ou na Carteira) e volte aqui para ver quantos ativos vieram pela HG.' : 'Sem a chave, as cotações voltam a vir só do brapi.' });
+  fecharModal();
+};
 $('btnToken').onclick = async () => {
   db.token = $('cToken').value.trim(); salvar(); $('cMsg').textContent = '';
   await modal({ titulo: db.token ? 'Token Gravado com Sucesso' : 'Token removido', ok: 'OK',
@@ -2090,6 +2142,7 @@ function conteudoBackup(d) {
     `Ativos no Dash.: ${d.dashIniciado ? (d.dash || []).length : 'mantém a lista atual (backup antigo)'}`,
     `Alerta Volatilidade Cabeçalho: ${d.alertaAlta > 0 ? 'alta ' + numPct(d.alertaAlta) : 'alta desligada'} · ${d.alertaQueda > 0 ? 'queda ' + numPct(d.alertaQueda) : 'queda desligada'}${d.alertaAlta == null ? ' (sem valores no backup: 0)' : ''}`,
     `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`,
+    `Chave da HG Brasil: ${d.hgKey ? 'incluída' : 'não incluída (mantém a deste aparelho)'}`,
     `Limite da atualização automática: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas usadas' : 'sem valor no backup (80% do plano do brapi)'}`].join('\n');
 }
 $('fileImp').onchange = async e => {
@@ -2108,10 +2161,10 @@ $('fileImp').onchange = async e => {
     const sim = await modal({ titulo: 'Substituir os dados?', ok: 'Sim, restaurar', cancelar: 'Cancelar',
       texto: `Todos os dados atuais deste celular serão substituídos pelos do backup.\n\nArquivo: ${f.name}\n\n${conteudoBackup(d)}` });
     fecharModal(); if (!sim) return;
-    db = { ...vazio, ...d, token: d.token || db.token, // backup sem token (antigo) mantém o token deste celular
+    db = { ...vazio, ...d, token: d.token || db.token, hgKey: d.hgKey || db.hgKey, // backup sem token/chave mantém o deste celular
       brapiUso: db.brapiUso, consultas: undefined, // uso do brapi é o deste celular (vem do brapi), não o do arquivo
       ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
-    $('cToken').value = db.token; mostraLimites();
+    $('cToken').value = db.token; $('cHg').value = db.hgKey || ''; mostraLimites();
     salvar(); render();
     $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.ops.length} lançamentos.`;
     await modal({ titulo: 'Backup restaurado com sucesso', ok: 'OK', texto: `Arquivo: ${f.name}\n\nImportados:\n${conteudoBackup(d)}` });
