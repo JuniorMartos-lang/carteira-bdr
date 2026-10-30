@@ -1188,7 +1188,7 @@ function render() {
   const quandoBkp = db.ultimoBackupEm ? new Date(db.ultimoBackupEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')
     : db.ultimoBackup && db.ultimoBackup.split('-').reverse().join('/'); // backups antigos só guardavam o dia
   const hs = db.hgStatus;
-  $('cHgStatus').innerHTML = !db.hgKey || !hs ? '' : `Última atualização pela HG (${new Date(hs.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')}): ` +
+  $('cHgStatus').innerHTML = !db.hgKey || !hs ? '' : db.hgSemAcoes ? '<b class="azul">Índices (IBOV, Dow Jones, Nasdaq) pela HG.</b> As ações não: o plano desta chave não libera cotação de ações (precisa do plano Member ou superior), então vêm do brapi.' : `Última atualização pela HG (${new Date(hs.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')}): ` +
     (hs.erro ? `<b class="dn">não funcionou (${esc(hs.erro)})</b> — usado o brapi.` : `<b class="azul">${hs.ok} de ${hs.total} ativos</b>${hs.ok < hs.total ? ' (os outros pelo brapi)' : ''}.`);
   if (document.activeElement !== $('cHg')) $('cHg').value = db.hgKey || '';
   const u = db.brapiUso, nCons = usadas(), parou = nCons != null && nCons >= limiteConsultas(), mil = v => v.toLocaleString('pt-BR');
@@ -1529,12 +1529,15 @@ async function brapiFetch(url) {
 // e IBOV/Dow Jones/Nasdaq noutra. O que não vier (ativo que a HG não tem, chave inválida, erro) é buscado no brapi.
 const hgUrl = (rota, extra = '') => `https://api.hgbrasil.com/${rota}?${extra}format=json-cors&key=${encodeURIComponent(db.hgKey)}`;
 async function hgCotacoes(tks) {
-  const m = new Map(); if (!db.hgKey || !tks.length) return m;
+  // plano grátis da HG não libera ações (conferido em 29/10/2026: "UNAUTHORIZED_KEY"); depois da 1ª recusa não pergunta
+  // de novo até a chave ser trocada (hgSemAcoes), para não gastar consulta à toa
+  const m = new Map(); if (!db.hgKey || !tks.length || db.hgSemAcoes) return m;
   try {
     const r = await fetch(hgUrl('v2/finance/quotes', `tickers=${tks.map(t => 'B3:' + t).join(',')}&`)), j = await r.json();
     for (const q of j.results || []) if (q.symbol && q.quote?.value != null) m.set(q.symbol, q);
     db.hgStatus = { em: new Date().toISOString(), ok: m.size, total: tks.length,
-      erro: m.size ? '' : String(j.message || j.error?.message || j.results?.message || j.metadata?.key_status || r.status) };
+      erro: m.size ? '' : String(j.errors?.[0]?.message || j.message || j.results?.message || r.status) };
+    if (j.errors?.some(e => e.code === 'UNAUTHORIZED_KEY')) db.hgSemAcoes = true;
   } catch (e) { db.hgStatus = { em: new Date().toISOString(), ok: 0, total: tks.length, erro: e.message }; }
   return m;
 }
@@ -2094,7 +2097,7 @@ document.querySelectorAll('button.info').forEach(b => b.onclick = () => {
   const q = $(b.getAttribute('aria-controls')), abre = q.hidden; q.hidden = !abre; b.setAttribute('aria-expanded', abre);
 });
 $('cHgSalvar').onclick = async () => {
-  db.hgKey = $('cHg').value.trim(); db.hgStatus = null; salvar(); render();
+  db.hgKey = $('cHg').value.trim(); db.hgStatus = null; db.hgSemAcoes = false; salvar(); render();
   await modal({ titulo: db.hgKey ? 'Chave Gravada com Sucesso' : 'Chave removida', ok: 'OK',
     texto: db.hgKey ? 'Toque em Atualizar cotações (no Resumo ou na Carteira) e volte aqui para ver quantos ativos vieram pela HG.' : 'Sem a chave, as cotações voltam a vir só do brapi.' });
   fecharModal();
