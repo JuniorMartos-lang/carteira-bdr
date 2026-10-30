@@ -33,7 +33,7 @@ header { background:var(--pri); color:#fff; padding:12px 16px 40px; padding-top:
 :where(:root[data-theme=dark]) header { color:#06201d; }
 #topo { max-width:640px; margin:-34px auto 0; padding:0 16px; }
 .lucroCard { padding:12px 14px; margin-bottom:8px; }
-#hLucro { font-size:28px; font-weight:600; margin:2px 0 4px; font-variant-numeric:tabular-nums; }
+#hLucro { flex:none; white-space:nowrap; font-size:28px; font-weight:600; margin:2px 0 4px; font-variant-numeric:tabular-nums; }
 .lucroCard .row { align-items:center; }
 .lucroCard b { font-weight:600; font-variant-numeric:tabular-nums; }
 .lucroCard .divide { margin-top:10px; padding-top:8px; border-top:1px solid var(--bd); }
@@ -115,7 +115,7 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 /* quem pediu menos movimento no celular: sem animação, uma vez só, rolando com o dedo */
 @media (prefers-reduced-motion: reduce) { #hIndices { overflow-x:auto; } #hIndices .faixa { animation:none; } #hIndices .copia { display:none; } }
 /* alertas do Dash. (limites de alta/queda em Ajustes): retângulo com letreiro na metade direita da linha do lucro */
-#hAlertas { flex:0 0 50%; min-width:0; overflow:hidden; white-space:nowrap; font-size:12px; border:1px solid var(--bd); border-radius:8px; padding:5px 0;
+#hAlertas { flex:1 1 0; min-width:0; /* usa só o espaço que sobra: o valor do lucro nunca quebra */ overflow:hidden; white-space:nowrap; font-size:12px; border:1px solid var(--bd); border-radius:8px; padding:5px 0;
   mask-image:linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image:linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 #hAlertas .faixa { display:inline-block; animation:letreiro 18s linear infinite; }
 #hAlertas .faixa > span > span { margin-right:16px; }
@@ -621,8 +621,8 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <div><label for="rFim">Mês final (venda)</label><select id="rFim"></select></div>
       </div>
       <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="rResumido"> Resumido</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="rResInfo" aria-label="O que é o Resumido">i</button>
-        <label class="check"><input type="checkbox" id="rRank" disabled> Ranking %</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="rRankInfo" aria-label="Como funciona o Ranking %">i</button></div>
-      <div id="rRankInfo" class="ajuda" hidden><b>Ranking %</b>
+        <label class="check"><input type="checkbox" id="rRank" disabled> Ranking R$</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="rRankInfo" aria-label="Como funciona o Ranking R$">i</button></div>
+      <div id="rRankInfo" class="ajuda" hidden><b>Ranking R$</b>
         <ul>
           <li>Só funciona com <b>Resumido</b> marcado. Sem ele, a caixa fica apagada e, ao desmarcar o Resumido, ela desmarca junto.</li>
           <li>Marcado, a lista fica em ordem de <b>lucro da venda em reais</b>, do maior para o menor: a coluna <b>Lucro R$</b>, antes do IR. Prejuízos ficam no fim.</li>
@@ -1333,7 +1333,7 @@ function renderResultados() {
   const t = lista.reduce((s, p) => ({ compra: s.compra + p.custoVendido, venda: s.venda + p.vendido, lucro: s.lucro + p.lucro,
     ir: s.ir + (p.ir || 0), liq: s.liq + liq(p) }), { compra: 0, venda: 0, lucro: 0, ir: 0, liq: 0 });
   const tP = t.compra ? t.lucro / t.compra : null, irTxt = p => p.ir == null ? 'retido' : reais(p.ir);
-  // Ranking %: só com Resumido marcado
+  // Ranking R$: só com Resumido marcado
   $('rRank').disabled = !$('rResumido').checked;
   if ($('rRank').disabled) $('rRank').checked = false;
   if ($('rRank').checked) lista.sort((a, b) => b.lucro - a.lucro);
