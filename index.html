@@ -648,7 +648,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <ul>
           <li>Toque no <b>i</b> ao lado do código para abrir uma janela com o nome do ativo e o fechamento de cada dia do mês corrente, do dia mais recente para o dia 1º (carregado ao tocar em Atualizar cotações).</li>
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
-          <li><b>Nada é atualizado sozinho:</b> só ao tocar em <b>Atualizar cotações</b>.</li>
+          <li><b>Os ativos não são atualizados sozinhos:</b> só ao tocar em <b>Atualizar cotações</b>.</li>
           <li>Ativo que está no <b>Resumo</b>: usa o valor carregado no Resumo, sem nova consulta, mesmo desmarcado. Semana % e Mês % dele vêm junto com o Atualizar do Resumo.</li>
           <li>Demais ativos: a <b>caixa de marcar</b> antes do "i" decide. <b>Marcado:</b> é buscado no brapi (uma consulta por ativo). <b>Desmarcado:</b> fica em espera, com os últimos valores, e não gasta consulta.</li>
           <li>Ativo novo aparece sem valores até o próximo Atualizar.</li>
@@ -844,7 +844,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <p id="cHgUso" style="margin:10px 0 8px"></p>
       <label for="cHgLimite">Limite: parar de consultar ao chegar em (consultas por dia)</label>
       <input id="cHgLimite" inputmode="numeric" autocomplete="off" onfocus="this.select()">
-      <p class="mut">Cada toque em Atualizar cotações no Resumo usa 1 consulta da HG. A HG não informa o uso: o número é contado por este celular e zera todo dia. O plano grátis tem 400 por dia e não dá cotação de ações. Ao chegar no limite (sem limite gravado, 320), os índices vêm do brapi. A chave e o limite vão no backup.</p>
+      <p class="mut">IBOV, Dow Jones e Nasdaq atualizam sozinhos ao abrir o app e a cada 15 minutos, de segunda a sexta, das 10h às 18h, com o app aberto na tela. Cada toque em Atualizar cotações no Resumo usa mais 1 consulta. A HG não informa o uso: o número é contado por este celular e zera todo dia. O plano grátis tem 400 por dia e não dá cotação de ações. Ao chegar no limite (sem limite gravado, 320), os índices vêm do brapi. A chave e o limite vão no backup.</p>
       <button id="cHgSalvar" class="ic ic-salvar">Salvar</button>
     </div>
     <div class="card">
@@ -952,7 +952,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
 </nav>
 
 <!-- ?v= igual à versão do app: o celular busca o calc.js novo junto com a tela nova (sem misturar com o do cache) -->
-<script src="calc.js?v=1.16.1"></script>
+<script src="calc.js?v=1.19.0"></script>
 <script>
 const KEY = 'carteira-bdr';
 const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, indices: {}, token: '', atualizado: null,
@@ -1035,6 +1035,14 @@ const INDICES = [['IBOV', 'ibov', pontos], ['Dólar', 'usd', v => v.toLocaleStri
   ['Dow Jones', 'dow', pontos], ['S&P 500', 'sp', pontos], ['Nasdaq', 'nasdaq', pontos]];
 // alertas do dia (ativos do Dash. que chegaram aos limites hoje), com os dados atuais de cada um
 const alertasHoje = () => db.alertas?.dia === hoje() ? db.alertas.tks.map(t => db.dash.find(a => a.ticker === t)).filter(a => a && ligado(a.dia ?? 0)) : [];
+function desenhaIndices() {
+  const itens = INDICES.map(([nome, k, fmt]) => { const x = db.indices[k]; return !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
+    <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`; }).join('');
+  if ($('hIndices').dataset.itens !== itens) { // só redesenha se mudou: senão o letreiro voltaria ao começo a cada render
+    $('hIndices').dataset.itens = itens;
+    $('hIndices').innerHTML = !itens ? '' : `<div class="faixa"><span>${itens}</span><span class="copia" aria-hidden="true">${itens}</span></div>`;
+  }
+}
 function render() {
   const ps = posicoesComClasse();
   const abertos = ps.filter(p => !p.encerrado).sort((a, b) => (b.pct ?? -9) - (a.pct ?? -9));
@@ -1049,8 +1057,6 @@ function render() {
   $('hPct').textContent = seta(pTot) + pct(pTot); $('hPct').className = 'pill ' + cor(pTot);
   // Investido e Atual começam escondidos a cada abertura do app (mostrarValores não é gravado)
   $('hInv').textContent = mostrarValores ? brl(inv) : 'R$ ••••••'; $('hAtual').textContent = mostrarValores ? brl(valor) : 'R$ ••••••';
-  const itens = INDICES.map(([nome, k, fmt]) => { const x = db.indices[k]; return !x ? '' : `<span>${nome} <b>${fmt(x.v)}</b>
-    <span class="${x.pct >= 0 ? 'iup' : 'idn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</span></span>`; }).join('');
   // alertas do Dash. (só os do dia de hoje), com a variação atual de cada um
   const al = alertasHoje();
   const itensAl = al.map(a => `<span class="${a.dia >= 0 ? 'up' : 'dn'}"><b>${esc(a.ticker)}</b> ${a.dia >= 0 ? '▲ +' : '▼ '}${pct(a.dia)}</span>`).join('');
@@ -1059,10 +1065,7 @@ function render() {
     $('hAlertas').dataset.itens = itensAl;
     $('hAlertas').innerHTML = `<div class="faixa"><span>${itensAl}</span><span class="copia" aria-hidden="true">${itensAl}</span></div>`;
   }
-  if ($('hIndices').dataset.itens !== itens) { // só redesenha se mudou: senão o letreiro voltaria ao começo a cada render
-    $('hIndices').dataset.itens = itens;
-    $('hIndices').innerHTML = !itens ? '' : `<div class="faixa"><span>${itens}</span><span class="copia" aria-hidden="true">${itens}</span></div>`;
-  }
+  desenhaIndices();
   // lucro por tipo; só aparece o tipo que tem posição em aberto
   $('hClasses').innerHTML = [['A', 'Ações'], ['F', 'Fundos']].map(([c, nome]) => {
     const ab = abertos.filter(p => p.classe === c);
@@ -1535,12 +1538,14 @@ async function brapiFetch(url) {
 // No limite escolhido em Ajustes (padrão: 80% do plano) não consulta mais a HG naquele dia; os índices vêm do brapi.
 const hgUsadas = () => db.hgUso?.dia === hoje() ? db.hgUso.n : 0;
 const limiteHg = () => db.limiteHg ?? 320;
+let hgTentou = null; // última tentativa (com falha também, para não insistir a cada minuto)
 async function hgIndices() {
   if (!db.hgKey || hgUsadas() >= limiteHg()) return {};
   try {
-    db.hgUso = { dia: hoje(), n: hgUsadas() + 1 };
+    db.hgUso = { dia: hoje(), n: hgUsadas() + 1 }; hgTentou = new Date().toISOString();
     const s = (await (await fetch(`https://api.hgbrasil.com/finance?format=json-cors&key=${encodeURIComponent(db.hgKey)}`)).json()).results?.stocks || {};
     const x = k => s[k]?.points != null ? { v: s[k].points, pct: s[k].variation } : null;
+    if (x('IBOVESPA')) db.hgEm = hgTentou;
     return { ibov: x('IBOVESPA'), dow: x('DOWJONES'), nasdaq: x('NASDAQ') };
   } catch { return {}; }
 }
@@ -1607,7 +1612,16 @@ async function atualizar() {
   $('btnAtualizar').disabled = false;
 }
 
-// sem consultas automáticas (a pedido): tudo só pelos botões Atualizar cotações (Resumo, Dash., Compar.)
+// a única consulta automática (a pedido) é a da HG: IBOV, Dow Jones e Nasdaq ao abrir o app e a cada 15 min, em dia útil das
+// 10h00 às 18h00, com o app na tela. Ativos e demais índices: só pelos botões Atualizar cotações (Resumo, Dash., Compar.)
+async function autoHg(abrindo) {
+  if (!horarioAuto() || document.hidden || (!abrindo && !velho(hgTentou, 15))) return;
+  const hgi = await hgIndices();
+  let mudou = false;
+  for (const k of ['ibov', 'dow', 'nasdaq']) if (hgi[k]) { db.indices[k] = hgi[k]; mudou = true; }
+  if (hgTentou) salvar(); // grava o contador mesmo se a consulta falhou
+  if (mudou) desenhaIndices();
+}
 const velho = (iso, min) => !iso || Date.now() - new Date(iso) > min * 60e3;
 
 // --- eventos ---
@@ -1966,7 +1980,8 @@ $('hVisao').onchange = async () => {
     return `<tr><td style="text-align:left"><b>${nome}</b></td><td>${fmt(x.v)}</td>
       <td class="${x.pct >= 0 ? 'up' : 'dn'}">${x.pct >= 0 ? '▲ +' : '▼ '}${pct(x.pct / 100)}</td></tr>`; }).join('');
   const quando = db.atualizado ? new Date(db.atualizado).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
-  await modal({ titulo: 'Cotações', ok: 'Fechar', texto: quando ? 'Atualizadas em ' + quando : '',
+  const quandoHg = db.hgEm ? new Date(db.hgEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
+  await modal({ titulo: 'Cotações', ok: 'Fechar', texto: (quando ? 'Atualizadas em ' + quando : '') + (quandoHg ? `\nIBOV, Dow Jones e Nasdaq em ${quandoHg}` : ''),
     html: (!linhas ? '<p class="mut">Sem cotações ainda: toque em Atualizar cotações.</p>' :
       `<table class="compacto" style="width:100%"><tr><th style="text-align:left">Índice</th><th>Valor</th><th>Dia</th></tr>${linhas}</table>`) +
       // segundo quadro: os alertas do dia (ativos do Dash. que chegaram aos limites), com a variação atual
@@ -2103,7 +2118,7 @@ $('cHgSalvar').onclick = () => salvarServico('cHg', 'cHgLimite', (c, v) => { db.
 async function fazerBackup() {
   // vai tudo, inclusive token e chave (a pedido): restaurar num celular novo já traz as cotações; o uso de brapi e HG
   // não vai, só os limites escolhidos
-  const { brapiUso, consultas, hgUso, hgStatus, hgSemAcoes, ...dados } = db;
+  const { brapiUso, consultas, hgUso, hgEm, hgStatus, hgSemAcoes, ...dados } = db;
   let txt = JSON.stringify(dados, null, 1);
   if (trava.backup) txt = JSON.stringify({ carteiraBdrProtegido: 1, sal: trava.backup.sal, ...await cifrar(txt, trava.backup.chave) });
   // .txt: o Chrome do Android recusa compartilhar .json ("Permission denied"); o conteúdo continua sendo JSON
@@ -2305,7 +2320,7 @@ $('tForm').onsubmit = async e => {
 let saiu = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) saiu = Date.now();
-  else { if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear(); }
+  else { if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear(); autoHg(false); }
 });
 if (temSenha()) bloquear();
 renderSenha();
@@ -2313,6 +2328,8 @@ window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
   .then(ok => { bioDisponivel = ok; renderSenha(); }).catch(() => {});
 
 render();
+autoHg(true);
+setInterval(() => autoHg(false), 60e3); // confere a cada minuto; só consulta depois de 15 min
 </script>
 </body>
 </html>

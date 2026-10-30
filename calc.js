@@ -163,13 +163,13 @@ function resultadoDia(atual, anterior, vivoAntes) {
   return ts.length ? { r, base, p: base ? r / base : null } : null;
 }
 
-// Atualização automática só em dia útil, das 10h00 às 17h30 de Brasília (fora disso, só pelo botão).
+// Atualização automática dos índices (HG) só em dia útil, das 10h00 às 18h00 de Brasília.
 // shortcut: não conhece os feriados da B3; num feriado em dia útil ela roda à toa (só gasta cota).
 function horarioAuto(data = new Date()) {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short',
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(data).map(x => [x.type, x.value]));
   const min = +p.hour * 60 + +p.minute;
-  return !['Sat', 'Sun'].includes(p.weekday) && min >= 10 * 60 && min <= 17 * 60 + 30;
+  return !['Sat', 'Sun'].includes(p.weekday) && min >= 10 * 60 && min <= 18 * 60;
 }
 
 // Dia (AAAA-MM-DD, horário de Brasília) de um candle do brapi (date em segundos unix)

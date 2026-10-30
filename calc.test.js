@@ -101,9 +101,9 @@ assert.deepStrictEqual(variacoes(10, [], '2026-10-28'), { semana: null, mes: nul
 
 // Atualização automática: dias úteis, 10h00–17h30 de Brasília (UTC-3)
 assert.ok(horarioAuto(new Date('2026-10-26T13:00:00Z')));   // seg 10h00
-assert.ok(horarioAuto(new Date('2026-10-30T20:30:00Z')));   // sex 17h30
+assert.ok(horarioAuto(new Date('2026-10-30T21:00:00Z')));   // sex 18h00
 assert.ok(!horarioAuto(new Date('2026-10-26T12:59:00Z')));  // seg 09h59
-assert.ok(!horarioAuto(new Date('2026-10-26T20:31:00Z')));  // seg 17h31
+assert.ok(!horarioAuto(new Date('2026-10-26T21:01:00Z')));  // seg 18h01
 assert.ok(!horarioAuto(new Date('2026-10-31T15:00:00Z')));  // sábado 12h
 assert.ok(!horarioAuto(new Date('2026-11-01T15:00:00Z')));  // domingo 12h
 
