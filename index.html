@@ -648,13 +648,14 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
           <li>Toque no <b>i</b> ao lado do código para abrir uma janela com o nome do ativo e o fechamento de cada dia do mês corrente, do dia mais recente para o dia 1º (carregado ao tocar em Atualizar cotações).</li>
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
           <li>O botão <b>Atualizar cotações</b> desta aba busca só os ativos do Dashboard.</li>
-          <li><b>Atualização automática</b>: de segunda a sexta, das 10h00 às 17h30 (horário de Brasília), ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou nesta aba, se a última atualização tiver mais de 15 minutos, as cotações são buscadas sozinhas (primeiro as da carteira, depois as do Dashboard). Fora desse horário (e com o app fechado) nada é atualizado sozinho: use o botão. Feriados não são reconhecidos: num feriado em dia útil a atualização automática roda normalmente.</li>
+          <li><b>Esta aba só atualiza pelo botão</b> (para economizar consultas do brapi). A exceção são os ativos que também estão na carteira: eles vêm junto na atualização da carteira (automática ou pelo botão do Resumo/Carteira), sem gastar consulta a mais, e o botão daqui pula os que foram atualizados há menos de 15 minutos.</li>
+          <li><b>Atualização automática da carteira</b>: de segunda a sexta, das 10h00 às 17h30 (horário de Brasília), ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira, nesta aba ou na Compar., se a última tiver mais de 15 minutos. Para sozinha ao chegar no limite de consultas do mês (Ajustes → Token do brapi). Fora desse horário (e com o app fechado) nada é atualizado sozinho. Feriados não são reconhecidos.</li>
           <li>Os ativos cadastrados vão no backup.</li>
         </ul>
         <b>Alertas no cabeçalho</b>
         <ul>
           <li>Quando um ativo cadastrado aqui <b>sobe</b> ou <b>cai</b> no dia até o limite configurado em <b>Ajustes → Alerta Volatilidade Cabeçalho</b> (0 desliga aquele lado; vem com 0 até você configurar), ele aparece num letreiro dentro de um retângulo, ao lado do lucro da carteira: verde com ▲ se subiu, vermelho com ▼ se caiu.</li>
-          <li>A lista é refeita a cada atualização de cotações do Dash. (pelo botão ou automática) e mostra sempre a variação atual.</li>
+          <li>A lista é refeita a cada atualização do Dash. (pelo botão) e a cada atualização da carteira (para os ativos da carteira que estão no Dash.) e mostra sempre a variação atual.</li>
           <li>Depois de entrar na lista, o ativo fica até o fim do dia, mesmo que a variação volte para dentro do limite (ex.: com limite de 5%, subiu 6% e depois ficou em 4%).</li>
           <li>No dia seguinte a lista começa vazia. Sem alertas, o retângulo não aparece.</li>
           <li>No início (app novo) ou ao restaurar um backup que não tem os limites, os dois ficam em <b>0</b> (desligados) até você configurar em Ajustes.</li>
@@ -707,7 +708,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         </ul>
         <b>Quando atualiza</b>
         <ul>
-          <li>A cada atualização de cotações do Dash. (pelo botão, ou automática de segunda a sexta, das 10h às 17h30).</li>
+          <li>A cada atualização do Dash. (pelo botão) e a cada atualização da carteira (automática de segunda a sexta, das 10h às 17h30, ou pelo botão), esta só para os ativos da carteira que estão no Dash.</li>
           <li>O ativo que entrou fica até o fim do dia, sempre com a variação atual, mesmo que volte para dentro do limite (ex.: com limite de 5%, subiu 6% e depois ficou em 4%).</li>
           <li>No dia seguinte a lista começa vazia. Sem alertas, o retângulo não aparece.</li>
         </ul>
@@ -829,6 +830,13 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <input id="cToken" autocomplete="off" spellcheck="false">
       <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. Ele fica guardado só neste celular.</p>
       <button id="btnToken" class="ic ic-salvar">Salvar token</button>
+      <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--bd)">
+        <p id="cConsultas" style="margin:0 0 8px"></p>
+        <label for="cLimite">Parar a atualização automática ao chegar em (consultas no mês)</label>
+        <input id="cLimite" inputmode="numeric" autocomplete="off" onfocus="this.select()">
+        <button id="cLimiteSalvar" class="ic ic-salvar" style="margin-top:8px">Salvar limite</button>
+        <p class="mut">Contadas por este celular, do dia 1º ao fim do mês. Ao chegar no limite, só a atualização automática para; os botões Atualizar cotações continuam funcionando. O número oficial (e o dia em que o brapi zera o seu limite) fica no painel do brapi.</p>
+      </div>
     </div>
     <div class="card">
       <div class="row" style="align-items:center"><b>Backup</b>
@@ -1172,6 +1180,10 @@ function render() {
   // último backup: data e hora em azul e negrito; sem backup, aviso em vermelho
   const quandoBkp = db.ultimoBackupEm ? new Date(db.ultimoBackupEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')
     : db.ultimoBackup && db.ultimoBackup.split('-').reverse().join('/'); // backups antigos só guardavam o dia
+  const nCons = consultasMes(), parou = nCons >= limiteConsultas();
+  $('cConsultas').innerHTML = `Consultas ao brapi neste mês: <b class="${parou ? 'dn' : 'azul'}">${nCons.toLocaleString('pt-BR')}</b>` +
+    (parou ? ' — atualização automática parada (limite atingido).' : '');
+  if (document.activeElement !== $('cLimite')) $('cLimite').value = limiteConsultas().toLocaleString('pt-BR');
   $('ultBackup').innerHTML = quandoBkp ? `Último backup: <b class="azul">${quandoBkp}</b>` : '<b class="dn">Nenhum backup feito ainda.</b>';
   $('lembrete').textContent = db.ops.length && (dias == null || dias >= 7)
     ? `Faça um backup em Ajustes (${dias == null ? 'nenhum feito ainda' : 'último há ' + dias + ' dias'}).` : '';
@@ -1489,13 +1501,20 @@ function registrarDia() {
 let mostrarValores = false; // olhinho do topo
 let editandoId = null; // Lançar: id do lançamento carregado da lista (Salvar corrige; Excluir apaga)
 let falhou = false; // última tentativa de atualizar não trouxe nenhuma cotação
+// Consultas ao brapi contadas neste celular, por mês do calendário (o plano grátis tem limite mensal).
+// A atualização automática para ao chegar no limite escolhido em Ajustes; os botões continuam funcionando.
+const LIMITE_PADRAO = 12000;
+const consultasMes = () => db.consultas?.mes === hoje().slice(0, 7) ? db.consultas.n : 0;
+const limiteConsultas = () => db.limiteConsultas ?? LIMITE_PADRAO;
+function brapiFetch(url) { db.consultas = { mes: hoje().slice(0, 7), n: consultasMes() + 1 }; return fetch(url); }
 async function atualizar() {
   if (!db.token) { falhou = true; render(); $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
   const tks = posicoes(db.ops, {}).filter(p => !p.encerrado && ehB3(p.ticker)).map(p => p.ticker);
   $('btnAtualizar').disabled = true; $('erroCot').textContent = '';
   const erros = [], datas = [];
-  const brapi = async t => {
-    const r = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?token=${encodeURIComponent(db.token)}`);
+  // hist: traz também os fechamentos de 3 meses (o que o Dash. precisa), na mesma consulta
+  const brapi = async (t, hist) => {
+    const r = await brapiFetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?${hist ? 'range=3mo&interval=1d&' : ''}token=${encodeURIComponent(db.token)}`);
     const j = await r.json();
     const q = j.results?.[0];
     if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
@@ -1505,7 +1524,9 @@ async function atualizar() {
   // e recusa chamadas simultâneas ("Limite de requisições simultâneas")
   const ativos = async () => { for (const t of tks) {
     try {
-      const q = await brapi(t);
+      const a = db.dash.find(x => x.ticker === t); // ativo também no Dash.: a mesma consulta atualiza a linha dele lá
+      const q = await brapi(t, !!a);
+      if (a) dashAplicar(a, q);
       db.precos[t] = q.regularMarketPrice;
       db.variacao[t] = q.regularMarketChangePercent;
       if (q.regularMarketTime) datas.push(pregaoDe(q.regularMarketTime));
@@ -1518,9 +1539,12 @@ async function atualizar() {
     }
     await brapi('^BVSP').then(q => db.indices.ibov = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent })
       .catch(e => erros.push('IBOV: ' + e.message));
-    // índices dos EUA no topo; falha aqui não conta como erro de cotação (fica o último valor)
-    for (const [k, t] of [['dow', '^DJI'], ['sp', '^GSPC'], ['nasdaq', '^IXIC']])
-      await brapi(t).then(q => db.indices[k] = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent }).catch(() => {});
+    // índices dos EUA no topo, no máximo a cada 60 min (economia de consultas); falha aqui não conta como erro (fica o último valor)
+    if (velho(db.indicesEm, 60)) {
+      for (const [k, t] of [['dow', '^DJI'], ['sp', '^GSPC'], ['nasdaq', '^IXIC']])
+        await brapi(t).then(q => db.indices[k] = { v: q.regularMarketPrice, pct: q.regularMarketChangePercent }).catch(() => {});
+      db.indicesEm = new Date().toISOString();
+    }
   };
   await Promise.all([ativos(),
   // dólar comercial pela AwesomeAPI (grátis, sem token)
@@ -1532,6 +1556,7 @@ async function atualizar() {
   if (algumAtivo) { db.atualizado = new Date().toISOString(); db.dataPregao = datas.sort().pop() || hoje(); registrarDia(); }
   // sem ativos da B3 na carteira, conta como falha só se IBOV e dólar falharem
   falhou = tks.length ? !algumAtivo : erros.length >= 2;
+  atualizaAlertas(); // ativos da carteira que também estão no Dash. já vieram atualizados
   salvar(); render();
   // falha total: só o motivo; falha parcial: quais ativos ficaram sem cotação
   const motivo = (erros[0] || '').split(': ').slice(1).join(': ');
@@ -1541,16 +1566,15 @@ async function atualizar() {
   $('btnAtualizar').disabled = false;
 }
 
-// Atualização automática: ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira ou no Dash.,
-// só de segunda a sexta das 10h00 às 17h30 (horarioAuto), busca de novo o que tiver mais de 15 min. Carteira e Dash. um depois do outro (o brapi grátis recusa consultas
-// simultâneas); os dois botões ficam travados enquanto isso. Sem servidor, nada atualiza com o app fechado.
+// Atualização automática (só a carteira; o Dash. só pelo botão, a pedido, para economizar consultas): ao abrir o app,
+// ao voltar para ele e ao entrar no Resumo, Carteira, Dash. ou Compar., de segunda a sexta das 10h00 às 17h30 (horarioAuto),
+// se a última tiver mais de 15 min e o limite de consultas do mês não tiver sido atingido. Sem servidor, nada atualiza com o app fechado.
 const AUTO_MIN = 15;
-const velho = iso => !iso || Date.now() - new Date(iso) > AUTO_MIN * 60e3;
+const velho = (iso, min = AUTO_MIN) => !iso || Date.now() - new Date(iso) > min * 60e3;
 async function autoAtualizar() {
   if (!horarioAuto() || !db.token || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // fora do horário, sem token ou já atualizando
-  const carteira = db.ops.length && velho(db.atualizado), dash = db.dash.length && velho(db.dashEm);
-  if (carteira) { $('wAtualizar').disabled = true; await atualizar(); $('wAtualizar').disabled = false; }
-  if (dash) { $('btnAtualizar').disabled = true; await atualizarDash(); $('btnAtualizar').disabled = false; }
+  if (consultasMes() >= limiteConsultas()) return render(); // limite do mês: só pelos botões
+  if (db.ops.length && velho(db.atualizado)) { $('wAtualizar').disabled = true; await atualizar(); $('wAtualizar').disabled = false; }
 }
 
 // --- eventos ---
@@ -1811,21 +1835,31 @@ async function atualizarDash(tks = db.dash.map(a => a.ticker)) {
   for (const [n, t] of tks.entries()) {
     $('wQuando').textContent = `Atualizando ${n + 1} de ${tks.length}…`;
     try { // range=3mo: fechamentos diários para achar a base da semana e do mês
-      const r = await fetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?range=3mo&interval=1d&token=${encodeURIComponent(db.token)}`);
+      const r = await brapiFetch(`https://brapi.dev/api/quote/${encodeURIComponent(t)}?range=3mo&interval=1d&token=${encodeURIComponent(db.token)}`);
       const j = await r.json(), q = j.results?.[0];
       if (!r.ok || q?.regularMarketPrice == null) throw new Error(j.message || r.status);
       const a = db.dash.find(x => x.ticker === t); if (!a) continue; // excluído enquanto atualizava
-      Object.assign(a, { nome: q.longName || q.shortName || a.nome, preco: q.regularMarketPrice,
-        pregao: q.regularMarketTime ? pregaoDe(q.regularMarketTime) : null,
-        dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100,
-        dias: diasDoMes(q.historicalDataPrice || []) },
-        variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
+      dashAplicar(a, q);
     } catch (err) { erros.push(`${t} (${err.message})`); }
   }
   if (erros.length < tks.length) db.dashEm = new Date().toISOString();
   atualizaAlertas();
   salvar(); $('wAtualizar').disabled = false; renderDash();
   $('wErro').textContent = erros.length ? 'Não foi possível atualizar: ' + erros.join(', ') + '.' : '';
+}
+// grava numa linha do Dash. o resultado de uma consulta com range=3mo (a.em: quando, para o botão não buscar de novo)
+function dashAplicar(a, q) {
+  Object.assign(a, { nome: q.longName || q.shortName || a.nome, preco: q.regularMarketPrice,
+    pregao: q.regularMarketTime ? pregaoDe(q.regularMarketTime) : null,
+    dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100,
+    dias: diasDoMes(q.historicalDataPrice || []), em: new Date().toISOString() },
+    variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
+}
+// botões Atualizar do Dash. e da Compar.: pula os ativos que a carteira trouxe há menos de 15 min (não gasta consulta duas vezes)
+async function atualizarDashBotao() {
+  const tks = db.dash.filter(a => velho(a.em)).map(a => a.ticker);
+  if (tks.length) return atualizarDash(tks);
+  db.dashEm = new Date().toISOString(); atualizaAlertas(); salvar(); renderDash();
 }
 // fechamentos [dia, valor] do mês corrente + o último do mês anterior (base do dia 1º), para a janela do botão i
 function diasDoMes(hist) {
@@ -1845,13 +1879,23 @@ async function janelaAtivo(a) {
         <td class="${dif > 0 ? 'up' : dif < 0 ? 'dn' : ''}">${reais(v)}${dif > 0 ? '<small> ▲</small>' : dif < 0 ? '<small> ▼</small>' : ''}</td></tr>`).join('') + '</table>' });
   fecharModal();
 }
-$('wAtualizar').onclick = () => atualizarDash();
+$('wAtualizar').onclick = () => atualizarDashBotao();
 $('rsAcoes').onchange = $('cResAcoes').onchange = render;
 // Ajustes → Alerta Volatilidade Cabeçalho: dois limites, em %, maiores que 0 e até 100 (aceita vírgula)
 const mostraLimites = () => { $('cAlta').value = numPct(altaPct()).replace('%', ''); $('cQueda').value = numPct(quedaPct()).replace('%', ''); };
 mostraLimites();
 // ao tocar no campo, seleciona o valor inteiro: é só digitar o novo por cima
 ['cAlta', 'cQueda'].forEach(id => $(id).onfocus = $(id).onclick = e => e.target.select());
+$('cLimiteSalvar').onclick = async () => {
+  const v = Number($('cLimite').value.replace(/\D/g, ''));
+  if (!$('cLimite').value.trim() || !(v > 0)) {
+    await modal({ titulo: 'Valor inválido', ok: 'OK', texto: 'Digite um número de consultas maior que 0 (ex.: 12000).' });
+    fecharModal(); return render();
+  }
+  db.limiteConsultas = v; salvar(); render();
+  await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: `A atualização automática para ao chegar em ${v.toLocaleString('pt-BR')} consultas no mês. Neste mês: ${consultasMes().toLocaleString('pt-BR')}.` });
+  fecharModal();
+};
 $('cAlertasSalvar').onclick = async () => {
   const le = id => Number($(id).value.replace(/[^\d,.]/g, '').replace(',', '.'));
   const alta = le('cAlta'), queda = le('cQueda');
@@ -1894,7 +1938,7 @@ $('hVisao').onchange = async () => {
 };
 $('kAtualizar').onclick = async () => { // não roda junto com outra atualização (o brapi grátis recusa consultas simultâneas)
   if ($('btnAtualizar').disabled || $('wAtualizar').disabled) return;
-  $('kAtualizar').disabled = true; await atualizarDash(); $('kAtualizar').disabled = false; };
+  $('kAtualizar').disabled = true; await atualizarDashBotao(); $('kAtualizar').disabled = false; };
 $('wBuscaTxt').oninput = filtraBusca;
 $('wBusca').ontoggle = () => { if ($('wBusca').open) $('wBuscaTxt').focus(); else { $('wBuscaTxt').value = ''; filtraBusca(); } };
 $('wBuscaLista').onchange = e => { // marcar "Todos" limpa a procura; marcar um ativo desmarca "Todos"
