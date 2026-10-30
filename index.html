@@ -804,8 +804,23 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
     </div>
     <div class="card">
       <div class="row" style="align-items:center"><b style="font-size:16px">Brapi (cotações dos ativos)</b>
-        <button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="Como conseguir o token">i</button></div>
+        <button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="O que é buscado no brapi e como conseguir o token">i</button></div>
       <div id="tokInfo" class="ajuda" hidden>
+        <b>O que é buscado no brapi</b>
+        <ul>
+          <li><b>Resumo</b> (botão Atualizar cotações): cada ativo em aberto da B3, uma consulta por ativo; o nome de cada ativo encerrado, só na primeira vez; o S&amp;P 500, no máximo 1 vez por hora.</li>
+          <li><b>Dash.</b> (botão Atualizar cotações): só os ativos <b>marcados</b> que não estão no Resumo, uma consulta por ativo.</li>
+          <li><b>Compar.</b> (botão Atualizar cotações): só os ativos encerrados que não estão no Resumo e não estão desmarcados no Dash., uma consulta por ativo.</li>
+          <li><b>IBOV, Dow Jones e Nasdaq:</b> só quando a HG Brasil não os entrega (sem chave, limite do dia atingido ou falha). O IBOV entra a cada Atualizar do Resumo; Dow Jones e Nasdaq, no máximo 1 vez por hora.</li>
+        </ul>
+        <b>O que não gasta consulta do brapi</b>
+        <ul>
+          <li><b>Carteira, Diário, Mensal, Gráficos e Resultados:</b> não têm busca própria; usam o que o Resumo carregou.</li>
+          <li>Linhas cinza do Dash. e ativos do Resumo na Compar.: usam o valor do Resumo.</li>
+          <li>Fundos (ex.: Agora S&amp;P 500 MM): sem cotação; o preço é digitado no cartão da Carteira.</li>
+          <li>Dólar: vem da AwesomeAPI, sem token.</li>
+          <li>Logos das empresas: imagens públicas do brapi, carregadas sem o seu token.</li>
+        </ul>
         <b>Como conseguir o token do brapi (grátis)</b>
         <p class="mut">O token é uma "chave" que deixa o app buscar as cotações. É criado uma vez só.</p>
         <b>1. Criar a conta e copiar o token</b>
@@ -839,7 +854,32 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <button id="btnToken" class="ic ic-salvar">Salvar</button>
     </div>
     <div class="card">
-      <b style="font-size:16px">HG Brasil (IBOV, Dow Jones e Nasdaq)</b>
+      <div class="row" style="align-items:center"><b style="font-size:16px">HG Brasil (IBOV, Dow Jones e Nasdaq)</b>
+        <button type="button" class="info" aria-expanded="false" aria-controls="hgInfo" aria-label="O que é buscado na HG Brasil">i</button></div>
+      <div id="hgInfo" class="ajuda" hidden>
+        <b>O que é buscado na HG Brasil</b>
+        <ul>
+          <li>Só 3 índices, juntos numa consulta: <b>IBOV, Dow Jones e Nasdaq</b>.</li>
+        </ul>
+        <b>Quando</b>
+        <ul>
+          <li><b>Sozinha:</b> ao abrir o app e a cada 15 minutos com o app na tela, de segunda a sexta, das 10h às 18h. Ao voltar para o app, se já passaram 15 minutos.</li>
+          <li><b>Resumo</b> (botão Atualizar cotações): 1 consulta a cada toque, em qualquer dia e horário.</li>
+        </ul>
+        <b>Onde aparece</b>
+        <ul>
+          <li>No topo do app, em todas as abas: no letreiro e na janela Visão Cotação.</li>
+        </ul>
+        <b>O que não vem da HG</b>
+        <ul>
+          <li>Cotação de ativos e fundos: o plano grátis não libera. Por isso Carteira, Lançar, Mov., Diário, Mensal, Gráficos, Compar., Resultados e Dash. não usam a HG.</li>
+          <li>S&amp;P 500: vem do brapi. Dólar: vem da AwesomeAPI.</li>
+        </ul>
+        <b>Ao chegar no limite do dia</b>
+        <ul>
+          <li>A atualização sozinha para até o dia seguinte. O botão Atualizar cotações do Resumo passa a buscar esses índices no brapi.</li>
+        </ul>
+      </div>
       <label for="cHg" style="margin-top:8px">Chave</label>
       <input id="cHg" autocomplete="off" spellcheck="false">
       <p id="cHgUso" style="margin:10px 0 8px"></p>
