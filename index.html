@@ -191,6 +191,7 @@ label.check:has(input:disabled) { opacity:.5; }
 #tPatrimonio .tkN { max-width:150px; } /* na tabela do Resumo, menor: cabe em 375 px */
 .logo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#fff; }
 #aloc svg { display:block; margin:4px auto 10px; }
+#alocGraf { margin-bottom:8px; } #alocGraf .bVal { font-size:9px; }
 #aloc .item { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--bd); }
 #aloc .item:first-of-type { border-top:0; }
 #aloc .bola { width:14px; height:14px; border-radius:50%; flex:none; }
@@ -287,7 +288,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
 .ic::before { border-radius:14px; }
 /* Resultados: gráfico de barras (lucro por ativo); a coluna de valores fica fixa e as barras rolam */
 .bGraf { display:flex; margin-top:10px; }
-#bRolagem { display:block; width:100%; height:24px; margin-top:8px; padding:0; border:0; border-radius:0; background:none; accent-color:var(--pri); }
+.bRolagem { display:block; width:100%; height:24px; margin-top:8px; padding:0; border:0; border-radius:0; background:none; accent-color:var(--pri); }
 .bEixo { position:relative; flex:none; width:40px; font-size:10px; color:var(--mut); }
 .bEixo span { position:absolute; right:5px; transform:translateY(-50%); white-space:nowrap; }
 .bRola { flex:1; min-width:0; overflow-x:auto; }
@@ -351,7 +352,8 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
     <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
     <button class="sec exp icl ic-exportar" data-exp="patrimonio">Exportar para Excel</button>
     <p class="mut">Patrimônio não aplicado (aba Aporte/Saque) + valor atual de cada ativo ou fundo em aberto.</p>
-    <h2>Alocação da carteira</h2>
+    <div class="row" style="align-items:center; margin:18px 0 8px"><h2 style="margin:0">Alocação da carteira</h2>
+      <label class="check" style="margin:0"><input type="checkbox" id="alocBarras"> Gráfico Barras</label></div>
     <div class="card viz" id="aloc"></div>
   </section>
 
@@ -1217,14 +1219,17 @@ function render() {
   const corF = i => `var(--s${i % 8 + 1})`; // shortcut: com mais de 8 ativos as cores se repetem; agrupar o resto em "Outros" se incomodar
   const R = 54, C = 2 * Math.PI * R;
   let acum = 0;
+  const barras = fatias.length && $('alocBarras').checked;
   $('aloc').innerHTML = !fatias.length ? '<p class="mut" style="margin:0">Sem posições com cotação ainda.</p>' :
-    `<svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="Alocação da carteira por ativo">
+    (barras ? '<div id="alocGraf"></div>' : `<svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="Alocação da carteira por ativo">
       ${fatias.map((p, i) => { const l = p.valor / somaAloc * C, sv = `<circle cx="85" cy="85" r="${R}" fill="none" stroke="${corF(i)}" stroke-width="30"
         stroke-dasharray="${Math.max(l - 1.5, 0.5)} ${C}" stroke-dashoffset="${-acum}" transform="rotate(-90 85 85)"/>`; acum += l; return sv; }).join('')}
       <text x="85" y="81" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">Aplicado</text>
-      <text x="85" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${ocN(somaAloc)}</text></svg>` +
+      <text x="85" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${ocN(somaAloc)}</text></svg>`) +
     fatias.map((p, i) => `<div class="item"><span class="bola" style="background:${corF(i)}"></span><span class="nomeA" title="${esc(p.ticker)}">${logo(p.ticker)}${esc(p.ticker)}</span>
       <span class="vals"><b>${ocN(p.valor)}</b><br><small>${pct(p.valor / somaAloc)}</small></span></div>`).join('');
+  if (barras) graficoBarras($('alocGraf'), fatias.map((p, i) => { const v = p.valor / somaAloc;
+    return { ticker: p.ticker, v: v * 100, rotulo: pct(v), titulo: pct(v), cor: corF(i) }; }), v => Math.round(v) + '%');
   tabelas.patrimonio = [['Item', 'Tipo', 'Valor R$'], ['Patrimônio não aplicado', '', xR(naoAloc)],
     ...comDia.map(p => [p.ticker, NOME_CLASSE[p.classe], xR(p.valor)]), ['Patrimônio total', '', xR(patri)]];
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
@@ -1352,6 +1357,31 @@ function renderMensal() {
 }
 
 // Aba Resultados: só ativos encerrados, com IR e lucro líquido; filtro de ativos e mês do encerramento
+// Gráfico de barras (Resultados e Alocação): dados = [{ ticker, v, rotulo, titulo, cor? }]; eixo = texto da escala Y.
+// A coluna da escala fica fixa e as barras rolam; sem cor própria, verde para cima e vermelho para baixo
+function graficoBarras(box, dados, eixo) {
+  const vals = dados.map(d => d.v), bruto = Math.max(0, ...vals) - Math.min(0, ...vals) || 1;
+  const ordem = 10 ** Math.floor(Math.log10(bruto)), passo = [0.2, 0.5, 1, 2, 5].map(x => x * ordem).find(x => bruto / x <= 5); // linhas "redondas"
+  const min = Math.floor(Math.min(0, ...vals) / passo) * passo, max = Math.max(Math.ceil(Math.max(0, ...vals) / passo) * passo, min + passo);
+  const H = 220, F = 18, y = v => F + (max - v) / (max - min) * (H - 2 * F); // F: folga para o valor acima/abaixo da barra
+  const linhas = []; for (let v = min; v <= max + passo / 2; v += passo) linhas.push(v);
+  box.innerHTML = `<div class="bGraf"><div class="bEixo" style="height:${H}px">${linhas.map(v => `<span style="top:${y(v)}px">${eixo(v)}</span>`).join('')}</div>
+    <div class="bRola"><div class="bArea" style="min-width:${dados.length * 34}px">
+      <div class="bPlot" style="height:${H}px">${linhas.map(v => `<i class="${Math.abs(v) < passo / 2 ? 'zero' : ''}" style="top:${y(v)}px"></i>`).join('')}
+        ${dados.map(d => { const a = y(Math.max(d.v, 0)), b = y(Math.min(d.v, 0)), up = d.v >= 0;
+          return `<div class="bCol" title="${esc(d.ticker)}: ${esc(d.titulo)}"><div class="bBarra ${up ? 'pos' : 'neg'}" style="top:${a}px; height:${Math.max(b - a, 2)}px${d.cor ? `; background:${d.cor}` : ''}"></div>
+            <span class="bVal" style="top:${up ? a - 15 : b + 2}px">${d.rotulo}</span></div>`; }).join('')}</div>
+      <div class="bNomes">${dados.map(d => `<div title="${esc(d.ticker)}">${logo(d.ticker)}<span>${esc(d.ticker)}</span></div>`).join('')}</div>
+    </div></div></div><input type="range" class="bRolagem" min="0" step="1" value="0" aria-label="Rolar o gráfico para o lado">`;
+  ligaRolagem(box);
+}
+// celular esconde a barra de rolagem nativa: esta fica sempre à vista quando os ativos não cabem na tela
+function ligaRolagem(box) {
+  const r = box.querySelector('.bRola'), b = box.querySelector('.bRolagem'), falta = r.scrollWidth - r.clientWidth;
+  b.hidden = falta <= 0; b.max = falta;
+  r.onscroll = () => b.value = r.scrollLeft;
+  b.oninput = () => r.scrollLeft = b.value;
+}
 // Resultados: gráfico de barras, com filtros próprios; barra para cima = lucro, para baixo = prejuízo
 function renderBarras() {
   const classeDe = p => p.classe || (ehB3(p.ticker) ? 'A' : 'F');
@@ -1365,24 +1395,7 @@ function renderBarras() {
   $('bTitulo').textContent = 'Lucro por ativo encerrado (R$)' + ($('bAcoes').checked ? ' – só ações' : '');
   if (!dados.length) { $('bGrafico').innerHTML = `<p class="mut">${db.ops.length && meses.length ? 'Nenhum ativo encerrado com esses filtros.' : 'Nenhum ativo encerrado ainda.'}</p>`; return; }
   const inteiro = v => Math.round(v).toLocaleString('pt-BR');
-  const vals = dados.map(d => d.lucro), bruto = Math.max(0, ...vals) - Math.min(0, ...vals) || 1;
-  const ordem = 10 ** Math.floor(Math.log10(bruto)), passo = [0.2, 0.5, 1, 2, 5].map(x => x * ordem).find(x => bruto / x <= 5); // linhas "redondas"
-  const min = Math.floor(Math.min(0, ...vals) / passo) * passo, max = Math.ceil(Math.max(0, ...vals) / passo) * passo;
-  const H = 220, F = 18, y = v => F + (max - v) / (max - min) * (H - 2 * F); // F: folga para o valor acima/abaixo da barra
-  const linhas = []; for (let v = min; v <= max + passo / 2; v += passo) linhas.push(v);
-  $('bGrafico').innerHTML = `<div class="bGraf"><div class="bEixo" style="height:${H}px">${linhas.map(v => `<span style="top:${y(v)}px">${inteiro(v)}</span>`).join('')}</div>
-    <div class="bRola"><div class="bArea" style="min-width:${dados.length * 34}px">
-      <div class="bPlot" style="height:${H}px">${linhas.map(v => `<i class="${Math.abs(v) < passo / 2 ? 'zero' : ''}" style="top:${y(v)}px"></i>`).join('')}
-        ${dados.map(d => { const a = y(Math.max(d.lucro, 0)), b = y(Math.min(d.lucro, 0)), up = d.lucro >= 0;
-          return `<div class="bCol" title="${esc(d.ticker)}: ${esc(brl(d.lucro))}"><div class="bBarra ${up ? 'pos' : 'neg'}" style="top:${a}px; height:${Math.max(b - a, 2)}px"></div>
-            <span class="bVal" style="top:${up ? a - 15 : b + 2}px">${inteiro(d.lucro)}</span></div>`; }).join('')}</div>
-      <div class="bNomes">${dados.map(d => `<div title="${esc(d.ticker)}">${logo(d.ticker)}<span>${esc(d.ticker)}</span></div>`).join('')}</div>
-    </div></div></div><input type="range" id="bRolagem" min="0" step="1" value="0" aria-label="Rolar o gráfico para o lado">`;
-  // celular esconde a barra de rolagem nativa: esta fica sempre à vista quando os ativos não cabem na tela
-  const r = document.querySelector('.bRola'), b = $('bRolagem'), falta = r.scrollWidth - r.clientWidth;
-  b.hidden = falta <= 0; b.max = falta;
-  r.onscroll = () => b.value = r.scrollLeft;
-  b.oninput = () => r.scrollLeft = b.value;
+  graficoBarras($('bGrafico'), dados.map(d => ({ ticker: d.ticker, v: d.lucro, rotulo: inteiro(d.lucro), titulo: brl(d.lucro) })), inteiro);
 }
 function renderResultados() {
   // cada posição encerrada (ativo vendido e recomprado mostra a posição antiga; a carteira não muda)
@@ -1765,7 +1778,7 @@ document.querySelector('nav').onclick = e => {
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   $('barra').hidden = !['resumo', 'carteira'].includes(t);
   $('btnAtualizar').hidden = t === 'carteira'; // a Carteira usa o que o Resumo carregou
-  if (t === 'result') renderBarras(); // a barra de rolagem precisa da largura da tela, que só existe com a aba visível
+  document.querySelectorAll('.bRolagem').forEach(b => ligaRolagem(b.parentElement)); // precisa da largura da tela, que só existe com a aba visível
   if (t === 'graf') renderGraficos(); // o gráfico precisa da largura da tela, que só existe com a aba visível
   b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados: mantém a aba visível
   scrollTo(0, 0);
@@ -2083,7 +2096,7 @@ async function janelaAtivo(a) {
   fecharModal();
 }
 $('wAtualizar').onclick = () => atualizarDashBotao();
-$('rsAcoes').onchange = $('cResAcoes').onchange = render;
+$('rsAcoes').onchange = $('cResAcoes').onchange = $('alocBarras').onchange = render;
 // Ajustes → Alerta Volatilidade Cabeçalho: dois limites, em %, maiores que 0 e até 100 (aceita vírgula)
 const mostraLimites = () => { $('cAlta').value = numPct(altaPct()).replace('%', ''); $('cQueda').value = numPct(quedaPct()).replace('%', ''); };
 mostraLimites();
