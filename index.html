@@ -201,6 +201,7 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 #tCompar .logo { width:15px; height:15px; margin-right:3px; } /* Compar.: coluna Ativo (título e códigos) alinhada à esquerda */
 #tCompar tr > :nth-child(n+3) { text-align:center; } /* colunas de valor (Unit. enc. em diante): no centro do título */
 #tCompar tr > :last-child { padding-right:1px; } /* sem isso a tabela passava 1 px da tela e rolava para o lado */
+#wTabela tr.res td { background:color-mix(in srgb, var(--mut) 20%, var(--card)); } /* ativo no Resumo: valor vem de lá, sem consulta */
 #ops tr.sel td, #aLista tr.sel td, #wTabela tr.sel td { background:color-mix(in srgb, var(--pri) 14%, transparent); }
 #mdTexto { white-space:pre-line; }
 #ops .tk2 { max-width:68px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -649,7 +650,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
           <li>Toque no <b>i</b> ao lado do código para abrir uma janela com o nome do ativo e o fechamento de cada dia do mês corrente, do dia mais recente para o dia 1º (carregado ao tocar em Atualizar cotações).</li>
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
           <li><b>Os ativos não são atualizados sozinhos:</b> só ao tocar em <b>Atualizar cotações</b>.</li>
-          <li>Ativo que está no <b>Resumo</b>: usa o valor carregado no Resumo, sem nova consulta, mesmo desmarcado. Semana % e Mês % dele vêm junto com o Atualizar do Resumo.</li>
+          <li><b>Linha cinza</b> = ativo que está no <b>Resumo</b>: usa o valor carregado no Resumo, sem nova consulta, mesmo desmarcado. Semana % e Mês % dele vêm junto com o Atualizar do Resumo.</li>
           <li>Demais ativos: a <b>caixa de marcar</b> antes do "i" decide. <b>Marcado:</b> é buscado no brapi (uma consulta por ativo). <b>Desmarcado:</b> fica em espera, com os últimos valores, e não gasta consulta.</li>
           <li>Ativo novo aparece sem valores até o próximo Atualizar.</li>
           <li>Os ativos cadastrados vão no backup.</li>
@@ -1865,7 +1866,7 @@ function renderDash() {
   $('wQuando').textContent = db.dashEm ? 'Atualizado em ' + new Date(db.dashEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ') : '';
   $('wTabela').innerHTML = !db.dash.length ? '<tr><td class="mut">Nenhum ativo cadastrado. Digite o código abaixo e toque em Adicionar.</td></tr>' :
     '<tr><th>Ativo</th><th>Atual R$</th><th>Dia %</th><th>Semana %</th><th>Mês %</th><th>Mês ant. %</th></tr>' +
-    mostrar.map(([a, i]) => `<tr data-i="${i}" class="${a.ticker === dashEditando ? 'sel' : ''}${a.off ? ' off' : ''}">
+    mostrar.map(([a, i]) => `<tr data-i="${i}" class="${a.ticker === dashEditando ? 'sel' : ''}${a.off ? ' off' : ''}${naCarteira.has(a.ticker) ? ' res' : ''}">
       <td><span class="wAtivo"><input type="checkbox" class="wChk" aria-label="Buscar cotação de ${esc(a.ticker)}"${a.off ? '' : ' checked'}><button type="button" class="info" data-nome="${i}" aria-label="Nome e cotações do mês de ${esc(a.ticker)}">i</button>${logo(a.ticker)}<b>${esc(a.ticker)}</b></span></td>
       <td>${reais(a.preco)}</td>${[a.dia, a.semana, a.mes, a.mesAnt].map(v => `<td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td>`).join('')}</tr>
 `).join('');
