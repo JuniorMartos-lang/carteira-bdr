@@ -1506,6 +1506,9 @@ let falhou = false; // última tentativa de atualizar não trouxe nenhuma cotaç
 const LIMITE_PADRAO = 12000;
 const consultasMes = () => db.consultas?.mes === hoje().slice(0, 7) ? db.consultas.n : 0;
 const limiteConsultas = () => db.limiteConsultas ?? LIMITE_PADRAO;
+// contador do mês atual juntando dois lados (este celular e um backup restaurado): fica o maior
+const consultasJuntas = (a, b) => { const m = hoje().slice(0, 7), n = x => x?.mes === m ? x.n : 0, v = Math.max(n(a), n(b));
+  return v ? { mes: m, n: v } : undefined; };
 function brapiFetch(url) { db.consultas = { mes: hoje().slice(0, 7), n: consultasMes() + 1 }; return fetch(url); }
 async function atualizar() {
   if (!db.token) { falhou = true; render(); $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
@@ -2080,7 +2083,9 @@ function conteudoBackup(d) {
     `Aportes e saques: ${(d.movs || []).length}`,
     `Ativos no Dash.: ${d.dashIniciado ? (d.dash || []).length : 'mantém a lista atual (backup antigo)'}`,
     `Alerta Volatilidade Cabeçalho: ${d.alertaAlta > 0 ? 'alta ' + numPct(d.alertaAlta) : 'alta desligada'} · ${d.alertaQueda > 0 ? 'queda ' + numPct(d.alertaQueda) : 'queda desligada'}${d.alertaAlta == null ? ' (sem valores no backup: 0)' : ''}`,
-    `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`].join('\n');
+    `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`,
+    `Consultas ao brapi: ${d.consultas ? `${d.consultas.n.toLocaleString('pt-BR')} em ${d.consultas.mes.slice(5)}/${d.consultas.mes.slice(0, 4)} (fica o maior entre o backup e este celular no mês atual)` : 'sem contador no backup (mantém o deste celular)'}`,
+    `Limite da atualização automática: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas' : 'sem valor no backup (' + LIMITE_PADRAO.toLocaleString('pt-BR') + ', padrão)'}`].join('\n');
 }
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return; // limpa já: escolher o mesmo arquivo de novo funciona mesmo após cancelar
@@ -2099,6 +2104,7 @@ $('fileImp').onchange = async e => {
       texto: `Todos os dados atuais deste celular serão substituídos pelos do backup.\n\nArquivo: ${f.name}\n\n${conteudoBackup(d)}` });
     fecharModal(); if (!sim) return;
     db = { ...vazio, ...d, token: d.token || db.token, // backup sem token (antigo) mantém o token deste celular
+      consultas: consultasJuntas(db.consultas, d.consultas), // backup antigo não "esquece" consultas já feitas neste mês
       ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
     $('cToken').value = db.token; mostraLimites();
     salvar(); render();
