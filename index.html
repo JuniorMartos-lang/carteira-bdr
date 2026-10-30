@@ -935,6 +935,11 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <div class="msg" id="cMsg"></div>
     </div>
     <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
+    <div class="card">
+      <label for="cNotas"><b style="font-size:16px">Anotações</b></label>
+      <textarea id="cNotas" rows="8" placeholder="Digite aqui suas anotações" style="width:100%; margin-top:8px; padding:12px 14px; font:inherit; border:1px solid transparent; border-radius:14px; background:var(--campo); color:var(--tx); resize:vertical"></textarea>
+      <p class="mut">Grava sozinho enquanto você digita e vai no backup.</p>
+    </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
     <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.19.0 · 30/10/2026</p>
   </section>
@@ -1237,6 +1242,7 @@ function render() {
   $('cHgUso').innerHTML = `Consultas hoje (contadas neste celular): <b class="${hgParou ? 'dn' : 'azul'}">${hgN.toLocaleString('pt-BR')}</b> de ${limiteHg().toLocaleString('pt-BR')}.` +
     (hgParou ? '<br><b class="dn">Limite atingido: hoje os índices vêm do brapi.</b>' : '');
   if (document.activeElement !== $('cHg')) $('cHg').value = db.hgKey || '';
+  if (document.activeElement !== $('cNotas')) $('cNotas').value = db.notas || '';
   if (document.activeElement !== $('cHgLimite')) $('cHgLimite').value = limiteHg().toLocaleString('pt-BR');
   const u = db.brapiUso, nCons = usadas(), parou = nCons != null && nCons >= limiteConsultas(), mil = v => v.toLocaleString('pt-BR');
   $('cConsultas').innerHTML = !u ? 'Consultas ao brapi: aparece depois da próxima atualização de cotações.' :
@@ -2153,6 +2159,7 @@ async function salvarServico(campo, campoLimite, grava, nome) {
   await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: `${nome}: ${chave ? 'gravado' : 'removido'}.\nLimite: ${v.toLocaleString('pt-BR')} consultas.` });
   fecharModal();
 }
+$('cNotas').oninput = e => { db.notas = e.target.value; salvar(); };
 $('btnToken').onclick = () => salvarServico('cToken', 'cLimite', (c, v) => { db.token = c; db.limiteConsultas = v; }, 'Token do brapi');
 $('cHgSalvar').onclick = () => salvarServico('cHg', 'cHgLimite', (c, v) => { db.hgKey = c; db.limiteHg = v; }, 'Chave da HG Brasil');
 // Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
@@ -2193,6 +2200,7 @@ function conteudoBackup(d) {
     `Alerta Volatilidade Cabeçalho: ${d.alertaAlta > 0 ? 'alta ' + numPct(d.alertaAlta) : 'alta desligada'} · ${d.alertaQueda > 0 ? 'queda ' + numPct(d.alertaQueda) : 'queda desligada'}${d.alertaAlta == null ? ' (sem valores no backup: 0)' : ''}`,
     `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`,
     `Chave da HG Brasil: ${d.hgKey ? 'incluída' : 'não incluída (mantém a deste aparelho)'}`,
+    `Anotações: ${d.notas != null ? (d.notas.length ? 'incluídas' : 'vazias') : 'não incluídas (mantém as deste aparelho)'}`,
     `Limite do brapi: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas usadas' : 'sem valor no backup (80% do plano)'}`,
     `Limite da HG Brasil: ${d.limiteHg ? d.limiteHg.toLocaleString('pt-BR') + ' consultas por dia' : 'sem valor no backup (320 por dia)'}`].join('\n');
 }
@@ -2212,7 +2220,7 @@ $('fileImp').onchange = async e => {
     const sim = await modal({ titulo: 'Substituir os dados?', ok: 'Sim, restaurar', cancelar: 'Cancelar',
       texto: `Todos os dados atuais deste celular serão substituídos pelos do backup.\n\nArquivo: ${f.name}\n\n${conteudoBackup(d)}` });
     fecharModal(); if (!sim) return;
-    db = { ...vazio, ...d, token: d.token || db.token, hgKey: d.hgKey || db.hgKey, // backup sem token/chave mantém o deste celular
+    db = { ...vazio, ...d, token: d.token || db.token, hgKey: d.hgKey || db.hgKey, notas: d.notas ?? db.notas, // backup sem token/chave/anotações mantém o deste celular
       brapiUso: db.brapiUso, hgUso: db.hgUso, consultas: undefined, hgStatus: undefined, hgSemAcoes: undefined, // uso é o deste celular, não o do arquivo
       ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
     $('cToken').value = db.token; $('cHg').value = db.hgKey || ''; mostraLimites();
