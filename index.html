@@ -184,6 +184,7 @@ button.perigo { background:transparent; color:var(--dn); border:1px solid var(--
 .wAtivo { display:inline-flex; align-items:center; gap:2px; white-space:nowrap; }
 .wAtivo button.info { width:20px; height:20px; font-size:12px; }
 .wAtivo .logo { width:14px; height:14px; margin:0 1px 0 0; }
+label.check:has(input:disabled) { opacity:.5; }
 #tResumo .logo, #tResAcoes .logo, #tResResumido .logo { width:15px; height:15px; margin-right:2px; }
 .tkN { display:inline-block; max-width:66px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
 #tPatrimonio td:first-child { white-space:nowrap; }
@@ -618,7 +619,17 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <div><label for="rIni">Mês inicial (venda)</label><select id="rIni"></select></div>
         <div><label for="rFim">Mês final (venda)</label><select id="rFim"></select></div>
       </div>
-      <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="rResumido"> Resumido</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="rResInfo" aria-label="O que é o Resumido">i</button></div>
+      <div class="row" style="justify-content:flex-start; gap:8px; align-items:center"><label class="check"><input type="checkbox" id="rResumido"> Resumido</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="rResInfo" aria-label="O que é o Resumido">i</button>
+        <label class="check"><input type="checkbox" id="rRank" disabled> Ranking %</label><button type="button" class="info" style="margin-top:10px" aria-expanded="false" aria-controls="rRankInfo" aria-label="Como funciona o Ranking %">i</button></div>
+      <div id="rRankInfo" class="ajuda" hidden><b>Ranking %</b>
+        <ul>
+          <li>Só funciona com <b>Resumido</b> marcado. Sem ele, a caixa fica apagada e, ao desmarcar o Resumido, ela desmarca junto.</li>
+          <li>Marcado, a lista fica em ordem de <b>rentabilidade da venda</b>, da maior para a menor: a coluna <b>Lucro %</b> (lucro ÷ total de compra da posição), antes do IR.</li>
+          <li>Desmarcado, volta à ordem normal: da venda mais recente para a mais antiga.</li>
+          <li>Entram só as posições que passam nos filtros de ativos e de meses. Ativo vendido mais de uma vez aparece uma vez por posição encerrada.</li>
+          <li>A linha Total não muda, e o "Exportar para Excel" segue a mesma ordem da tela.</li>
+        </ul>
+      </div>
       <div id="rResInfo" class="ajuda" hidden>Marcado, os cartões viram uma <b>lista com uma linha por ativo</b>: ativo, data da compra, data da venda, total da venda, lucro R$ e %, IR a pagar e lucro líquido, com a linha <b>Total</b> no fim. A lista rola para o lado e a coluna Ativo fica fixa. O "Exportar para Excel" segue as mesmas colunas.</div>
     </div>
     <div id="rLista"></div>
@@ -1321,6 +1332,10 @@ function renderResultados() {
   const t = lista.reduce((s, p) => ({ compra: s.compra + p.custoVendido, venda: s.venda + p.vendido, lucro: s.lucro + p.lucro,
     ir: s.ir + (p.ir || 0), liq: s.liq + liq(p) }), { compra: 0, venda: 0, lucro: 0, ir: 0, liq: 0 });
   const tP = t.compra ? t.lucro / t.compra : null, irTxt = p => p.ir == null ? 'retido' : reais(p.ir);
+  // Ranking %: só com Resumido marcado
+  $('rRank').disabled = !$('rResumido').checked;
+  if ($('rRank').disabled) $('rRank').checked = false;
+  if ($('rRank').checked) lista.sort((a, b) => b.pct - a.pct);
   if ($('rResumido').checked) {
     // Resumido: uma linha por ativo (lista compacta, como no Diário), com Total no fim; a exportação segue as mesmas colunas
     const curta = d => dt(d).slice(0, 6) + d.slice(2, 4); // dd/mm/aa
@@ -1540,7 +1555,7 @@ function renderDiario() {
 }
 
 [['mIni', renderMensal], ['mFim', renderMensal], ['mResumido', renderMensal], ['mAbertos', renderMensal], ['dResumido', renderDiario],
- ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', renderGraficos], ['gAcoes', renderGraficos], ['eIni', renderGraficos], ['eFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
+ ['rIni', renderResultados], ['rFim', renderResultados], ['rResumido', renderResultados], ['rRank', renderResultados], ['gIni', renderGraficos], ['gFim', renderGraficos], ['gRealizados', renderGraficos], ['gAcoes', renderGraficos], ['eIni', renderGraficos], ['eFim', renderGraficos]].forEach(([id, f]) => $(id).onchange = f);
 // marcar um ativo desmarca "Todos"; marcar "Todos" desmarca os outros
 [['m', renderMensal], ['d', renderDiario], ['r', renderResultados], ['g', renderGraficos], ['e', renderGraficos], ['k', renderCompar]].forEach(([p, f]) => $(p + 'Ativos').onchange = e => {
   const tudo = e.target.value === '*';
