@@ -625,7 +625,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <div id="rRankInfo" class="ajuda" hidden><b>Ranking %</b>
         <ul>
           <li>Só funciona com <b>Resumido</b> marcado. Sem ele, a caixa fica apagada e, ao desmarcar o Resumido, ela desmarca junto.</li>
-          <li>Marcado, a lista fica em ordem de <b>rentabilidade da venda</b>, da maior para a menor: a coluna <b>Lucro %</b> (lucro ÷ total de compra da posição), antes do IR.</li>
+          <li>Marcado, a lista fica em ordem de <b>lucro da venda em reais</b>, do maior para o menor: a coluna <b>Lucro R$</b>, antes do IR. Prejuízos ficam no fim.</li>
           <li>Desmarcado, volta à ordem normal: da venda mais recente para a mais antiga.</li>
           <li>Entram só as posições que passam nos filtros de ativos e de meses. Ativo vendido mais de uma vez aparece uma vez por posição encerrada.</li>
           <li>A linha Total não muda, e o "Exportar para Excel" segue a mesma ordem da tela.</li>
@@ -1336,7 +1336,7 @@ function renderResultados() {
   // Ranking %: só com Resumido marcado
   $('rRank').disabled = !$('rResumido').checked;
   if ($('rRank').disabled) $('rRank').checked = false;
-  if ($('rRank').checked) lista.sort((a, b) => b.pct - a.pct);
+  if ($('rRank').checked) lista.sort((a, b) => b.lucro - a.lucro);
   if ($('rResumido').checked) {
     // Resumido: uma linha por ativo (lista compacta, como no Diário), com Total no fim; a exportação segue as mesmas colunas
     const curta = d => dt(d).slice(0, 6) + d.slice(2, 4); // dd/mm/aa
