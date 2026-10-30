@@ -832,10 +832,10 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <button id="btnToken" class="ic ic-salvar">Salvar token</button>
       <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--bd)">
         <p id="cConsultas" style="margin:0 0 8px"></p>
-        <label for="cLimite">Parar a atualização automática ao chegar em (consultas no mês)</label>
+        <label for="cLimite">Parar a atualização automática ao chegar em (consultas usadas)</label>
         <input id="cLimite" inputmode="numeric" autocomplete="off" onfocus="this.select()">
         <button id="cLimiteSalvar" class="ic ic-salvar" style="margin-top:8px">Salvar limite</button>
-        <p class="mut">Contadas por este celular, do dia 1º ao fim do mês. Ao chegar no limite, só a atualização automática para; os botões Atualizar cotações continuam funcionando. O número oficial (e o dia em que o brapi zera o seu limite) fica no painel do brapi.</p>
+        <p class="mut">O número vem do próprio brapi a cada consulta e conta os últimos 30 dias corridos (inclui o que for gasto em outros aparelhos com o mesmo token). Ao chegar no limite, só a atualização automática para; os botões Atualizar cotações continuam funcionando. Sem limite gravado, vale 80% do plano. Só o limite vai no backup.</p>
       </div>
     </div>
     <div class="card">
@@ -1180,9 +1180,12 @@ function render() {
   // último backup: data e hora em azul e negrito; sem backup, aviso em vermelho
   const quandoBkp = db.ultimoBackupEm ? new Date(db.ultimoBackupEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')
     : db.ultimoBackup && db.ultimoBackup.split('-').reverse().join('/'); // backups antigos só guardavam o dia
-  const nCons = consultasMes(), parou = nCons >= limiteConsultas();
-  $('cConsultas').innerHTML = `Consultas ao brapi neste mês: <b class="${parou ? 'dn' : 'azul'}">${nCons.toLocaleString('pt-BR')}</b>` +
-    (parou ? ' — atualização automática parada (limite atingido).' : '');
+  const u = db.brapiUso, nCons = usadas(), parou = nCons != null && nCons >= limiteConsultas(), mil = v => v.toLocaleString('pt-BR');
+  $('cConsultas').innerHTML = !u ? 'Consultas ao brapi: aparece depois da próxima atualização de cotações.' :
+    `Consultas usadas (últimos 30 dias, informado pelo brapi): <b class="${parou ? 'dn' : 'azul'}">${mil(nCons)}</b> de ${mil(u.limite)} — restam ${mil(u.restante)}.` +
+    `<br><span class="mut">Conferido em ${new Date(u.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')}.</span>` +
+    (parou ? '<br><b class="dn">Atualização automática parada (limite atingido).</b>' : '') +
+    (u.aviso ? `<br><b class="dn">Aviso do brapi:</b> ${esc(u.aviso)}` : '');
   if (document.activeElement !== $('cLimite')) $('cLimite').value = limiteConsultas().toLocaleString('pt-BR');
   $('ultBackup').innerHTML = quandoBkp ? `Último backup: <b class="azul">${quandoBkp}</b>` : '<b class="dn">Nenhum backup feito ainda.</b>';
   $('lembrete').textContent = db.ops.length && (dias == null || dias >= 7)
@@ -1501,15 +1504,16 @@ function registrarDia() {
 let mostrarValores = false; // olhinho do topo
 let editandoId = null; // Lançar: id do lançamento carregado da lista (Salvar corrige; Excluir apaga)
 let falhou = false; // última tentativa de atualizar não trouxe nenhuma cotação
-// Consultas ao brapi contadas neste celular, por mês do calendário (o plano grátis tem limite mensal).
-// A atualização automática para ao chegar no limite escolhido em Ajustes; os botões continuam funcionando.
-const LIMITE_PADRAO = 12000;
-const consultasMes = () => db.consultas?.mes === hoje().slice(0, 7) ? db.consultas.n : 0;
-const limiteConsultas = () => db.limiteConsultas ?? LIMITE_PADRAO;
-// contador do mês atual juntando dois lados (este celular e um backup restaurado): fica o maior
-const consultasJuntas = (a, b) => { const m = hoje().slice(0, 7), n = x => x?.mes === m ? x.n : 0, v = Math.max(n(a), n(b));
-  return v ? { mes: m, n: v } : undefined; };
-function brapiFetch(url) { db.consultas = { mes: hoje().slice(0, 7), n: consultasMes() + 1 }; return fetch(url); }
+// Uso da conta no brapi: cada resposta traz o limite do plano e quantas consultas restam nos últimos 30 dias corridos
+// (cabeçalhos RateLimit-Limit / RateLimit-Remaining, conferidos em 29/10/2026). Fica em db.brapiUso (fora do backup:
+// é da conta, não do celular). A atualização automática para ao chegar no limite escolhido em Ajustes (padrão: 80% do plano).
+const usadas = () => db.brapiUso ? db.brapiUso.limite - db.brapiUso.restante : null;
+const limiteConsultas = () => db.limiteConsultas ?? Math.round((db.brapiUso?.limite ?? 15000) * 0.8);
+async function brapiFetch(url) {
+  const r = await fetch(url), lim = +r.headers.get('ratelimit-limit'), rest = r.headers.get('ratelimit-remaining');
+  if (lim && rest != null) db.brapiUso = { limite: lim, restante: +rest, em: new Date().toISOString(), aviso: r.headers.get('x-usage-warning') || '' };
+  return r;
+}
 async function atualizar() {
   if (!db.token) { falhou = true; render(); $('erroCot').textContent = 'Cadastre o token do brapi.dev em Ajustes.'; return; }
   const tks = posicoes(db.ops, {}).filter(p => !p.encerrado && ehB3(p.ticker)).map(p => p.ticker);
@@ -1576,7 +1580,7 @@ const AUTO_MIN = 30;
 const velho = (iso, min = AUTO_MIN) => !iso || Date.now() - new Date(iso) > min * 60e3;
 async function autoAtualizar() {
   if (!horarioAuto() || !db.token || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // fora do horário, sem token ou já atualizando
-  if (consultasMes() >= limiteConsultas()) return render(); // limite do mês: só pelos botões
+  if (usadas() >= limiteConsultas()) return render(); // limite atingido: só pelos botões
   if (db.ops.length && velho(db.atualizado)) { $('wAtualizar').disabled = true; await atualizar(); $('wAtualizar').disabled = false; }
 }
 
@@ -1896,7 +1900,7 @@ $('cLimiteSalvar').onclick = async () => {
     fecharModal(); return render();
   }
   db.limiteConsultas = v; salvar(); render();
-  await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: `A atualização automática para ao chegar em ${v.toLocaleString('pt-BR')} consultas no mês. Neste mês: ${consultasMes().toLocaleString('pt-BR')}.` });
+  await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: `A atualização automática para ao chegar em ${v.toLocaleString('pt-BR')} consultas usadas.` + (usadas() != null ? ` Usadas agora: ${usadas().toLocaleString('pt-BR')}.` : '') });
   fecharModal();
 };
 $('cAlertasSalvar').onclick = async () => {
@@ -2051,7 +2055,9 @@ $('btnToken').onclick = async () => {
 };
 // Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
 async function fazerBackup() {
-  const dados = db; // vai tudo, inclusive o token do brapi (a pedido): restaurar num celular novo já traz as cotações
+  // vai tudo, inclusive o token do brapi (a pedido): restaurar num celular novo já traz as cotações; o uso do brapi
+  // não vai (é da conta, vem do próprio brapi), só o limite escolhido
+  const { brapiUso, consultas, ...dados } = db;
   let txt = JSON.stringify(dados, null, 1);
   if (trava.backup) txt = JSON.stringify({ carteiraBdrProtegido: 1, sal: trava.backup.sal, ...await cifrar(txt, trava.backup.chave) });
   // .txt: o Chrome do Android recusa compartilhar .json ("Permission denied"); o conteúdo continua sendo JSON
@@ -2084,8 +2090,7 @@ function conteudoBackup(d) {
     `Ativos no Dash.: ${d.dashIniciado ? (d.dash || []).length : 'mantém a lista atual (backup antigo)'}`,
     `Alerta Volatilidade Cabeçalho: ${d.alertaAlta > 0 ? 'alta ' + numPct(d.alertaAlta) : 'alta desligada'} · ${d.alertaQueda > 0 ? 'queda ' + numPct(d.alertaQueda) : 'queda desligada'}${d.alertaAlta == null ? ' (sem valores no backup: 0)' : ''}`,
     `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`,
-    `Consultas ao brapi: ${d.consultas ? `${d.consultas.n.toLocaleString('pt-BR')} em ${d.consultas.mes.slice(5)}/${d.consultas.mes.slice(0, 4)} (fica o maior entre o backup e este celular no mês atual)` : 'sem contador no backup (mantém o deste celular)'}`,
-    `Limite da atualização automática: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas' : 'sem valor no backup (' + LIMITE_PADRAO.toLocaleString('pt-BR') + ', padrão)'}`].join('\n');
+    `Limite da atualização automática: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas usadas' : 'sem valor no backup (80% do plano do brapi)'}`].join('\n');
 }
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return; // limpa já: escolher o mesmo arquivo de novo funciona mesmo após cancelar
@@ -2104,7 +2109,7 @@ $('fileImp').onchange = async e => {
       texto: `Todos os dados atuais deste celular serão substituídos pelos do backup.\n\nArquivo: ${f.name}\n\n${conteudoBackup(d)}` });
     fecharModal(); if (!sim) return;
     db = { ...vazio, ...d, token: d.token || db.token, // backup sem token (antigo) mantém o token deste celular
-      consultas: consultasJuntas(db.consultas, d.consultas), // backup antigo não "esquece" consultas já feitas neste mês
+      brapiUso: db.brapiUso, consultas: undefined, // uso do brapi é o deste celular (vem do brapi), não o do arquivo
       ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
     $('cToken').value = db.token; mostraLimites();
     salvar(); render();
