@@ -649,7 +649,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
           <li>Toque na linha para carregar o ativo no cadastro (abaixo da tabela) e <b>alterar</b> ou <b>excluir</b>.</li>
           <li>O botão <b>Atualizar cotações</b> desta aba busca só os ativos do Dashboard.</li>
           <li><b>Esta aba só atualiza pelo botão</b> (para economizar consultas do brapi). A exceção são os ativos que também estão na carteira: eles vêm junto na atualização da carteira (automática ou pelo botão do Resumo/Carteira), sem gastar consulta a mais, e o botão daqui pula os que foram atualizados há menos de 15 minutos.</li>
-          <li><b>Atualização automática da carteira</b>: de segunda a sexta, das 10h00 às 17h30 (horário de Brasília), ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira, nesta aba ou na Compar., se a última tiver mais de 15 minutos. Para sozinha ao chegar no limite de consultas do mês (Ajustes → Token do brapi). Fora desse horário (e com o app fechado) nada é atualizado sozinho. Feriados não são reconhecidos.</li>
+          <li><b>Atualização automática da carteira</b>: de segunda a sexta, das 10h00 às 17h30 (horário de Brasília), ao abrir o app, ao voltar para ele e ao entrar no Resumo, na Carteira, nesta aba ou na Compar., se a última tiver mais de 30 minutos. Para sozinha ao chegar no limite de consultas do mês (Ajustes → Token do brapi). Fora desse horário (e com o app fechado) nada é atualizado sozinho. Feriados não são reconhecidos.</li>
           <li>Os ativos cadastrados vão no backup.</li>
         </ul>
         <b>Alertas no cabeçalho</b>
@@ -1568,8 +1568,8 @@ async function atualizar() {
 
 // Atualização automática (só a carteira; o Dash. só pelo botão, a pedido, para economizar consultas): ao abrir o app,
 // ao voltar para ele e ao entrar no Resumo, Carteira, Dash. ou Compar., de segunda a sexta das 10h00 às 17h30 (horarioAuto),
-// se a última tiver mais de 15 min e o limite de consultas do mês não tiver sido atingido. Sem servidor, nada atualiza com o app fechado.
-const AUTO_MIN = 15;
+// se a última tiver mais de 30 min (era 15; mudado para economizar consultas) e o limite de consultas do mês não tiver sido atingido. Sem servidor, nada atualiza com o app fechado.
+const AUTO_MIN = 30;
 const velho = (iso, min = AUTO_MIN) => !iso || Date.now() - new Date(iso) > min * 60e3;
 async function autoAtualizar() {
   if (!horarioAuto() || !db.token || $('btnAtualizar').disabled || $('wAtualizar').disabled) return; // fora do horário, sem token ou já atualizando
@@ -1857,7 +1857,7 @@ function dashAplicar(a, q) {
 }
 // botões Atualizar do Dash. e da Compar.: pula os ativos que a carteira trouxe há menos de 15 min (não gasta consulta duas vezes)
 async function atualizarDashBotao() {
-  const tks = db.dash.filter(a => velho(a.em)).map(a => a.ticker);
+  const tks = db.dash.filter(a => velho(a.em, 15)).map(a => a.ticker);
   if (tks.length) return atualizarDash(tks);
   db.dashEm = new Date().toISOString(); atualizaAlertas(); salvar(); renderDash();
 }
