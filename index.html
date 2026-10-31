@@ -352,8 +352,9 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
     <div class="card" style="padding:6px 8px"><table id="tPatrimonio"></table></div>
     <button class="sec exp icl ic-exportar" data-exp="patrimonio">Exportar para Excel</button>
     <p class="mut">Patrimônio não aplicado (aba Aporte/Saque) + valor atual de cada ativo ou fundo em aberto.</p>
-    <div class="row" style="align-items:center; margin:18px 0 8px"><h2 style="margin:0">Alocação da carteira</h2>
-      <label class="check" style="margin:0"><input type="checkbox" id="alocBarras"> Gráfico Barras</label></div>
+    <h2>Alocação da carteira</h2>
+    <div class="row" style="justify-content:flex-start; gap:14px; margin-bottom:8px"><label class="check" style="margin:0"><input type="checkbox" id="alocBarras"> Gráfico Barras</label>
+      <label class="check" style="margin:0"><input type="checkbox" id="alocSo"> Somente Alocado</label></div>
     <div class="card viz" id="aloc"></div>
   </section>
 
@@ -1213,23 +1214,26 @@ function render() {
       <th class="${cor(tLucro)}">${reais(tLucro)} <small>${pct(tLucroP)}</small></th></tr>`;
   // Resumo → Patrimônio total: não alocado + valor atual de cada posição aberta (mesma ordem do ranking)
   const naoAloc = naoAplicado(), patri = naoAloc + comDia.reduce((s, p) => s + (p.valor || 0), 0);
-  // Resumo → Alocação da carteira: fatia = valor atual da posição (qtd × preço de agora) sobre a soma das posições
-  // abertas com cotação (sem o patrimônio não aplicado), do maior para o menor; valores seguem o olhinho, % não
-  const fatias = comDia.filter(p => p.valor > 0).sort((a, b) => b.valor - a.valor), somaAloc = fatias.reduce((x, p) => x + p.valor, 0);
+  // Resumo → Alocação da carteira: fatia = valor atual da posição (qtd × preço de agora) sobre a soma das fatias, do maior
+  // para o menor; o patrimônio não aplicado entra, se positivo, salvo com "Somente Alocado"; valores seguem o olhinho, % não
   const corF = i => `var(--s${i % 8 + 1})`; // shortcut: com mais de 8 ativos as cores se repetem; agrupar o resto em "Outros" se incomodar
+  const soAlocado = $('alocSo').checked, comNA = !soAlocado && naoAloc > 0;
+  const fatias = comDia.filter(p => p.valor > 0).sort((a, b) => b.valor - a.valor).map((p, i) => ({ ticker: p.ticker, valor: p.valor, cor: corF(i) })) // a cor do ativo não muda com a caixa
+    .concat(comNA ? [{ ticker: 'Patrimônio não aplicado', valor: naoAloc, cor: 'var(--mut)' }] : []).sort((a, b) => b.valor - a.valor);
+  const somaAloc = fatias.reduce((x, p) => x + p.valor, 0);
   const R = 54, C = 2 * Math.PI * R;
   let acum = 0;
   const barras = fatias.length && $('alocBarras').checked;
   $('aloc').innerHTML = !fatias.length ? '<p class="mut" style="margin:0">Sem posições com cotação ainda.</p>' :
     (barras ? '<div id="alocGraf"></div>' : `<svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="Alocação da carteira por ativo">
-      ${fatias.map((p, i) => { const l = p.valor / somaAloc * C, sv = `<circle cx="85" cy="85" r="${R}" fill="none" stroke="${corF(i)}" stroke-width="30"
+      ${fatias.map(p => { const l = p.valor / somaAloc * C, sv = `<circle cx="85" cy="85" r="${R}" fill="none" stroke="${p.cor}" stroke-width="30"
         stroke-dasharray="${Math.max(l - 1.5, 0.5)} ${C}" stroke-dashoffset="${-acum}" transform="rotate(-90 85 85)"/>`; acum += l; return sv; }).join('')}
-      <text x="85" y="81" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">Aplicado</text>
+      <text x="85" y="81" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">${comNA ? 'Total' : 'Aplicado'}</text>
       <text x="85" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${ocN(somaAloc)}</text></svg>`) +
-    fatias.map((p, i) => `<div class="item"><span class="bola" style="background:${corF(i)}"></span><span class="nomeA" title="${esc(p.ticker)}">${logo(p.ticker)}${esc(p.ticker)}</span>
+    fatias.map(p => `<div class="item"><span class="bola" style="background:${p.cor}"></span><span class="nomeA" title="${esc(p.ticker)}">${logo(p.ticker)}${esc(p.ticker)}</span>
       <span class="vals"><b>${ocN(p.valor)}</b><br><small>${pct(p.valor / somaAloc)}</small></span></div>`).join('');
-  if (barras) graficoBarras($('alocGraf'), fatias.map((p, i) => { const v = p.valor / somaAloc;
-    return { ticker: p.ticker, v: v * 100, rotulo: pct(v), titulo: pct(v), cor: corF(i) }; }), v => Math.round(v) + '%');
+  if (barras) graficoBarras($('alocGraf'), fatias.map(p => { const v = p.valor / somaAloc;
+    return { ticker: p.ticker, v: v * 100, rotulo: pct(v), titulo: pct(v), cor: p.cor }; }), v => Math.round(v) + '%');
   tabelas.patrimonio = [['Item', 'Tipo', 'Valor R$'], ['Patrimônio não aplicado', '', xR(naoAloc)],
     ...comDia.map(p => [p.ticker, NOME_CLASSE[p.classe], xR(p.valor)]), ['Patrimônio total', '', xR(patri)]];
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
@@ -2096,7 +2100,7 @@ async function janelaAtivo(a) {
   fecharModal();
 }
 $('wAtualizar').onclick = () => atualizarDashBotao();
-$('rsAcoes').onchange = $('cResAcoes').onchange = $('alocBarras').onchange = render;
+$('rsAcoes').onchange = $('cResAcoes').onchange = $('alocBarras').onchange = $('alocSo').onchange = render;
 // Ajustes → Alerta Volatilidade Cabeçalho: dois limites, em %, maiores que 0 e até 100 (aceita vírgula)
 const mostraLimites = () => { $('cAlta').value = numPct(altaPct()).replace('%', ''); $('cQueda').value = numPct(quedaPct()).replace('%', ''); };
 mostraLimites();
