@@ -304,6 +304,33 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
 .bNomes > div { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:8.5px; color:var(--tx); }
 .bNomes .logo { margin:0; }
 .bNomes span:last-child { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Ajustes: perfil no topo do menu, Editar perfil e senha */
+#ajPerfil { display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px 0 16px; }
+#ajNome { font-size:18px; color:var(--tx); overflow-wrap:anywhere; text-align:center; }
+.avatar { display:inline-flex; align-items:center; justify-content:center; width:96px; height:96px; border-radius:50%; object-fit:cover; background:var(--navy); color:#fff; font-size:32px; font-weight:700; }
+.comOlho { position:relative; } .comOlho input { padding-right:46px; }
+button.vOlho { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; background:none; color:var(--mut); border:0; box-shadow:none; }
+button.vOlho[aria-pressed=true] { color:var(--pri); }
+.sAviso { display:flex; gap:8px; align-items:flex-start; margin:0 0 6px; padding:10px 12px; border-radius:14px; background:var(--campo); color:var(--tx); font-size:14px; }
+.sAvisoI { flex:none; width:20px; height:20px; border-radius:50%; background:var(--pri); color:var(--icFg, #fff); display:flex; align-items:center; justify-content:center; font:italic 700 13px/1 Georgia, serif; }
+/* Ajustes em telas: menu → tela do grupo */
+#tab-config { overflow-x:clip; overflow-clip-margin:16px; }
+body.ajAba header, body.ajAba #topo { display:none; }
+button.ajItem { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; min-height:50px; padding:12px 16px; margin:0;
+  background:none; color:var(--tx); border:0; border-bottom:1px solid var(--bd); border-radius:0; box-shadow:none; font:inherit; font-weight:600; text-align:left; }
+button.ajItem:last-child { border-bottom:0; }
+.ajNomeI { display:flex; align-items:center; gap:12px; min-width:0; }
+.ajNomeI svg { flex:none; color:var(--pri); }
+button.ajItem span:last-child { color:var(--mut); font-size:22px; line-height:1; }
+.ajBarra { position:sticky; top:0; z-index:5; display:grid; grid-template-columns:40px 1fr 40px; align-items:center; padding:8px 0; margin-bottom:6px; background:var(--bg); } /* colunas iguais: título no centro real da tela */
+.ajBarra b { font-size:16px; color:var(--tx); text-align:center; }
+.ajDesc { display:flex; gap:8px; align-items:flex-start; margin:0 2px 12px; font-size:14px; color:var(--tx); }
+.ajDesc p { margin:0; min-width:0; }
+button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; color:var(--tx); border:0; box-shadow:none; font-size:30px; line-height:1; }
+@media (prefers-reduced-motion: no-preference) {
+  .ajDeDir { animation:ajDeDir .25s ease-out; } .ajDeEsq { animation:ajDeEsq .25s ease-out; }
+  @keyframes ajDeDir { from { transform:translateX(100%); } } @keyframes ajDeEsq { from { transform:translateX(-100%); } }
+}
 </style>
 </head>
 <body>
@@ -740,9 +767,28 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
   </section>
 
   <section id="tab-config" hidden>
+    <div id="ajMenu">
+    <div id="ajPerfil">
+      <img id="ajFoto" class="avatar" alt="Foto do perfil" hidden><div id="ajIni" class="avatar" aria-hidden="true"></div>
+      <b id="ajNome"></b>
+      <button type="button" class="sec" data-aj="perfil">Editar perfil</button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden">
+      <button type="button" class="ajItem" data-aj="alerta"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Alerta Volatilidade Cabeçalho</span><span aria-hidden="true">›</span></button>
+      <button type="button" class="ajItem" data-aj="brapi"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M13 10l2 2"/></svg>Token do brapi e consultas</span><span aria-hidden="true">›</span></button>
+      <button type="button" class="ajItem" data-aj="hg"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 6-7"/></svg>HG Brasil (IBOV, Dow Jones e Nasdaq)</span><span aria-hidden="true">›</span></button>
+      <button type="button" class="ajItem" data-aj="senha"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Senha do app</span><span aria-hidden="true">›</span></button>
+      <button type="button" class="ajItem" data-aj="backup"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 9.5a4 4 0 0 1-1 8.5"/><path d="M12 20v-8M9 15l3-3 3 3"/></svg>Backup</span><span aria-hidden="true">›</span></button>
+      <button type="button" class="ajItem" data-aj="aparencia"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>Aparência</span><span aria-hidden="true">›</span></button>
+      <button type="button" class="ajItem" data-aj="notas"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Anotações</span><span aria-hidden="true">›</span></button>
+    </div>
+    <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.26.1 · 31/10/2026</p>
+    </div>
+    <div class="ajTela" id="aj-alerta" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Alerta Volatilidade Cabeçalho</b></div>
+      <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="cAlertaInfo" aria-label="Como funciona o alerta de volatilidade">i</button><p>Mostra no cabeçalho, num letreiro, os ativos do Dash. que subiram ou caíram além dos limites no dia. Quem entra fica até o fim do dia, e 0 desliga aquele lado. A lista só muda quando as cotações são atualizadas, e o app não envia notificação. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
-      <div class="row" style="align-items:center; justify-content:flex-start; gap:6px"><b style="color:var(--tx); font-size:15px">Alerta Volatilidade Cabeçalho</b>
-        <button type="button" class="info" aria-expanded="false" aria-controls="cAlertaInfo" aria-label="Como funciona o alerta de volatilidade">i</button></div>
       <div id="cAlertaInfo" class="ajuda" hidden>
         <b>O que é</b>
         <ul>
@@ -768,44 +814,57 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <b>Backup</b>
         <ul><li>Os dois limites vão no backup e voltam ao restaurar.</li></ul>
       </div>
-      <p class="mut" style="margin:2px 0 6px">Variação do dia que coloca um ativo do Dash. nos alertas do cabeçalho.</p>
       <div class="two">
         <div><label for="cAlta">Alta a partir de (%)</label><input id="cAlta" inputmode="decimal" autocomplete="off" placeholder="0"></div>
         <div><label for="cQueda">Queda a partir de (%)</label><input id="cQueda" inputmode="decimal" autocomplete="off" placeholder="0"></div>
       </div>
       <div class="botoes"><button type="button" id="cAlertasSalvar" class="ic ic-salvar">Salvar</button></div>
-    </div>
+    </div></div>
+    <div class="ajTela" id="aj-aparencia" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Aparência</b></div>
+      <div class="ajDesc"><span class="sAvisoI" aria-hidden="true">i</span><p>Escolhe as cores do app: claro, escuro ou automático, que segue o tema do celular. A troca vale na hora e só muda a aparência, nunca os seus dados. A escolha fica guardada neste aparelho e não vai no backup.</p></div>
     <div class="card">
-      <label for="cTema" style="margin-top:0"><b style="color:var(--tx); font-size:15px">Aparência</b></label>
-      <select id="cTema">
+      <select id="cTema" aria-label="Aparência">
         <option value="auto">Automático (igual ao celular)</option>
         <option value="claro">Claro</option>
         <option value="escuro">Escuro</option>
       </select>
-      <label>Foto (aparece no topo, ao lado do lucro)</label>
+    </div></div>
+    <div class="ajTela" id="aj-perfil" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Editar perfil</b></div>
+      <div class="ajDesc"><span class="sAvisoI" aria-hidden="true">i</span><p>Guarda seu nome, e-mail, data de nascimento e foto. O nome e a foto aparecem no topo de Ajustes, e a foto também no cabeçalho das outras abas. Nada muda até tocar em Salvar alterações. A foto não vai no backup; os outros dados vão.</p></div>
+    <div class="card">
+      <div style="text-align:center">
+        <img id="pFoto" class="avatar" alt="Foto do perfil" hidden><div id="pIni" class="avatar" aria-hidden="true"></div>
+      </div>
       <div class="two">
-        <button id="cFotoEsc" class="sec">Escolher foto</button>
-        <button id="cFotoRem" class="sec">Remover foto</button>
+        <button type="button" id="cFotoEsc" class="sec">Alterar foto</button>
+        <button type="button" id="cFotoRem" class="sec">Remover foto</button>
       </div>
       <input type="file" id="cFotoArq" accept="image/*" hidden>
-    </div>
+      <label for="pNome">Nome</label><input id="pNome" autocomplete="name" maxlength="60">
+      <label for="pEmail">E-mail (só informativo; o app não envia e-mails)</label><input id="pEmail" type="email" inputmode="email" autocomplete="email">
+      <label for="pNasc">Data de nascimento</label><input id="pNasc" type="date">
+      <button type="button" id="pSalvar" style="width:100%; margin-top:14px">Salvar alterações</button>
+    </div></div>
+    <div class="ajTela" id="aj-senha" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b id="sTitulo"></b></div>
+      <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="senhaInfo" aria-label="Como funciona a senha">i</button><p>A senha trava a tela ao abrir o app e ao voltar depois de mais de 1 minuto fora dele. Também protege o arquivo de backup. Ela não vai no backup e não criptografa os dados guardados no celular. Ao criar, anote o código de recuperação: ele aparece uma vez só. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
-      <div class="row" style="align-items:center"><b>Senha do app</b>
-        <button type="button" class="info" aria-expanded="false" aria-controls="senhaInfo" aria-label="Como funciona a senha">i</button></div>
       <div id="senhaInfo" class="ajuda" hidden>
         <b>Como funciona a senha do app</b>
         <p class="mut">A senha é opcional. Sem senha, o app abre direto. Com senha, ninguém abre o app no seu celular sem ela.</p>
         <b>Criar a senha</b>
         <ol>
           <li>Digite a senha em <b>Nova senha</b> e repita em <b>Repita a nova senha</b>. Mínimo de <b>8 caracteres</b> (combine letras e números; maiúsculas e minúsculas contam como diferentes). Senhas criadas antes com 4 a 7 caracteres continuam valendo até serem trocadas.</li>
-          <li>Toque em <b>Criar senha</b>.</li>
+          <li>Toque em <b>Salvar alterações</b>.</li>
           <li>Aparece o <b>código de recuperação</b> (ex.: 7K3P-9QXM-2B4T). <b>Anote ou tire foto e guarde fora do celular.</b> Ele aparece <b>só essa vez</b>. Depois toque em <b>Já anotei</b>.</li>
         </ol>
         <b>Quando o app pede a senha</b>
         <ul>
           <li>Toda vez que você abre o app.</li>
           <li>Quando você volta para o app depois de <b>mais de 1 minuto</b> fora dele.</li>
-          <li>Os campos ficam escondidos (●●●●). Para ver o que digitou, marque <b>Mostrar senha</b>.</li>
+          <li>Os campos ficam escondidos (●●●●). Para ver o que digitou, toque no <b>olho</b> do campo.</li>
         </ul>
         <b>Esqueci a senha</b>
         <ol>
@@ -816,7 +875,7 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         <p class="mut">O app não envia a senha por e-mail: ele não tem servidor e não guarda a senha, só uma versão "embaralhada" dela. Se perder a senha <b>e</b> o código, o único jeito é apagar os dados do app no navegador e restaurar o último backup.</p>
         <b>Trocar ou remover</b>
         <ul>
-          <li><b>Trocar:</b> digite a <b>senha atual</b>, a nova duas vezes e toque em <b>Trocar senha</b>. O código de recuperação continua o mesmo.</li>
+          <li><b>Trocar:</b> digite a <b>senha atual</b>, a nova duas vezes e toque em <b>Salvar alterações</b>. O código de recuperação continua o mesmo.</li>
           <li><b>Remover:</b> digite a <b>senha atual</b> e toque em <b>Remover senha</b>. O app volta a abrir direto.</li>
         </ul>
         <b>Digital / rosto (biometria)</b>
@@ -835,26 +894,26 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
         </ul>
       </div>
       <p class="mut" id="sStatus"></p>
-      <div id="sAtualBox"><label for="sAtual">Senha atual</label><input id="sAtual" type="password" autocomplete="current-password"></div>
-      <label for="sNova">Nova senha (mínimo 8 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
-      <label for="sConf">Repita a nova senha</label><input id="sConf" type="password" autocomplete="new-password">
-      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
-      <div class="two" style="margin-top:10px">
-        <button id="sSalvar">Criar senha</button>
-        <button id="sRemover" class="sec">Remover senha</button>
-      </div>
-      <label class="check" id="sBioBox"><input type="checkbox" id="sBio"> Entrar com a digital / rosto do celular</label>
+      <p class="sAviso"><span class="sAvisoI" aria-hidden="true">i</span>Para uma senha mais forte, use números e caracteres especiais (ex.: ! @ # $ %).</p>
+      <div id="sAtualBox"><label for="sAtual">Senha atual</label><div class="comOlho"><input id="sAtual" type="password" autocomplete="current-password"><button type="button" class="vOlho" aria-pressed="false" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+      <label for="sNova">Nova senha (mínimo 8 caracteres)</label><div class="comOlho"><input id="sNova" type="password" autocomplete="new-password"><button type="button" class="vOlho" aria-pressed="false" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <label for="sConf">Repetir a nova senha</label><div class="comOlho"><input id="sConf" type="password" autocomplete="new-password"><button type="button" class="vOlho" aria-pressed="false" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <button type="button" id="sSalvar" style="width:100%; margin-top:14px">Salvar alterações</button>
       <div class="msg" id="sMsg"></div>
+      <label class="check" id="sBioBox"><input type="checkbox" id="sBio"> Entrar com a digital / rosto do celular</label>
+      <p class="mut" id="sBioAviso" style="margin:4px 0 0"></p>
+      <button type="button" id="sRemover" class="sec" style="width:100%; margin-top:12px">Remover senha</button>
       <div id="sCodigoBox" class="codigo" hidden>
         <b>Seu código de recuperação</b>
         <div id="sCodigo"></div>
         <p class="mut">Anote ou tire foto e guarde fora do celular. Se esquecer a senha, é com ele que você cria outra. Ele só aparece agora.</p>
         <button id="sCodigoOk" class="sec" style="width:100%">Já anotei</button>
       </div>
-    </div>
+    </div></div>
+    <div class="ajTela" id="aj-brapi" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Token do brapi e consultas</b></div>
+      <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="O que é buscado no brapi e como conseguir o token">i</button><p>O brapi traz as cotações dos ativos, os nomes das empresas e o S&amp;P 500. O app só consulta quando você toca em Atualizar cotações, no Resumo, no Dash. ou na Compar. Sem token, essas cotações não são atualizadas. Ao chegar no limite, ele para de consultar até você aumentá-lo. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
-      <div class="row" style="align-items:center"><b style="font-size:16px">Brapi (cotações dos ativos)</b>
-        <button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="O que é buscado no brapi e como conseguir o token">i</button></div>
       <div id="tokInfo" class="ajuda" hidden>
         <b>O que é buscado no brapi</b>
         <ul>
@@ -903,9 +962,12 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <p class="mut">Crie uma conta grátis em brapi.dev e copie o token do painel. O número de consultas vem do próprio brapi e conta os últimos 30 dias corridos, em todos os aparelhos com o mesmo token. Ao chegar no limite, o app não consulta mais o brapi até você aumentá-lo aqui. Sem limite gravado, vale 80% do plano. O token e o limite vão no backup.</p>
       <button id="btnToken" class="ic ic-salvar">Salvar</button>
     </div>
+    <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
+    </div>
+    <div class="ajTela" id="aj-hg" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>HG Brasil (IBOV, Dow Jones e Nasdaq)</b></div>
+      <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="hgInfo" aria-label="O que é buscado na HG Brasil">i</button><p>A HG Brasil traz só três índices: IBOV, Dow Jones e Nasdaq. Com a chave, eles atualizam sozinhos com o app aberto, de segunda a sexta, das 10h às 18h. Ela não traz ações nem o S&amp;P 500. Sem chave ou no limite do dia, os índices vêm do brapi, pelo botão Atualizar cotações. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
-      <div class="row" style="align-items:center"><b style="font-size:16px">HG Brasil (IBOV, Dow Jones e Nasdaq)</b>
-        <button type="button" class="info" aria-expanded="false" aria-controls="hgInfo" aria-label="O que é buscado na HG Brasil">i</button></div>
       <div id="hgInfo" class="ajuda" hidden>
         <b>O que é buscado na HG Brasil</b>
         <ul>
@@ -937,10 +999,11 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       <input id="cHgLimite" inputmode="numeric" autocomplete="off" onfocus="this.select()">
       <p class="mut">IBOV, Dow Jones e Nasdaq atualizam sozinhos ao abrir o app e a cada 15 minutos, de segunda a sexta, das 10h às 18h, com o app aberto na tela. Cada toque em Atualizar cotações no Resumo usa mais 1 consulta. A HG não informa o uso: o número é contado por este celular e zera todo dia. O plano grátis tem 400 por dia e não dá cotação de ações. Ao chegar no limite (sem limite gravado, 320), os índices vêm do brapi. A chave e o limite vão no backup.</p>
       <button id="cHgSalvar" class="ic ic-salvar">Salvar</button>
-    </div>
+    </div></div>
+    <div class="ajTela" id="aj-backup" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Backup</b></div>
+      <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="bkpInfo" aria-label="Como funciona o backup">i</button><p>Os dados ficam só neste celular. Salvar backup cria um arquivo, e você escolhe o OneDrive (e a pasta) na tela de compartilhar; não é automático. Restaurar substitui os dados atuais pelos do arquivo. A senha, a foto e a aparência não vão no backup. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
-      <div class="row" style="align-items:center"><b>Backup</b>
-        <button type="button" class="info" aria-expanded="false" aria-controls="bkpInfo" aria-label="Como funciona o backup">i</button></div>
       <div id="bkpInfo" class="ajuda" hidden>
         <b>Sobre o backup</b>
         <p>O backup é uma cópia de todos os dados do aplicativo (lançamentos, histórico diário, cotações, aportes e saques, Dashboard e o token do brapi, quando cadastrado), gravada em um arquivo de texto (.txt). Ao restaurar, o token volta junto; um backup antigo, sem token, mantém o token já cadastrado neste aparelho. Não são incluídos a senha do aplicativo, a foto e a configuração de aparência. Como o token vai no arquivo, recomenda-se manter a senha do aplicativo cadastrada, para que o backup fique protegido.</p>
@@ -975,7 +1038,6 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
           <li>Mantenha a conta do OneDrive protegida, com senha forte e verificação em duas etapas.</li>
         </ul>
       </div>
-      <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo no OneDrive.</p>
       <p id="ultBackup"></p>
       <div class="two">
         <button id="btnExp" class="ic ic-backup">Salvar backup</button>
@@ -983,15 +1045,13 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       </div>
       <input type="file" id="fileImp" accept=".txt,.json,text/plain,application/json" hidden>
       <div class="msg" id="cMsg"></div>
-    </div>
-    <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
+    </div></div>
+    <div class="ajTela" id="aj-notas" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Anotações</b></div>
+      <div class="ajDesc"><span class="sAvisoI" aria-hidden="true">i</span><p>Um espaço livre para os seus lembretes, sem relação com os cálculos da carteira. O texto grava sozinho enquanto você digita, sem botão de salvar, e vai no backup. Ao restaurar um backup sem anotações, as deste aparelho são mantidas.</p></div>
     <div class="card">
-      <label for="cNotas"><b style="font-size:16px">Anotações</b></label>
-      <textarea id="cNotas" rows="8" placeholder="Digite aqui suas anotações" style="width:100%; margin-top:8px; padding:12px 14px; font:inherit; border:1px solid transparent; border-radius:14px; background:var(--campo); color:var(--tx); resize:vertical"></textarea>
-      <p class="mut">Grava sozinho enquanto você digita e vai no backup.</p>
-    </div>
-    <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.24.1 · 31/10/2026</p>
+      <textarea id="cNotas" aria-label="Anotações" rows="8" placeholder="Digite aqui suas anotações" style="width:100%; margin-top:8px; padding:12px 14px; font:inherit; border:1px solid transparent; border-radius:14px; background:var(--campo); color:var(--tx); resize:vertical"></textarea>
+    </div></div>
   </section>
 </main>
 
@@ -1299,6 +1359,7 @@ function render() {
     (hgParou ? '<br><b class="dn">Limite atingido: hoje os índices vêm do brapi.</b>' : '');
   if (document.activeElement !== $('cHg')) $('cHg').value = db.hgKey || '';
   if (document.activeElement !== $('cNotas')) $('cNotas').value = db.notas || '';
+  mostrarFoto();
   if (document.activeElement !== $('cHgLimite')) $('cHgLimite').value = limiteHg().toLocaleString('pt-BR');
   const u = db.brapiUso, nCons = usadas(), parou = nCons != null && nCons >= limiteConsultas(), mil = v => v.toLocaleString('pt-BR');
   $('cConsultas').innerHTML = !u ? 'Consultas ao brapi: aparece depois da próxima atualização de cotações.' :
@@ -1776,8 +1837,39 @@ async function autoHg(abrindo) {
 const velho = (iso, min) => !iso || Date.now() - new Date(iso) > min * 60e3;
 
 // --- eventos ---
+// Ajustes: menu → tela do grupo. Cada tela é uma entrada do histórico, para o voltar do Android fazer o caminho da seta
+let ajNivel = 0, ajScrolls = []; // nível da tela (0 = menu) e rolagem guardada de cada nível
+history.scrollRestoration = 'manual';
+if (history.state?.aj) history.replaceState(null, ''); // recarregou dentro de uma tela: o app abre no Resumo
+function ajMostra(id, anim) {
+  if (!$('aj-senha').hidden && id !== 'senha') limpaSenhaTela();
+  $('ajMenu').hidden = !!id;
+  document.querySelectorAll('.ajTela').forEach(x => x.hidden = x.id !== 'aj-' + id);
+  const el = id ? $('aj-' + id) : $('ajMenu');
+  el.classList.remove('ajDeDir', 'ajDeEsq');
+  if (anim) { void el.offsetWidth; el.classList.add(anim); } // offsetWidth: reinicia a animação
+}
+$('tab-config').addEventListener('click', e => {
+  const id = e.target.closest('[data-aj]')?.dataset.aj; if (!id) return;
+  ajScrolls[ajNivel] = scrollY;
+  if (id === 'perfil') perfilCarrega();
+  history.pushState({ aj: id, n: ++ajNivel }, '');
+  ajMostra(id, 'ajDeDir');
+  scrollTo(0, 0);
+});
+document.querySelectorAll('.ajSeta').forEach(b => b.onclick = () => history.back());
+addEventListener('popstate', () => {
+  const id = history.state?.aj, n = history.state?.n || 0, volta = n < ajNivel, antes = ajNivel;
+  ajNivel = n;
+  if ($('tab-config').hidden) return; // veio da troca de aba: já está no menu
+  if (id === 'perfil' && antes === 0) perfilCarrega(); // avançar do menu não recupera o que foi descartado
+  ajMostra(id, volta ? 'ajDeEsq' : 'ajDeDir');
+  scrollTo(0, volta ? ajScrolls[n] || 0 : 0);
+});
 document.querySelector('nav').onclick = e => {
   const b = e.target.closest('button'); const t = b?.dataset.tab; if (!t) return; // toque pode cair no ícone
+  ajMostra(); ajScrolls = []; if (history.state?.n) history.go(-history.state.n); // sair de Ajustes (ou tocar nela de novo) volta ao menu
+  document.body.classList.toggle('ajAba', t === 'config');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   $('barra').hidden = !['resumo', 'carteira'].includes(t);
@@ -2231,11 +2323,27 @@ $('cTema').onchange = e => { localStorage.setItem('carteira-bdr-tema', e.target.
 
 // Foto do topo: guardada reduzida (160 px, JPEG) na chave carteira-bdr-foto, fora do backup
 const KEY_FOTO = 'carteira-bdr-foto';
+const iniciais = n => { const p = (n || '').trim().split(/\s+/).filter(Boolean); return p.length ? (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() : '?'; };
+function desenhaAvatar(img, ini, foto, nome) {
+  img.hidden = !foto; ini.hidden = !!foto; ini.textContent = iniciais(nome);
+  if (foto) img.src = foto; else img.removeAttribute('src');
+}
 function mostrarFoto() {
   let f = null; try { f = localStorage.getItem(KEY_FOTO); } catch {}
   $('hFoto').hidden = !f; if (f) $('hFoto').src = f; else $('hFoto').removeAttribute('src');
-  $('cFotoRem').disabled = !f;
+  const nome = db.perfil?.nome || '';
+  desenhaAvatar($('ajFoto'), $('ajIni'), f, nome); $('ajNome').textContent = nome || 'Seu nome';
 }
+// Editar perfil: tudo fica na tela (foto em pFotoNova) até "Salvar alterações"; ao entrar pelo menu, recarrega o que está gravado
+let pFotoNova = null;
+function pDesenhaFoto() { desenhaAvatar($('pFoto'), $('pIni'), pFotoNova, $('pNome').value); $('cFotoRem').disabled = !pFotoNova; }
+function perfilCarrega() {
+  const f = db.perfil || {};
+  $('pNome').value = f.nome || ''; $('pEmail').value = f.email || ''; $('pNasc').value = f.nasc || ''; $('pNasc').max = hoje();
+  try { pFotoNova = localStorage.getItem(KEY_FOTO); } catch { pFotoNova = null; }
+  pDesenhaFoto();
+}
+$('pNome').oninput = pDesenhaFoto;
 $('cFotoEsc').onclick = () => $('cFotoArq').click();
 $('cFotoArq').onchange = async e => {
   const arq = e.target.files[0]; e.target.value = ''; if (!arq) return;
@@ -2244,10 +2352,22 @@ $('cFotoArq').onchange = async e => {
     const lado = Math.min(img.width, img.height), c = document.createElement('canvas');
     c.width = c.height = 160; // recorta o centro em quadrado
     c.getContext('2d').drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 160, 160);
-    localStorage.setItem(KEY_FOTO, c.toDataURL('image/jpeg', 0.85)); mostrarFoto();
+    pFotoNova = c.toDataURL('image/jpeg', 0.85); pDesenhaFoto();
   } catch (err) { alert('Não foi possível usar essa imagem: ' + err.message); }
 };
-$('cFotoRem').onclick = () => { localStorage.removeItem(KEY_FOTO); mostrarFoto(); };
+$('cFotoRem').onclick = () => { pFotoNova = null; pDesenhaFoto(); };
+const emailOk = v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+$('pSalvar').onclick = async () => {
+  const email = $('pEmail').value.trim(), nasc = $('pNasc').value;
+  const erro = !emailOk(email) ? 'Digite um e-mail válido (ex.: nome@exemplo.com) ou deixe o campo vazio.'
+    : $('pNasc').validity.badInput ? 'A data de nascimento está incompleta.' : nasc > hoje() ? 'A data de nascimento não pode ser no futuro.' : '';
+  if (erro) { await modal({ titulo: 'Valor inválido', ok: 'OK', texto: erro }); return fecharModal(); }
+  try { if (pFotoNova) localStorage.setItem(KEY_FOTO, pFotoNova); else localStorage.removeItem(KEY_FOTO); }
+  catch (err) { await modal({ titulo: 'Não foi possível gravar a foto', ok: 'OK', texto: err.message }); return fecharModal(); }
+  db.perfil = { nome: $('pNome').value.trim(), email, nasc }; salvar(); mostrarFoto();
+  await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: 'Perfil atualizado.' }); fecharModal();
+  history.back();
+};
 mostrarFoto();
 $('cToken').value = db.token;
 // botões "i": abrem/fecham o quadro de ajuda indicado em aria-controls
@@ -2308,6 +2428,7 @@ function conteudoBackup(d) {
     `Token do brapi: ${d.token ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`,
     `Chave da HG Brasil: ${d.hgKey ? 'incluída' : 'não incluída (mantém a deste aparelho)'}`,
     `Anotações: ${d.notas != null ? (d.notas.length ? 'incluídas' : 'vazias') : 'não incluídas (mantém as deste aparelho)'}`,
+    `Perfil (nome, e-mail, nascimento): ${d.perfil ? 'incluído' : 'não incluído (mantém o deste aparelho)'}`,
     `Limite do brapi: ${d.limiteConsultas ? d.limiteConsultas.toLocaleString('pt-BR') + ' consultas usadas' : 'sem valor no backup (80% do plano)'}`,
     `Limite da HG Brasil: ${d.limiteHg ? d.limiteHg.toLocaleString('pt-BR') + ' consultas por dia' : 'sem valor no backup (320 por dia)'}`].join('\n');
 }
@@ -2327,7 +2448,7 @@ $('fileImp').onchange = async e => {
     const sim = await modal({ titulo: 'Substituir os dados?', ok: 'Sim, restaurar', cancelar: 'Cancelar',
       texto: `Todos os dados atuais deste celular serão substituídos pelos do backup.\n\nArquivo: ${f.name}\n\n${conteudoBackup(d)}` });
     fecharModal(); if (!sim) return;
-    db = { ...vazio, ...d, token: d.token || db.token, hgKey: d.hgKey || db.hgKey, notas: d.notas ?? db.notas, // backup sem token/chave/anotações mantém o deste celular
+    db = { ...vazio, ...d, token: d.token || db.token, hgKey: d.hgKey || db.hgKey, notas: d.notas ?? db.notas, perfil: d.perfil ?? db.perfil, // backup sem token/chave/anotações mantém o deste celular
       brapiUso: db.brapiUso, hgUso: db.hgUso, consultas: undefined, hgStatus: undefined, hgSemAcoes: undefined, // uso é o deste celular, não o do arquivo
       ...(!d.dashIniciado && { dash: db.dash, dashIniciado: true }) }; // backup de antes do Dash.: mantém a lista atual
     $('cToken').value = db.token; $('cHg').value = db.hgKey || ''; mostraLimites();
@@ -2397,10 +2518,18 @@ document.addEventListener('change', e => {
 function renderSenha() {
   $('sStatus').textContent = temSenha() ? 'O app pede senha ao abrir.' : 'Sem senha: o app abre direto.';
   $('sAtualBox').hidden = $('sRemover').hidden = !temSenha();
-  $('sSalvar').textContent = temSenha() ? 'Trocar senha' : 'Criar senha';
-  $('sBioBox').hidden = !temSenha() || !bioDisponivel;
+  $('sTitulo').textContent = temSenha() ? 'Alterar senha' : 'Criar senha';
+  $('sBio').disabled = !temSenha() || !bioDisponivel;
+  $('sBioAviso').textContent = !temSenha() ? 'Crie uma senha para poder usar a digital ou o rosto.' : !bioDisponivel ? 'Este aparelho não oferece digital ou rosto.' : '';
   $('sBio').checked = !!trava.bio;
 }
+function olhosFechados() { document.querySelectorAll('.vOlho').forEach(b => { b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', 'Mostrar senha'); b.previousElementSibling.type = 'password'; }); }
+function limpaSenhaTela() { limpaCampos('sAtual', 'sNova', 'sConf'); olhosFechados(); $('sMsg').textContent = ''; }
+document.querySelectorAll('.vOlho').forEach(b => b.onclick = () => {
+  const ver = b.previousElementSibling.type === 'password';
+  b.previousElementSibling.type = ver ? 'text' : 'password';
+  b.setAttribute('aria-pressed', ver); b.setAttribute('aria-label', ver ? 'Esconder senha' : 'Mostrar senha');
+});
 const msgSenha = (txt, ok) => { $('sMsg').className = 'msg ' + (ok ? 'up' : 'dn'); $('sMsg').textContent = txt; };
 const limpaCampos = (...ids) => ids.forEach(id => $(id).value = '');
 
