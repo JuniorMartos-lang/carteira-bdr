@@ -1233,7 +1233,7 @@ function render() {
   tabelas.patrimonio = [['Item', 'Tipo', 'Valor R$'], ['Patrimônio não aplicado', '', xR(naoAloc)],
     ...comDia.map(p => [p.ticker, NOME_CLASSE[p.classe], xR(p.valor)]), ['Patrimônio total', '', xR(patri)]];
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
-    `<tr><td>Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
+    `<tr><td>${logo('Patrimônio não aplicado')}Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
     comDia.map(p => `<tr><td title="${esc(p.ticker)}">${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span> <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
     `<tr class="soma"><th>Patrimônio total</th><th>${ocN(patri)}</th></tr>`;
   // Atual verde ▲ se está acima do investido, vermelho ▼ se abaixo (a cor e a seta aparecem mesmo com o olhinho fechado)
