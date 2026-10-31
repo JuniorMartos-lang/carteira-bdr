@@ -983,15 +983,6 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
       </div>
       <input type="file" id="fileImp" accept=".txt,.json,text/plain,application/json" hidden>
       <div class="msg" id="cMsg"></div>
-      <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--bd)">
-        <b>Teste: salvar sozinho no OneDrive</b>
-        <p class="mut">Só um teste: grava um arquivo com a data e a hora, sem nenhum dado seu, e não muda o seu backup.</p>
-        <div class="row" style="justify-content:flex-start; flex-wrap:wrap; gap:8px">
-          <button type="button" class="sec" id="fsEscolher">1. Escolher arquivo</button>
-          <button type="button" class="sec" id="fsGravar">2. Gravar de novo</button>
-        </div>
-        <p class="mut" id="fsResultado" style="margin-bottom:0"></p>
-      </div>
     </div>
     <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
     <div class="card">
@@ -2275,47 +2266,6 @@ async function salvarServico(campo, campoLimite, grava, nome) {
   await modal({ titulo: 'Dados Salvos com Sucesso', ok: 'OK', texto: `${nome}: ${chave ? 'gravado' : 'removido'}.\nLimite: ${v.toLocaleString('pt-BR')} consultas.` });
   fecharModal();
 }
-// Teste do seletor de arquivos do Android (OneDrive como destino); o destino fica no IndexedDB, fora do db e do backup
-function fsGuardado(arq) {
-  return new Promise((ok, erro) => {
-    const r = indexedDB.open('carteira-bdr-teste', 1);
-    r.onupgradeneeded = () => r.result.createObjectStore('h');
-    r.onerror = () => erro(r.error);
-    r.onsuccess = () => {
-      const o = r.result.transaction('h', arq ? 'readwrite' : 'readonly').objectStore('h'), q = arq ? o.put(arq, 'arq') : o.get('arq');
-      q.onsuccess = () => ok(q.result); q.onerror = () => erro(q.error);
-    };
-  });
-}
-async function fsGrava(h) {
-  const quando = new Date().toLocaleString('pt-BR'), w = await h.createWritable();
-  await w.write(`Teste da Carteira BDR. Gravado em ${quando}. Nenhum dado seu neste arquivo.\n`);
-  await w.close();
-  return quando;
-}
-const fsMostra = (t, ok) => { $('fsResultado').className = ok ? 'up' : 'dn'; $('fsResultado').textContent = t; };
-$('fsEscolher').onclick = async () => {
-  if (!window.showSaveFilePicker) return fsMostra('Resultado A: este navegador não tem esse recurso. O caminho não funciona neste celular.');
-  try {
-    const h = await showSaveFilePicker({ suggestedName: 'teste-carteira-bdr.txt', types: [{ description: 'Texto', accept: { 'text/plain': ['.txt'] } }] });
-    const quando = await fsGrava(h); await fsGuardado(h);
-    fsMostra(`Passo 1 ok: gravado em ${quando}. Agora feche o app por completo, abra de novo e toque em "2. Gravar de novo".`, true);
-  } catch (e) {
-    fsMostra(e.name === 'AbortError' ? 'Cancelado. Se o OneDrive não apareceu na tela de escolher, anote isso.' : `Resultado B: não conseguiu gravar (${e.name}: ${e.message}).`);
-  }
-};
-$('fsGravar').onclick = async () => {
-  try {
-    const h = await fsGuardado();
-    if (!h) return fsMostra('Toque antes em "1. Escolher arquivo".');
-    const antes = await h.queryPermission({ mode: 'readwrite' });
-    const agora = antes === 'granted' ? antes : await h.requestPermission({ mode: 'readwrite' });
-    if (agora !== 'granted') return fsMostra('Resultado C: o celular não deu permissão para gravar de novo.');
-    const quando = await fsGrava(h);
-    fsMostra(antes === 'granted' ? `Resultado D: gravou sozinho em ${quando}, sem perguntar nada. Confira o arquivo no OneDrive.`
-      : `Resultado E: gravou em ${quando}, mas o celular pediu permissão antes. Confira o arquivo no OneDrive.`, true);
-  } catch (e) { fsMostra(`Resultado B: não conseguiu gravar (${e.name}: ${e.message}).`); }
-};
 $('cNotas').oninput = e => { db.notas = e.target.value; salvar(); };
 $('btnToken').onclick = () => salvarServico('cToken', 'cLimite', (c, v) => { db.token = c; db.limiteConsultas = v; }, 'Token do brapi');
 $('cHgSalvar').onclick = () => salvarServico('cHg', 'cHgLimite', (c, v) => { db.hgKey = c; db.limiteHg = v; }, 'Chave da HG Brasil');
