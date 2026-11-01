@@ -304,6 +304,17 @@ nav { border-top:0; box-shadow:0 -4px 14px rgba(30,58,95,.08); }
 .bNomes > div { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:8.5px; color:var(--tx); }
 .bNomes .logo { margin:0; }
 .bNomes span:last-child { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Resumo: tela do ativo */
+[data-ativo] { cursor:pointer; }
+main { overflow-x:clip; } /* a tela que desliza não cria rolagem lateral */
+#atTopo { display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:12px; text-align:center; }
+#atTopo .logo { width:72px; height:72px; font-size:24px; margin:0; }
+#atTopo b { font-size:20px; color:var(--tx); }
+#atValores { width:100%; font-size:15px; }
+#atValores td { padding:10px 2px; border-bottom:1px solid var(--bd); text-align:right; }
+#atValores td:first-child { text-align:left; color:var(--mut); }
+#atValores tr:last-child td { border-bottom:0; }
+#atHist { width:100%; margin-top:6px; } #atHist th, #atHist td { padding:7px 2px; text-align:right; } #atHist th:first-child, #atHist td:first-child { text-align:left; }
 /* Ajustes: perfil no topo do menu, Editar perfil e senha */
 #ajPerfil { display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px 0 16px; }
 #ajNome { font-size:18px; color:var(--tx); overflow-wrap:anywhere; text-align:center; }
@@ -369,6 +380,20 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
     <label class="check" style="margin:0 0 8px"><input type="checkbox" id="cResAcoes"> Resumido Ações</label>
     <div id="lista"></div>
     <button class="sec exp icl ic-exportar" data-exp="carteira" id="cResExp" hidden>Exportar para Excel</button>
+  </section>
+
+  <section id="tab-ativo" hidden>
+    <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b id="atTitulo"></b></div>
+    <div class="card">
+      <div id="atTopo"></div>
+      <table id="atValores"></table>
+      <p class="mut" id="atNota" style="margin:10px 0 0"></p>
+    </div>
+    <div class="card" id="atHistBox">
+      <b>Histórico por mês</b>
+      <table id="atHist"></table>
+      <p class="mut" style="margin:10px 0 0">Resultado de cada mês fechado (último fechamento do mês sobre o último do mês anterior). Os meses vão sendo guardados a cada atualização de cotações deste ativo.</p>
+    </div>
   </section>
 
   <section id="tab-resumo">
@@ -783,7 +808,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <button type="button" class="ajItem" data-aj="notas"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Anotações</span><span aria-hidden="true">›</span></button>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.26.1 · 31/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.28.0 · 01/11/2026</p>
     </div>
     <div class="ajTela" id="aj-alerta" hidden>
       <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Alerta Volatilidade Cabeçalho</b></div>
@@ -1108,7 +1133,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
 </nav>
 
 <!-- ?v= igual à versão do app: o celular busca o calc.js novo junto com a tela nova (sem misturar com o do cache) -->
-<script src="calc.js?v=1.22.0"></script>
+<script src="calc.js?v=1.28.0"></script>
 <script>
 const KEY = 'carteira-bdr';
 const vazio = { ops: [], historico: [], precos: {}, variacao: {}, nomes: {}, indices: {}, token: '', atualizado: null,
@@ -1267,7 +1292,7 @@ function render() {
   // aba Resumo: uma linha por ativo, na mesma ordem (ranking) da Carteira
   $('tResumo').innerHTML = !tab.length ? '<tr><td class="mut">Nenhum ativo.</td></tr>' :
     '<tr><th>Ativo</th><th>Hoje %</th><th>Hoje R$</th><th>Lucro R$ e %</th></tr>' +
-    tab.map((p, i) => `<tr><td><b title="${esc(p.ticker)}" style="white-space:nowrap">${i + 1}º ${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span></b></td>
+    tab.map((p, i) => `<tr><td data-ativo="${esc(p.ticker)}"><b title="${esc(p.ticker)}" style="white-space:nowrap">${i + 1}º ${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span></b></td>
       <td class="${cor(p.d.p)}">${pct(p.d.p)}</td><td class="${cor(p.d.r)}">${reais(p.d.r)}</td>
       <td class="${cor(p.lucro)}"><b>${reais(p.lucro)}</b> <small>${pct(p.pct)}</small></td></tr>`).join('') +
     `<tr class="soma"><th>Total</th><th class="${cor(tHojeP)}">${pct(tHojeP)}</th><th class="${cor(tHojeR)}">${reais(tHojeR)}</th>
@@ -1290,7 +1315,7 @@ function render() {
         stroke-dasharray="${Math.max(l - 1.5, 0.5)} ${C}" stroke-dashoffset="${-acum}" transform="rotate(-90 85 85)"/>`; acum += l; return sv; }).join('')}
       <text x="85" y="81" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">${comNA ? 'Total' : 'Aplicado'}</text>
       <text x="85" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${ocN(somaAloc)}</text></svg>`) +
-    fatias.map(p => `<div class="item"><span class="bola" style="background:${p.cor}"></span><span class="nomeA" title="${esc(p.ticker)}">${logo(p.ticker)}${esc(p.ticker)}</span>
+    fatias.map(p => `<div class="item"><span class="bola" style="background:${p.cor}"></span><span class="nomeA" ${p.ticker === 'Patrimônio não aplicado' ? '' : `data-ativo="${esc(p.ticker)}"`} title="${esc(p.ticker)}">${logo(p.ticker)}${esc(p.ticker)}</span>
       <span class="vals"><b>${ocN(p.valor)}</b><br><small>${pct(p.valor / somaAloc)}</small></span></div>`).join('');
   if (barras) graficoBarras($('alocGraf'), fatias.map(p => { const v = p.valor / somaAloc;
     return { ticker: p.ticker, v: v * 100, rotulo: pct(v), titulo: pct(v), cor: p.cor }; }), v => Math.round(v) + '%');
@@ -1298,7 +1323,7 @@ function render() {
     ...comDia.map(p => [p.ticker, NOME_CLASSE[p.classe], xR(p.valor)]), ['Patrimônio total', '', xR(patri)]];
   $('tPatrimonio').innerHTML = '<tr><th>Item</th><th>Valor R$</th></tr>' +
     `<tr><td>${logo('Patrimônio não aplicado')}Patrimônio não aplicado</td><td class="${naoAloc < 0 ? 'dn' : ''}">${ocN(naoAloc)}</td></tr>` +
-    comDia.map(p => `<tr><td title="${esc(p.ticker)}">${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span> <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
+    comDia.map(p => `<tr><td data-ativo="${esc(p.ticker)}" title="${esc(p.ticker)}">${logo(p.ticker)}<span class="tkN">${esc(p.ticker)}</span> <span class="tag">${NOME_CLASSE[p.classe]}</span></td><td>${p.valor == null ? '—' : ocN(p.valor)}</td></tr>`).join('') +
     `<tr class="soma"><th>Patrimônio total</th><th>${ocN(patri)}</th></tr>`;
   // Atual verde ▲ se está acima do investido, vermelho ▼ se abaixo (a cor e a seta aparecem mesmo com o olhinho fechado)
   const atualSeta = (v, inv, tag) => v == null ? `<${tag}>—</${tag}>` :
@@ -1840,7 +1865,7 @@ const velho = (iso, min) => !iso || Date.now() - new Date(iso) > min * 60e3;
 // Ajustes: menu → tela do grupo. Cada tela é uma entrada do histórico, para o voltar do Android fazer o caminho da seta
 let ajNivel = 0, ajScrolls = []; // nível da tela (0 = menu) e rolagem guardada de cada nível
 history.scrollRestoration = 'manual';
-if (history.state?.aj) history.replaceState(null, ''); // recarregou dentro de uma tela: o app abre no Resumo
+if (history.state?.aj || history.state?.ativo) history.replaceState(null, ''); // recarregou dentro de uma tela: o app abre no Resumo
 function ajMostra(id, anim) {
   if (!$('aj-senha').hidden && id !== 'senha') limpaSenhaTela();
   $('ajMenu').hidden = !!id;
@@ -1858,7 +1883,45 @@ $('tab-config').addEventListener('click', e => {
   scrollTo(0, 0);
 });
 document.querySelectorAll('.ajSeta').forEach(b => b.onclick = () => history.back());
+// Resumo: tocar no nome do ativo abre a tela dele, no mesmo modelo das telas de Ajustes
+let ativoAberto = false, ativoScroll = 0;
+function ativoMostra(tk, anim) {
+  ativoAberto = !!tk;
+  if (tk) ativoDesenha(tk);
+  $('tab-ativo').hidden = !tk; $('tab-resumo').hidden = !!tk; $('barra').hidden = !!tk;
+  document.body.classList.toggle('ajAba', !!tk);
+  const el = $(tk ? 'tab-ativo' : 'tab-resumo');
+  el.classList.remove('ajDeDir', 'ajDeEsq'); void el.offsetWidth; el.classList.add(anim);
+}
+// mesmos valores do Dash.; preço e Dia % como no Resumo, que é de onde o Dash. os copia
+function ativoDesenha(tk) {
+  const a = db.dash.find(x => x.ticker === tk), nome = a?.nome || db.nomes[tk];
+  const preco = db.precos[tk] ?? a?.preco, dia = db.variacao[tk] != null ? db.variacao[tk] / 100 : a?.dia;
+  $('atTitulo').textContent = tk;
+  $('atTopo').innerHTML = `${logo(tk)}<b>${esc(tk)}</b>${nome ? `<span class="mut">${esc(nomeCurto(nome))}</span>` : ''}`;
+  $('atValores').innerHTML = `<tr><td>Atual R$</td><td><b>${reais(preco)}</b></td></tr>` +
+    [['Dia %', dia], ['Semana %', a?.semana], ['Mês %', a?.mes], ['Mês ant. %', a?.mesAnt]].map(([r, v]) =>
+      `<tr><td>${r}</td><td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td></tr>`).join('');
+  const meses = Object.entries(a?.meses || {}).sort((x, y) => y[0].localeCompare(x[0]));
+  $('atHistBox').hidden = !a;
+  $('atHist').innerHTML = !meses.length ? '<tr><td class="mut">Ainda sem meses guardados. Toque em Atualizar cotações.</td></tr>' :
+    '<tr><th>Mês</th><th>%</th></tr>' + meses.map(([m, v]) => `<tr><td>${nomeMes(m)}</td><td class="${cor(v)}">${pct(v)}${v > 0 ? '<small> ▲</small>' : v < 0 ? '<small> ▼</small>' : ''}</td></tr>`).join('');
+  $('atNota').textContent = a ? '' : 'Este ativo não está no Dash.: Semana %, Mês % e Mês ant. % só aparecem para os ativos cadastrados lá.';
+}
+$('tab-resumo').addEventListener('click', e => {
+  const tk = e.target.closest('[data-ativo]')?.dataset.ativo; if (!tk) return;
+  ativoScroll = scrollY;
+  history.pushState({ ativo: tk }, '');
+  ativoMostra(tk, 'ajDeDir');
+  scrollTo(0, 0);
+});
 addEventListener('popstate', () => {
+  const tk = history.state?.ativo;
+  if (ativoAberto || (tk && !$('tab-resumo').hidden)) {
+    ativoMostra(tk, tk ? 'ajDeDir' : 'ajDeEsq');
+    scrollTo(0, tk ? 0 : ativoScroll);
+    return;
+  }
   const id = history.state?.aj, n = history.state?.n || 0, volta = n < ajNivel, antes = ajNivel;
   ajNivel = n;
   if ($('tab-config').hidden) return; // veio da troca de aba: já está no menu
@@ -1868,6 +1931,7 @@ addEventListener('popstate', () => {
 });
 document.querySelector('nav').onclick = e => {
   const b = e.target.closest('button'); const t = b?.dataset.tab; if (!t) return; // toque pode cair no ícone
+  ativoAberto = false; if (history.state?.ativo) history.back(); // sair da tela do ativo pelo menu de baixo
   ajMostra(); ajScrolls = []; if (history.state?.n) history.go(-history.state.n); // sair de Ajustes (ou tocar nela de novo) volta ao menu
   document.body.classList.toggle('ajAba', t === 'config');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
@@ -2146,7 +2210,8 @@ function dashAplicar(a, q) {
   Object.assign(a, { nome: q.longName || q.shortName || a.nome, preco: q.regularMarketPrice,
     pregao: q.regularMarketTime ? pregaoDe(q.regularMarketTime) : null,
     dia: q.regularMarketChangePercent == null ? null : q.regularMarketChangePercent / 100,
-    dias: diasDoMes(q.historicalDataPrice || []), em: new Date().toISOString() },
+    dias: diasDoMes(q.historicalDataPrice || []), em: new Date().toISOString(),
+    meses: { ...a.meses, ...mesesFechados(q.historicalDataPrice || [], hoje()) } }, // histórico mensal: só cresce, e vai no backup
     variacoes(q.regularMarketPrice, q.historicalDataPrice || [], hoje()));
 }
 // ativos em aberto no Resumo: Dash. e Compar. usam o valor carregado lá e não gastam consulta com eles

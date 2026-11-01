@@ -206,6 +206,16 @@ function variacoes(preco, hist, hoje) {
   };
 }
 
+// % de cada mês já fechado que o histórico cobre por inteiro: { 'AAAA-MM': último fechamento do mês / último do mês antes dele - 1 }
+function mesesFechados(hist, hoje) {
+  const fins = {};
+  hist.filter(h => h.close != null).map(h => [diaBR(h.date), h.close]).sort((x, y) => x[0].localeCompare(y[0]))
+    .forEach(([d, c]) => { fins[d.slice(0, 7)] = c; });
+  const lista = Object.entries(fins), r = {};
+  lista.forEach(([m, c], i) => { if (i && m < hoje.slice(0, 7)) r[m] = c / lista[i - 1][1] - 1; });
+  return r;
+}
+
 // --- Senha do app: guarda só o hash (PBKDF2), nunca a senha ---
 const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s); }; // em pedaços: o backup cifrado pode ser grande
 const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -237,5 +247,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, lucroPorAtivo,
+if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, mesesFechados, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, lucroPorAtivo,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

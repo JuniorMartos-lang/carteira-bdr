@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, lucroPorAtivo, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, mesesFechados, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, lucroPorAtivo, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 
 // Dois lotes do mesmo ticker viram uma posição com preço médio (caso SPCX34 + Aporte)
@@ -89,6 +89,12 @@ assert.deepStrictEqual(tendencia([null, null]), ['', '']);
 // Dash.: semana = sobre o fechamento da sexta anterior; mês = sobre o último fechamento do mês anterior
 const cd = (dia, close) => ({ date: Date.UTC(+dia.slice(0, 4), +dia.slice(5, 7) - 1, +dia.slice(8), 3) / 1000, close }); // meia-noite em Brasília
 const hv = [cd('2026-08-31', 80), cd('2026-09-29', 90), cd('2026-09-30', 100), cd('2026-10-01', 105), cd('2026-10-23', 110), cd('2026-10-26', 115)];
+// meses fechados: o 1º mês do histórico não tem base, e o mês corrente ainda não fechou
+const unix = d => Date.parse(d + 'T15:00Z') / 1000;
+const mf = mesesFechados([['2026-08-20', 100], ['2026-08-31', 110], ['2026-09-30', 121], ['2026-10-30', 108.9], ['2026-11-03', 200]]
+  .map(([d, close]) => ({ date: unix(d), close })), '2026-11-04');
+assert.deepStrictEqual(Object.keys(mf), ['2026-09', '2026-10']);
+perto(mf['2026-09'], 0.1); perto(mf['2026-10'], -0.1);
 let vv = variacoes(121, hv, '2026-10-28'); // quarta
 perto(vv.semana, 121 / 110 - 1); perto(vv.mes, 121 / 100 - 1);
 vv = variacoes(121, hv, '2026-10-25'); // domingo: semana de 19 a 23/10 → base = último fechamento antes de 19/10 (01/10)
