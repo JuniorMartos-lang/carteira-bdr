@@ -335,6 +335,7 @@ button.ajItem:last-child { border-bottom:0; }
 button.ajItem span:last-child { color:var(--mut); font-size:22px; line-height:1; }
 .ajBarra { position:sticky; top:0; z-index:5; display:grid; grid-template-columns:40px 1fr 40px; align-items:center; padding:8px 0; margin-bottom:6px; background:var(--bg); } /* colunas iguais: título no centro real da tela */
 .ajBarra b { font-size:16px; color:var(--tx); text-align:center; }
+.ajTit svg { width:20px; height:20px; vertical-align:-4px; margin-right:6px; color:var(--pri); }
 .ajDesc { display:flex; gap:8px; align-items:flex-start; margin:0 2px 12px; font-size:14px; color:var(--tx); }
 .ajDesc p { margin:0; min-width:0; }
 button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; color:var(--tx); border:0; box-shadow:none; font-size:30px; line-height:1; }
@@ -808,10 +809,10 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <button type="button" class="ajItem" data-aj="notas"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Anotações</span><span aria-hidden="true">›</span></button>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.28.0 · 01/11/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.28.1 · 03/11/2026</p>
     </div>
     <div class="ajTela" id="aj-alerta" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Alerta Volatilidade Cabeçalho</b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Alerta Volatilidade Cabeçalho</span></b></div>
       <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="cAlertaInfo" aria-label="Como funciona o alerta de volatilidade">i</button><p>Mostra no cabeçalho, num letreiro, os ativos do Dash. que subiram ou caíram além dos limites no dia. Quem entra fica até o fim do dia, e 0 desliga aquele lado. A lista só muda quando as cotações são atualizadas, e o app não envia notificação. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
       <div id="cAlertaInfo" class="ajuda" hidden>
@@ -846,7 +847,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <div class="botoes"><button type="button" id="cAlertasSalvar" class="ic ic-salvar">Salvar</button></div>
     </div></div>
     <div class="ajTela" id="aj-aparencia" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Aparência</b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg><span>Aparência</span></b></div>
       <div class="ajDesc"><span class="sAvisoI" aria-hidden="true">i</span><p>Escolhe as cores do app: claro, escuro ou automático, que segue o tema do celular. A troca vale na hora e só muda a aparência, nunca os seus dados. A escolha fica guardada neste aparelho e não vai no backup.</p></div>
     <div class="card">
       <select id="cTema" aria-label="Aparência">
@@ -856,7 +857,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       </select>
     </div></div>
     <div class="ajTela" id="aj-perfil" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Editar perfil</b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Editar perfil</span></b></div>
       <div class="ajDesc"><span class="sAvisoI" aria-hidden="true">i</span><p>Guarda seu nome, e-mail, data de nascimento e foto. O nome e a foto aparecem no topo de Ajustes, e a foto também no cabeçalho das outras abas. Nada muda até tocar em Salvar alterações. A foto não vai no backup; os outros dados vão.</p></div>
     <div class="card">
       <div style="text-align:center">
@@ -873,7 +874,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <button type="button" id="pSalvar" style="width:100%; margin-top:14px">Salvar alterações</button>
     </div></div>
     <div class="ajTela" id="aj-senha" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b id="sTitulo"></b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span id="sTitulo"></span></b></div>
       <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="senhaInfo" aria-label="Como funciona a senha">i</button><p>A senha trava a tela ao abrir o app e ao voltar depois de mais de 1 minuto fora dele. Também protege o arquivo de backup. Ela não vai no backup e não criptografa os dados guardados no celular. Ao criar, anote o código de recuperação: ele aparece uma vez só. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
       <div id="senhaInfo" class="ajuda" hidden>
@@ -936,7 +937,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       </div>
     </div></div>
     <div class="ajTela" id="aj-brapi" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Token do brapi e consultas</b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M13 10l2 2"/></svg><span>Token do brapi e consultas</span></b></div>
       <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="tokInfo" aria-label="O que é buscado no brapi e como conseguir o token">i</button><p>O brapi traz as cotações dos ativos, os nomes das empresas e o S&amp;P 500. O app só consulta quando você toca em Atualizar cotações, no Resumo, no Dash. ou na Compar. Sem token, essas cotações não são atualizadas. Ao chegar no limite, ele para de consultar até você aumentá-lo. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
       <div id="tokInfo" class="ajuda" hidden>
@@ -990,7 +991,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
     <p class="mut">Ativos que não são da B3 (ex.: fundos) não têm cotação automática: toque no preço do card para digitar o valor atual.</p>
     </div>
     <div class="ajTela" id="aj-hg" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>HG Brasil (IBOV, Dow Jones e Nasdaq)</b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 6-7"/></svg><span>HG Brasil (IBOV, Dow Jones e Nasdaq)</span></b></div>
       <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="hgInfo" aria-label="O que é buscado na HG Brasil">i</button><p>A HG Brasil traz só três índices: IBOV, Dow Jones e Nasdaq. Com a chave, eles atualizam sozinhos com o app aberto, de segunda a sexta, das 10h às 18h. Ela não traz ações nem o S&amp;P 500. Sem chave ou no limite do dia, os índices vêm do brapi, pelo botão Atualizar cotações. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
       <div id="hgInfo" class="ajuda" hidden>
@@ -1026,7 +1027,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <button id="cHgSalvar" class="ic ic-salvar">Salvar</button>
     </div></div>
     <div class="ajTela" id="aj-backup" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Backup</b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 9.5a4 4 0 0 1-1 8.5"/><path d="M12 20v-8M9 15l3-3 3 3"/></svg><span>Backup</span></b></div>
       <div class="ajDesc"><button type="button" class="info" aria-expanded="false" aria-controls="bkpInfo" aria-label="Como funciona o backup">i</button><p>Os dados ficam só neste celular. Salvar backup cria um arquivo, e você escolhe o OneDrive (e a pasta) na tela de compartilhar; não é automático. Restaurar substitui os dados atuais pelos do arquivo. A senha, a foto e a aparência não vão no backup. Toque no i para ver todos os detalhes.</p></div>
     <div class="card">
       <div id="bkpInfo" class="ajuda" hidden>
@@ -1072,7 +1073,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <div class="msg" id="cMsg"></div>
     </div></div>
     <div class="ajTela" id="aj-notas" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Anotações</b></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Anotações</span></b></div>
       <div class="ajDesc"><span class="sAvisoI" aria-hidden="true">i</span><p>Um espaço livre para os seus lembretes, sem relação com os cálculos da carteira. O texto grava sozinho enquanto você digita, sem botão de salvar, e vai no backup. Ao restaurar um backup sem anotações, as deste aparelho são mantidas.</p></div>
     <div class="card">
       <textarea id="cNotas" aria-label="Anotações" rows="8" placeholder="Digite aqui suas anotações" style="width:100%; margin-top:8px; padding:12px 14px; font:inherit; border:1px solid transparent; border-radius:14px; background:var(--campo); color:var(--tx); resize:vertical"></textarea>
