@@ -220,9 +220,9 @@ function mesesFechados(hist, hoje) {
 const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s); }; // em pedaços: o backup cifrado pode ser grande
 const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const aleatorio = n => crypto.getRandomValues(new Uint8Array(n));
-async function hashSenha(senha, sal) {
+async function hashSenha(senha, sal, iteracoes = 150000) {
   const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deB64(sal), iterations: 150000 }, chave, 256);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deB64(sal), iterations: iteracoes }, chave, 256);
   return b64(new Uint8Array(bits));
 }
 // cria {sal, hash} para guardar
@@ -247,5 +247,49 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
+// --- Sincronização com o Google Drive ---
+// A chave sai da senha do app com um sal fixo guardado no próprio arquivo de dados, então é a mesma em todos os
+// aparelhos. O arquivo tem o formato do backup protegido, com "iteracoes", e por isso também abre pelo Restaurar comum.
+const ITERACOES_SYNC = 600000;
+const chaveSync = (senha, sal) => hashSenha(senha, sal, ITERACOES_SYNC);
+const novoSal = () => b64(aleatorio(16));
+async function cifrarComChave(dados, chave, sal) {
+  return { carteiraBdrProtegido: 1, sal, iteracoes: ITERACOES_SYNC, ...await cifrar(JSON.stringify(dados), chave) };
+}
+async function decifrarComChave(o, chave) {
+  if (!o?.carteiraBdrProtegido || o.iteracoes !== ITERACOES_SYNC) throw new Error('formato');
+  return JSON.parse(await decifrar(o, chave));
+}
+// JSON com as chaves em ordem: a mesma informação dá sempre o mesmo texto, venha de onde vier
+const canonico = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x)
+  ? Object.fromEntries(Object.keys(x).sort().map(c => [c, x[c]])) : x);
+// assinatura curta (FNV-1a), para saber se os dados mudaram desde o último envio ou recebimento
+function assinatura(texto) { let h = 2166136261; for (let i = 0; i < texto.length; i++) { h ^= texto.charCodeAt(i); h = Math.imul(h, 16777619); } return texto.length + ':' + (h >>> 0).toString(36); }
+// Compara dados antigos (um backup) com os atuais, item a item: quantos faltam nos atuais e quantos existem nos dois
+// com conteúdo diferente. Lançamentos e aportes/saques pelo id; Diário pela data; Dash. pelo código (só o ativo e a
+// caixa de marcar, porque as cotações mudam a toda atualização).
+const LISTAS_COMPARADAS = [['ops', o => o.id], ['movs', m => m.id], ['historico', h => h.data],
+  ['dash', a => a.ticker, a => ({ ticker: a.ticker, off: !!a.off })]];
+function compararDados(antigo, atual) {
+  let faltam = 0, diferentes = 0;
+  for (const [lista, chave, ver = x => x] of LISTAS_COMPARADAS) {
+    const agora = new Map((atual?.[lista] || []).map(x => [chave(x), canonico(ver(x))]));
+    for (const x of antigo?.[lista] || []) {
+      if (!agora.has(chave(x))) faltam++;
+      else if (agora.get(chave(x)) !== canonico(ver(x))) diferentes++;
+    }
+  }
+  return { faltam, diferentes };
+}
+const ehClienteGoogle = v => typeof v === 'string' && v.length <= 200 && /^[\w-]+\.apps\.googleusercontent\.com$/.test(v);
+// db.google: ID do cliente do projeto no Google (vazio usa o do código) e data do último backup automático
+const googleValido = g => g === undefined || (!!g && typeof g === 'object' && !Array.isArray(g)
+  && (g.cliente === undefined || ehClienteGoogle(g.cliente))
+  && (g.ultimoAutoEm === undefined || (typeof g.ultimoAutoEm === 'string' && g.ultimoAutoEm.length <= 40 && !isNaN(Date.parse(g.ultimoAutoEm)))));
+// backup deste app: lançamentos válidos e, se houver, os dados do Google válidos
+const backupValido = d => Array.isArray(d?.ops) && d.ops.every(o => o.data && o.ticker && 'CV'.includes(o.tipo) && [undefined, 'A', 'F'].includes(o.classe) && o.qtd > 0 && o.preco > 0)
+  && googleValido(d.google);
+
 if (typeof module !== 'undefined') module.exports = { posicoes, qtdEm, irDe, realizados, mensal, pregaoDe, tendencia, variacoes, mesesFechados, horarioAuto, resultadoDia, encerramentos, inicioCiclo, ciclosEncerrados, lucroPorAtivo,
-  protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };
+  protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio,
+  chaveSync, novoSal, cifrarComChave, decifrarComChave, canonico, assinatura, compararDados, ehClienteGoogle, googleValido, backupValido };

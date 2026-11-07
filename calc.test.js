@@ -173,5 +173,31 @@ assert.strictEqual(posicoes(opsCiclo, {}).find(p => p.ticker === 'SPCX34').qtd, 
   assert.ok(!cif.dados.includes('AÇÃO34'));
   assert.strictEqual(await decifrar(cif, await hashSenha('senha forte 123', sal)), texto);
   await assert.rejects(decifrar(cif, await hashSenha('senha errada', sal)));
+  // Sincronização: a chave sai da senha e do sal do arquivo, então é igual em dois aparelhos; outra senha não abre
+  const k = require('./calc.js');
+  const salS = k.novoSal(), chA = await k.chaveSync('senha-do-app-1', salS), chB = await k.chaveSync('senha-do-app-1', salS);
+  assert.strictEqual(chA, chB);
+  const dadosS = { ops: [{ id: 1, data: '2026-10-01', ticker: 'AAPL34', tipo: 'C', qtd: 1, preco: 10 }], google: { cliente: 'x-1.apps.googleusercontent.com', ultimoAutoEm: '2026-11-07T10:00:00.000Z' } };
+  const arqS = JSON.parse(JSON.stringify(await k.cifrarComChave(dadosS, chA, salS)));
+  assert.strictEqual(arqS.carteiraBdrProtegido, 1); assert.strictEqual(arqS.iteracoes, 600000); assert.strictEqual(arqS.sal, salS);
+  assert.deepStrictEqual(await k.decifrarComChave(arqS, chB), dadosS);
+  await assert.rejects(k.decifrarComChave(arqS, await k.chaveSync('outra-senha-1', salS)));
+  // o Restaurar comum abre o arquivo de dados com a senha: hashSenha com as iterações do arquivo dá a mesma chave
+  assert.deepStrictEqual(JSON.parse(await k.decifrar(arqS, await k.hashSenha('senha-do-app-1', arqS.sal, arqS.iteracoes))), dadosS);
+  // ida e volta do backup com os dados do Google: continua válido e igual
+  assert.ok(k.backupValido(dadosS)); assert.deepStrictEqual(JSON.parse(JSON.stringify(dadosS)), dadosS);
+  assert.ok(k.backupValido({ ops: [] })); // backup antigo, sem google
+  assert.ok(!k.backupValido({ ...dadosS, google: { cliente: 'nao-e-id' } }));
+  assert.ok(!k.backupValido({ ...dadosS, google: { ultimoAutoEm: 'ontem' } }));
+  assert.ok(!k.backupValido({ ops: [{ data: '2026-10-01', ticker: 'X', tipo: 'Z', qtd: 1, preco: 1 }] }));
+  assert.ok(k.ehClienteGoogle('729588885596-bdhr47c2p7lbat77mtr5htsgnb787sbd.apps.googleusercontent.com'));
+  // mesma informação em outra ordem: mesmo texto e mesma assinatura
+  assert.strictEqual(k.canonico({ b: 1, a: { d: 2, c: [3, { f: 1, e: 2 }] } }), k.canonico({ a: { c: [3, { e: 2, f: 1 }], d: 2 }, b: 1 }));
+  assert.strictEqual(k.assinatura(k.canonico({ x: 1, y: 2 })), k.assinatura(k.canonico({ y: 2, x: 1 })));
+  assert.notStrictEqual(k.assinatura('{"x":1}'), k.assinatura('{"x":2}'));
+  // backup de conflito comparado com os dados atuais
+  const atual = { ops: [{ id: 1, v: 1 }, { id: 2 }], historico: [{ data: '2026-11-01', v: 5 }], dash: [{ ticker: 'A', preco: 9 }] };
+  assert.deepStrictEqual(k.compararDados({ ops: [{ id: 1, v: 1 }], dash: [{ ticker: 'A', preco: 1 }] }, atual), { faltam: 0, diferentes: 0 }, 'sem nada a mais (cotação não conta)');
+  assert.deepStrictEqual(k.compararDados({ ops: [{ id: 1, v: 9 }, { id: 3 }], movs: [{ id: 7 }], historico: [{ data: '2026-11-01', v: 6 }], dash: [{ ticker: 'A', off: true }, { ticker: 'B' }] }, atual), { faltam: 3, diferentes: 3 });
   console.log('ok');
 })();
