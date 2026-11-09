@@ -842,7 +842,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <button type="button" class="ajItem" data-aj="notas"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Anotações</span><span aria-hidden="true">›</span></button>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.29.0 · 07/11/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.30.0 · 09/11/2026</p>
     </div>
     <div class="ajTela" id="aj-alerta" hidden>
       <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Alerta Volatilidade Cabeçalho</span></b></div>
@@ -1102,6 +1102,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
         <b>Google Drive: backup</b>
         <ul>
           <li><b>Salvar Backup Já</b> grava o mesmo arquivo do Backup Manual na pasta <b>Carteira BDR</b> do seu Drive. <b>Restaurar do Google</b> mostra os 20 backups mais novos dessa pasta.</li>
+          <li><b>Restaurar da sincronização</b> traz o arquivo que a sincronização mantém em <b>Carteira BDR/Dados</b>: os dados mais recentes enviados por qualquer aparelho. Neste aparelho, com a sincronização ligada, abre sem pedir senha; em outro, pede a senha do aplicativo.</li>
           <li>Com a sincronização ligada, sempre que o backup mais novo da pasta tiver mais de 24 horas (ou não houver nenhum), o app salva outro sozinho, com o nome terminado em <b>-auto</b>.</li>
           <li>A pasta pode ser movida para dentro de outra pasta no Drive, mas não deve ser renomeada.</li>
           <li>O <b>ID do cliente do projeto no Google</b> fica gravado e vai no backup. Vazio, o app usa o do projeto atual.</li>
@@ -1133,6 +1134,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
         <button type="button" class="mini" id="aSyncAgora">Sincronizar Já</button>
         <button type="button" class="mini" id="aDriveSalvar">Salvar Backup Já</button>
         <button type="button" class="mini sec" id="aDriveRestaurar">Restaurar do Google</button>
+        <button type="button" class="mini sec" id="aDriveRestSync">Restaurar da sincronização</button>
         <button type="button" class="mini sec" id="aConflitos">Revisar backups de conflito</button>
       </div>
       <p id="aDriveMsg" class="mut" aria-live="polite"></p>
@@ -2728,6 +2730,21 @@ $('aDriveRestaurar').onclick = async () => {
     avisar('Não foi possível ler o Google Drive', err.message);
   }
 };
+// Restaurar da sincronização: o arquivo que a sincronização mantém em "Carteira BDR/Dados" (o mais recente de todos os aparelhos)
+$('aDriveRestSync').onclick = async () => {
+  try { await tokenGoogle(); } catch (err) { return avisar('Google Drive', err.message); }
+  $('aDriveMsg').textContent = 'Buscando o arquivo sincronizado...';
+  try {
+    const arq = await arquivoDados();
+    if (!arq) { $('aDriveMsg').textContent = ''; return avisar('Nenhum arquivo sincronizado', `A pasta "${PASTA_DRIVE}/Dados" ainda não tem o arquivo da sincronização.`); }
+    const texto = await baixarTexto(arq.id);
+    $('aDriveMsg').textContent = '';
+    restaurarTexto(texto, `Arquivo sincronizado de ${new Date(arq.modifiedTime).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(', ', ' ')}`);
+  } catch (err) {
+    $('aDriveMsg').textContent = '';
+    avisar('Não foi possível ler o arquivo sincronizado', err.message);
+  }
+};
 // Backups de conflito: os que não têm nada a mais que os dados atuais vão direto para a lixeira do Drive;
 // os outros aparecem com o que têm a mais, para a pessoa restaurar ou mandar para a lixeira.
 let conflitos = [];
@@ -2997,7 +3014,8 @@ async function backupObrigatorio() {
 async function abrirBackupProtegido(d) {
   // arquivo da sincronização (dados ou conflito): com "iteracoes", a chave sai da senha com essas iterações
   if (d.iteracoes !== undefined && d.iteracoes !== ITERACOES_SYNC) throw new Error('formato de arquivo desconhecido');
-  if (d.iteracoes && sync.chave && sync.sal === d.sal) { try { return JSON.parse(await decifrar(d, sync.chave)); } catch {} }
+  // chave da sincronização deste aparelho: abre o arquivo da sincronização sem pedir a senha
+  if (d.iteracoes && sync.chave) { const r = await decifrarComChave(d, sync.chave).catch(() => null); if (r) return r; }
   if (!d.iteracoes && trava.backup?.sal === d.sal) { try { return JSON.parse(await decifrar(d, trava.backup.chave)); } catch {} }
   let aviso = '';
   for (;;) {
