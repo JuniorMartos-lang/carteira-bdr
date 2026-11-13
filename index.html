@@ -850,7 +850,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <button type="button" class="ajItem" data-aj="notas"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Anotações</span><span aria-hidden="true">›</span></button>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.31.0 · 13/11/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.32.0 · 13/11/2026</p>
     </div>
     <div class="ajTela" id="aj-alerta" hidden>
       <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Alerta Volatilidade Cabeçalho</span></b></div>
@@ -3162,6 +3162,8 @@ window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
 render();
 if (sync.ativo) { carregarGoogle(); sincronizar(); }
 autoHg(true);
+// cópia do app no celular (sw.js): abre sem internet depois da primeira abertura com internet
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 setInterval(() => autoHg(false), 60e3); // confere a cada minuto; só consulta depois de 15 min
 </script>
 </body>
