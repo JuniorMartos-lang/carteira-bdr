@@ -29,7 +29,12 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicarTem
 body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-bottom:72px; }
 /* topo: faixa na cor do app; o cartão do lucro sobe por cima dela */
 header { background:var(--pri); color:#fff; padding:12px 16px 40px; padding-top:max(12px, env(safe-area-inset-top));
-  display:flex; align-items:center; gap:12px; min-height:52px; }
+  display:flex; flex-wrap:wrap; align-items:center; gap:12px; min-height:52px; }
+/* conexão (on-line/off-line), numa linha acima do letreiro das cotações */
+#hRede { flex-basis:100%; display:flex; align-items:center; gap:6px; margin-bottom:-6px; font-size:11px; line-height:1.2; color:#fff; opacity:.9; }
+#hRede .ponto { width:8px; height:8px; border-radius:50%; background:#4ade80; flex:none; }
+#hRede.off { opacity:1; font-weight:600; }
+#hRede.off .ponto { background:#f87171; }
 :where(:root[data-theme=dark]) header { color:#06201d; }
 #topo { max-width:640px; margin:-34px auto 0; padding:0 16px; }
 .lucroCard { padding:12px 14px; margin-bottom:8px; }
@@ -384,6 +389,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
 <body>
 <!-- topo: faixa verde fina (foto, IBOV, dólar) e o cartão do lucro por cima dela -->
 <header>
+  <div id="hRede" role="status" aria-live="polite"><span class="ponto"></span><span id="hRedeTxt"></span></div>
   <img id="hFoto" alt="Foto" hidden>
   <div id="hIndices"></div>
   <span class="syncBox"><button type="button" class="syncIco" id="hSync"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 10a4 4 0 0 1-.5 8z"/><g class="giro"><path d="M15 13a3 3 0 1 1-1-2.2"/><path d="M14.2 9.3v1.6h-1.6"/></g></svg></button><small id="hSyncQuando" hidden></small></span>
@@ -850,7 +856,7 @@ button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; 
       <button type="button" class="ajItem" data-aj="notas"><span class="ajNomeI"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Anotações</span><span aria-hidden="true">›</span></button>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.32.0 · 13/11/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Carteira BDR · versão 1.33.0 · 13/11/2026</p>
     </div>
     <div class="ajTela" id="aj-alerta" hidden>
       <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b class="ajTit"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Alerta Volatilidade Cabeçalho</span></b></div>
@@ -3003,8 +3009,15 @@ async function desligarSync() {
   sync = {};
   gravarSync();
 }
-addEventListener('online', () => { mostrarSync(); sincronizar(); });
-addEventListener('offline', mostrarSync);
+// indicador de conexão no cabeçalho, acima do letreiro
+function mostrarRede() {
+  const on = navigator.onLine;
+  $('hRede').classList.toggle('off', !on);
+  $('hRedeTxt').textContent = on ? 'On-line' : 'Off-line · as alterações ficam no celular';
+}
+mostrarRede();
+addEventListener('online', () => { mostrarRede(); mostrarSync(); sincronizar(); });
+addEventListener('offline', () => { mostrarRede(); mostrarSync(); });
 
 // --- Senha do app (guardada à parte: não entra no backup) ---
 // shortcut: é uma trava de tela; os dados no celular não ficam criptografados. Para isso, cifrar o db com a senha.
