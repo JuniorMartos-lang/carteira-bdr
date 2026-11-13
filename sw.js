@@ -22,7 +22,7 @@ self.addEventListener('activate', e => e.waitUntil((async () => {
 
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
-  if (req.method !== 'GET') return;
+  if (req.method !== 'GET' || url.searchParams.has('ping')) return; // conferência de conexão: vai sempre à rede
   if (url.origin === location.origin) e.respondWith(redePrimeiro(req));
   else if (url.hostname === 'icons.brapi.dev') e.respondWith(copiaPrimeiro(req));
 });
